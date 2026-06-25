@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
@@ -667,6 +667,12 @@ const v1bWeeklyData = [
   { week: "Week 3", dateLabel: "Jun 16–22", factual: 0,     tracked: 1600, projected: 8200, total: 9800  },
   { week: "Week 4", dateLabel: "Jun 23–30", factual: 0,     tracked: 0,   projected: 22480, total: 22480 },
 ];
+const v1bConfirmed = v1bWeeklyData.reduce((s, w) => s + w.factual,  0);
+const v1bPlanned   = v1bWeeklyData.reduce((s, w) => s + w.tracked,  0);
+const v1bProjected = v1AdjProj - v1bConfirmed - v1bPlanned;
+const v1bPctC = Math.round(v1bConfirmed / v1AdjProj * 100);
+const v1bPctP = Math.round(v1bPlanned   / v1AdjProj * 100);
+const v1bPctR = 100 - v1bPctC - v1bPctP;
 
 function SegmentedWeekBar(props: any) {
   const { x, y, width, height, payload } = props;
@@ -688,6 +694,57 @@ function SegmentedWeekBar(props: any) {
   addSeg("tracked",   tracked,   "#0168dd", !projected);
   addSeg("projected", projected, "#85baf5", true);
   return <g>{rects}</g>;
+}
+
+function ProjectionBreakdownPopover() {
+  const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState({ top: 0, right: 0 });
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const fmtK = (n: number) => { const k = n / 1000; return `$${k % 1 === 0 ? k.toFixed(0) : k.toFixed(1)}k`; };
+  const toggle = () => {
+    if (btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect();
+      setPos({ top: r.bottom + 6, right: window.innerWidth - r.right });
+    }
+    setOpen(o => !o);
+  };
+  return (
+    <div className="relative">
+      <button ref={btnRef} onClick={toggle} className="flex items-center gap-1 text-[11px] text-[#0168dd] hover:text-[#0057bb] transition-colors select-none">
+        View breakdown <ChevronDown size={11} className={`transition-transform duration-150 ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-20" onClick={() => setOpen(false)} />
+          <div className="fixed z-30 bg-white rounded-lg border border-[#e8eaf0] shadow-xl w-52 p-3" style={{ top: pos.top, right: pos.right }}>
+            <div className="space-y-1.5">
+              {([
+                { label: "Confirmed",  color: "#10b981", value: v1bConfirmed, pct: v1bPctC },
+                { label: "Planned",    color: "#0168dd", value: v1bPlanned,   pct: v1bPctP },
+                { label: "~Projected", color: "#85baf5", value: v1bProjected, pct: v1bPctR },
+              ] as const).map(({ label, color, value, pct }) => (
+                <div key={label} className="flex justify-between text-[11px] font-semibold" style={{ color }}>
+                  <span>{label}</span>
+                  <span>{fmtK(value)} ({pct}%)</span>
+                </div>
+              ))}
+            </div>
+            <div className="mt-2.5 h-2 rounded-full overflow-hidden">
+              <div className="h-full flex">
+                <div className="h-full bg-emerald-500" style={{ width: `${v1bPctC}%` }} />
+                <div className="h-full bg-[#0168dd]" style={{ width: `${Math.max(v1bPctP, 0.6)}%` }} />
+                <div className="h-full flex-1 bg-[#85baf5]" />
+              </div>
+            </div>
+            <div className="flex justify-between text-[10px] text-[#8a8fa8] mt-1">
+              <span>{fmt0(v1AvgMonthly)} avg</span>
+              <span>{fmt0(v1AdjProj)} total</span>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
 }
 
 function BreakdownPopover() {
@@ -783,45 +840,19 @@ function V1bPredictivePanel() {
           <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-1">Recommended projection</p>
           <div className="flex items-baseline gap-2">
             <p className="text-3xl font-bold text-[#0168dd] tracking-tight">{fmt0(v1AdjProj)}</p>
-            <BreakdownPopover />
+            <ProjectionBreakdownPopover />
           </div>
-          {(() => {
-            const confirmed  = v1bWeeklyData.reduce((s,w) => s + w.factual,  0);
-            const planned    = v1bWeeklyData.reduce((s,w) => s + w.tracked,  0);
-            const projected  = v1AdjProj - confirmed - planned;
-            const pctC = Math.round(confirmed / v1AdjProj * 100);
-            const pctP = Math.round(planned   / v1AdjProj * 100);
-            const pctR = 100 - pctC - pctP;
-            return (
-              <>
-                {(() => {
-                  const fmtK = (n: number) => { const k = n/1000; return `$${k%1===0?k.toFixed(0):k.toFixed(1)}k`; };
-                  return (
-                    <div className="mt-3 mb-0.5 text-[10px] space-y-0.5">
-                      {([
-                        { label: "Confirmed",   color: "text-emerald-600", value: confirmed, pct: pctC },
-                        { label: "Planned",     color: "text-[#0168dd]",   value: planned,   pct: pctP },
-                        { label: "~Projected",  color: "text-[#85baf5]",   value: projected, pct: pctR },
-                      ] as const).map(({ label, color, value, pct }) => (
-                        <div key={label} className={`flex justify-between font-semibold ${color}`}>
-                          <span>{label}</span>
-                          <span>{fmtK(value)} ({pct}%)</span>
-                        </div>
-                      ))}
-                    </div>
-                  );
-                })()}
-                <div className="h-2 rounded-full overflow-hidden">
-                  <div className="h-full flex" style={{ width: "100%" }}>
-                    <div className="h-full bg-emerald-500" style={{ width: `${pctC}%` }} />
-                    <div className="h-full bg-[#0168dd]" style={{ width: `${Math.max(pctP, 0.6)}%` }} />
-                    <div className="h-full flex-1 bg-[#85baf5]" />
-                  </div>
-                </div>
-                <div className="flex justify-between text-[10px] text-[#8a8fa8] mt-0.5"><span>{fmt0(v1AvgMonthly)} avg</span><span>{fmt0(v1AdjProj)} total</span></div>
-              </>
-            );
-          })()}
+          <div className="mt-3 h-2 rounded-full overflow-hidden">
+            <div className="h-full flex">
+              <div className="h-full bg-emerald-500" style={{ width: `${v1bPctC}%` }} />
+              <div className="h-full bg-[#0168dd]" style={{ width: `${Math.max(v1bPctP, 0.6)}%` }} />
+              <div className="h-full flex-1 bg-[#85baf5]" />
+            </div>
+          </div>
+          <div className="flex justify-between text-[10px] text-[#8a8fa8] mt-0.5">
+            <span>{fmt0(v1AvgMonthly)} avg</span>
+            <span>{fmt0(v1AdjProj)} total</span>
+          </div>
         </div>
       </div>
       <div className="flex divide-x divide-[#e8eaf0]">
