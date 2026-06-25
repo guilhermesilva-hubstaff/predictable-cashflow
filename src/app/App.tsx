@@ -803,7 +803,7 @@ function V1bPredictivePanel() {
               <span>{fmt0(v1AvgMonthly)} avg</span>
               <span>{fmt0(v1AdjProj)} total</span>
             </div>
-            <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block z-20 pointer-events-none">
+            <div className="absolute top-full left-0 mt-2 hidden group-hover:block z-20 pointer-events-none">
               <div className="bg-white border border-[#e8eaf0] rounded-lg shadow-lg p-3 w-48">
                 {([
                   { label: "Confirmed",  color: "#10b981", value: v1bConfirmed, pct: v1bPctC },
