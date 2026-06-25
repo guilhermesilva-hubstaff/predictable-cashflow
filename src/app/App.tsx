@@ -727,7 +727,7 @@ function BreakdownPopover() {
       {open && (
         <>
           <div className="fixed inset-0 z-20" onClick={() => setOpen(false)} />
-          <div className="absolute top-6 left-0 z-30 bg-white rounded-lg border border-[#e8eaf0] shadow-xl w-56 overflow-hidden">
+          <div className="absolute top-6 right-0 z-30 bg-white rounded-lg border border-[#e8eaf0] shadow-xl w-56 overflow-hidden">
             <div className="flex border-b border-[#e8eaf0]">
               {(["earning", "provider"] as const).map(t => (
                 <button key={t} onClick={() => setTab(t)} className={`flex-1 py-2 text-[10px] font-semibold transition-colors border-b-2 -mb-px ${tab === t ? "text-[#0168dd] border-[#0168dd]" : "text-[#8a8fa8] border-transparent hover:text-[#1a1e35]"}`}>
@@ -799,6 +799,10 @@ function V1bPredictivePanel() {
                 <div className="h-full flex-1 bg-[#85baf5]" />
               </div>
             </div>
+            <div className="flex justify-between text-[10px] text-[#8a8fa8] mt-0.5">
+              <span>{fmt0(v1AvgMonthly)} avg</span>
+              <span>{fmt0(v1AdjProj)} total</span>
+            </div>
             <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block z-20 pointer-events-none">
               <div className="bg-white border border-[#e8eaf0] rounded-lg shadow-lg p-3 w-48">
                 {([
@@ -817,10 +821,6 @@ function V1bPredictivePanel() {
                 })}
               </div>
             </div>
-          </div>
-          <div className="flex justify-between text-[10px] text-[#8a8fa8] mt-0.5">
-            <span>{fmt0(v1AvgMonthly)} avg</span>
-            <span>{fmt0(v1AdjProj)} total</span>
           </div>
         </div>
       </div>
