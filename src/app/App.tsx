@@ -781,16 +781,47 @@ function V1bPredictivePanel() {
         </div>
         <div className="px-5 py-4">
           <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-1">Recommended projection</p>
-          <p className="text-3xl font-bold text-[#0168dd] tracking-tight">{fmt0(v1AdjProj)}</p>
-          <BreakdownPopover />
-          <div className="mt-3 h-1.5 rounded-full overflow-hidden bg-[#ccd8e9]">
-            <div className="h-full flex" style={{ width: `${Math.min(100,(v1AdjProj/70000)*100)}%` }}>
-              <div className="h-full bg-emerald-500" style={{ width: `${(v1bWeeklyData.reduce((s,w)=>s+w.factual,0)/v1AdjProj)*100}%` }} />
-              <div className="h-full bg-[#0168dd]" style={{ width: `${Math.max((v1bWeeklyData.reduce((s,w)=>s+w.tracked,0)/v1AdjProj)*100, 0.6)}%` }} />
-              <div className="h-full flex-1 bg-[#85baf5]" />
-            </div>
+          <div className="flex items-baseline gap-2">
+            <p className="text-3xl font-bold text-[#0168dd] tracking-tight">{fmt0(v1AdjProj)}</p>
+            <BreakdownPopover />
           </div>
-          <div className="flex justify-between text-[10px] text-[#8a8fa8] mt-0.5"><span>{fmt0(v1AvgMonthly)} avg</span><span>{fmt0(70000)} cap</span></div>
+          {(() => {
+            const confirmed  = v1bWeeklyData.reduce((s,w) => s + w.factual,  0);
+            const planned    = v1bWeeklyData.reduce((s,w) => s + w.tracked,  0);
+            const projected  = v1AdjProj - confirmed - planned;
+            const pctC = Math.round(confirmed / v1AdjProj * 100);
+            const pctP = Math.round(planned   / v1AdjProj * 100);
+            const pctR = 100 - pctC - pctP;
+            return (
+              <>
+                {(() => {
+                  const fmtK = (n: number) => { const k = n/1000; return `$${k%1===0?k.toFixed(0):k.toFixed(1)}k`; };
+                  return (
+                    <div className="mt-3 mb-0.5 text-[10px] space-y-0.5">
+                      {([
+                        { label: "Confirmed",   color: "text-emerald-600", value: confirmed, pct: pctC },
+                        { label: "Planned",     color: "text-[#0168dd]",   value: planned,   pct: pctP },
+                        { label: "~Projected",  color: "text-[#85baf5]",   value: projected, pct: pctR },
+                      ] as const).map(({ label, color, value, pct }) => (
+                        <div key={label} className={`flex justify-between font-semibold ${color}`}>
+                          <span>{label}</span>
+                          <span>{fmtK(value)} ({pct}%)</span>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+                <div className="h-2 rounded-full overflow-hidden">
+                  <div className="h-full flex" style={{ width: "100%" }}>
+                    <div className="h-full bg-emerald-500" style={{ width: `${pctC}%` }} />
+                    <div className="h-full bg-[#0168dd]" style={{ width: `${Math.max(pctP, 0.6)}%` }} />
+                    <div className="h-full flex-1 bg-[#85baf5]" />
+                  </div>
+                </div>
+                <div className="flex justify-between text-[10px] text-[#8a8fa8] mt-0.5"><span>{fmt0(v1AvgMonthly)} avg</span><span>{fmt0(v1AdjProj)} total</span></div>
+              </>
+            );
+          })()}
         </div>
       </div>
       <div className="flex divide-x divide-[#e8eaf0]">
@@ -799,7 +830,7 @@ function V1bPredictivePanel() {
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-0.5">Week-by-week distribution</p>
               {chartView === "a" ? (
-                <p className="text-[11px] text-[#8a8fa8]">Past weeks show actual payments · current &amp; future show tracked + projected</p>
+                <p className="text-[11px] text-[#8a8fa8]">Past weeks show confirmed · current &amp; future show planned + projected</p>
               ) : (
                 <p className="text-[11px] text-[#8a8fa8]">Amounts owed per payment provider per week</p>
               )}
@@ -834,8 +865,8 @@ function V1bPredictivePanel() {
                   const d = payload[0]?.payload;
                   if (!d) return null;
                   const items = [
-                    { key: "factual",   label: "Actual paid",    color: "#10b981", value: d.factual   },
-                    { key: "tracked",   label: "Future tracked", color: "#0168dd", value: d.tracked   },
+                    { key: "factual",   label: "Confirmed",      color: "#10b981", value: d.factual   },
+                    { key: "tracked",   label: "Planned",        color: "#0168dd", value: d.tracked   },
                     { key: "projected", label: "Projected",      color: "#85baf5", value: d.projected },
                   ].filter(i => i.value > 0);
                   const total = items.reduce((s, i) => s + i.value, 0);
@@ -859,7 +890,9 @@ function V1bPredictivePanel() {
                 }}
                 cursor={{ fill: "#f5f6fa" }}
               />
-              <Bar dataKey="total" shape={(p: any) => <SegmentedWeekBar {...p} />} />
+              <Bar dataKey="factual"   name="Confirmed"  stackId="s" fill="#10b981" radius={[4,4,0,0]} />
+              <Bar dataKey="tracked"   name="Planned"    stackId="s" fill="#0168dd" radius={[0,0,0,0]} />
+              <Bar dataKey="projected" name="Projected"  stackId="s" fill="#85baf5" radius={[4,4,0,0]} />
             </BarChart>
           </ResponsiveContainer>
           ) : (
@@ -869,7 +902,7 @@ function V1bPredictivePanel() {
               <XAxis dataKey="week" tick={(p) => <WeekTick {...p} data={v1ProviderWeekData} />} axisLine={false} tickLine={false} interval={0} />
               <YAxis tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 10, fill: "#8a8fa8" }} axisLine={false} tickLine={false} width={32} />
               <Tooltip content={<ChartTip />} cursor={{ fill: "#f5f6fa" }} />
-              <Bar dataKey="factual"  name="Actual paid" stackId="s" fill="#10b981" radius={[4,4,0,0]} />
+              <Bar dataKey="factual"  name="Confirmed"   stackId="s" fill="#10b981" radius={[4,4,0,0]} />
               <Bar dataKey="Wise"     name="Wise"        stackId="s" fill="#0168dd" radius={[0,0,0,0]} />
               <Bar dataKey="Payoneer" name="Payoneer"    stackId="s" fill="#0ea5a0" radius={[0,0,0,0]} />
               <Bar dataKey="Deel"     name="Deel"        stackId="s" fill="#f59e0b" radius={[0,0,0,0]} />
@@ -878,21 +911,24 @@ function V1bPredictivePanel() {
           </ResponsiveContainer>
           )}
           <div className="flex items-center justify-between mt-1">
-            {chartView === "a" ? (
-              <div className="flex flex-wrap gap-x-4 gap-y-1">
-                <div className="flex items-center gap-1.5 text-[11px] text-[#8a8fa8]"><div className="w-2 h-2 rounded-sm bg-emerald-500" /> Actual paid</div>
-                <div className="flex items-center gap-1.5 text-[11px] text-[#8a8fa8]"><div className="w-2 h-2 rounded-sm bg-[#0168dd]" /> Future tracked</div>
-                <div className="flex items-center gap-1.5 text-[11px] text-[#8a8fa8]"><div className="w-2 h-2 rounded-sm bg-[#85baf5]" /> Projected</div>
-              </div>
-            ) : (
-              <div className="flex flex-wrap gap-x-4 gap-y-1">
-                {v1Providers.map(p => (
-                  <div key={p.name} className="flex items-center gap-1.5 text-[11px] text-[#8a8fa8]">
-                    <div className="w-2 h-2 rounded-sm" style={{ background: p.color }} />{p.name}
+            <div className="flex flex-wrap gap-x-4 gap-y-1">
+              {([
+                { label: "Confirmed", color: "#10b981", desc: "Payments already received"            },
+                { label: "Planned",   color: "#0168dd", desc: "Upcoming tracked payments"            },
+                { label: "Projected", color: "#85baf5", desc: "Estimated based on historical trends" },
+              ] as const).map(({ label, color, desc }) => (
+                <div key={label} className="relative group flex items-center gap-1.5 text-[11px] text-[#8a8fa8] cursor-default">
+                  <div className="w-2 h-2 rounded-sm" style={{ background: color }} />
+                  {label}
+                  <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block z-20 pointer-events-none whitespace-nowrap">
+                    <div className="bg-white border border-[#e8eaf0] rounded-lg shadow-lg p-3 text-xs">
+                      <p className="font-semibold mb-0.5" style={{ color }}>{label}</p>
+                      <p className="text-[#8a8fa8]">{desc}</p>
+                    </div>
                   </div>
-                ))}
-              </div>
-            )}
+                </div>
+              ))}
+            </div>
             {chartView === "a" && (
               <div className="flex items-center gap-3 text-[10px]">
                 <span className="text-[#8a8fa8]">Wk 1–2: <span className="font-semibold text-emerald-600">past</span></span>
