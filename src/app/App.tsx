@@ -279,7 +279,7 @@ function ChevronLeft({ size = 16, className = "" }: { size?: number; className?:
   return <ChevronRight size={size} className={`rotate-180 ${className}`} />;
 }
 
-function Sidebar({ active }: { active: "v1" | "v1b" | "v2" }) {
+function Sidebar({ active }: { active: "v1" | "v1b" | "v1c" | "v2" }) {
   const topNav = [
     { icon: LayoutDashboard, label: "Dashboard" },
     { icon: ClipboardList,   label: "Timesheets" },
@@ -287,7 +287,7 @@ function Sidebar({ active }: { active: "v1" | "v1b" | "v2" }) {
     { icon: Lightbulb,       label: "Insights" },
     { icon: FolderKanban,    label: "Project management" },
     { icon: CalendarDays,    label: "Calendar" },
-    { icon: BarChart2,       label: "Reports",  isActive: active === "v1" || active === "v1b" },
+    { icon: BarChart2,       label: "Reports",  isActive: active === "v1" || active === "v1b" || active === "v1c" },
     { icon: UserCircle2,     label: "People" },
   ];
   return (
@@ -1001,6 +1001,34 @@ function Version1B() {
   );
 }
 
+function Version1C() {
+  const [bottomTab, setBottomTab] = useState<"history"|"future">("history");
+  return (
+    <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+      <h1 className="text-xl font-semibold text-[#1a1e35]">Payments report</h1>
+      <div className="bg-white rounded-lg border border-[#e8eaf0] overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-[#e8eaf0] bg-[#f9f9fc]">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold text-[#1a1e35]">Predictable Cash Flow</span>
+            <span className="text-xs text-[#8a8fa8]">— based on historical payments</span>
+          </div>
+          <ExportDropdown />
+        </div>
+        <V1bPredictivePanel />
+      </div>
+      <div className="mt-6">
+        <p className="text-base font-semibold text-[#1a1e35] mb-3">Payment Activity</p>
+        <div className="flex items-center gap-0 mb-3 border-b border-[#e8eaf0]">
+          {([["history","Payment History"],["future","Future Tracked So Far"]] as const).map(([id, label]) => (
+            <button key={id} onClick={() => setBottomTab(id)} className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${bottomTab === id ? "border-[#0168dd] text-[#0168dd]" : "border-transparent text-[#8a8fa8] hover:text-[#1a1e35]"}`}>{label}</button>
+          ))}
+        </div>
+        {bottomTab === "history" ? <V1PaymentHistory /> : <V1FutureTracked />}
+      </div>
+    </div>
+  );
+}
+
 // ─── V2 ────────────────────────────────────────────────────────────────────────
 
 function V2StatusBadge({ status }: { status: string }) {
@@ -1373,7 +1401,7 @@ function Version2() {
 // ─── Root ──────────────────────────────────────────────────────────────────────
 
 export default function App() {
-  const [version, setVersion] = useState<"v1"|"v1b"|"v2">("v1b");
+  const [version, setVersion] = useState<"v1"|"v1b"|"v1c"|"v2">("v1b");
 
   return (
     <div className="flex h-screen w-full overflow-hidden font-[Inter,sans-serif]">
@@ -1381,7 +1409,7 @@ export default function App() {
       <div className="flex-1 flex flex-col overflow-hidden bg-[#f5f6fa]">
         <div className="flex items-center justify-between px-6 py-2.5 bg-white border-b border-[#e8eaf0] flex-shrink-0">
           <div className="flex items-center gap-1 text-xs text-[#8a8fa8]">
-            {(version === "v1" || version === "v1b") ? (
+            {(version === "v1" || version === "v1b" || version === "v1c") ? (
               <><span className="hover:text-[#0168dd] cursor-pointer">Reports</span><ChevronRight size={12} /><span className="text-[#1a1e35] font-medium">Payments report</span></>
             ) : (
               <><span className="hover:text-[#0168dd] cursor-pointer">Financials</span><ChevronRight size={12} /><span className="text-[#1a1e35] font-medium">Team Payments</span></>
@@ -1391,6 +1419,7 @@ export default function App() {
             <div className="flex items-center bg-[#f0f1f5] rounded-lg p-0.5">
               <button onClick={() => setVersion("v1")}  className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${version === "v1"  ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>Version 1</button>
               <button onClick={() => setVersion("v1b")} className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${version === "v1b" ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>Version 1B</button>
+              <button onClick={() => setVersion("v1c")} className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${version === "v1c" ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>Version 1C</button>
               <button onClick={() => setVersion("v2")}  className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${version === "v2"  ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>Version 2</button>
             </div>
             <div className="flex items-center gap-2 text-xs text-[#8a8fa8]"><Clock size={13} /><span>0:00:00</span></div>
@@ -1398,6 +1427,7 @@ export default function App() {
         </div>
         {version === "v1"  && <Version1  />}
         {version === "v1b" && <Version1B />}
+        {version === "v1c" && <Version1C />}
         {version === "v2"  && <Version2  />}
       </div>
     </div>
