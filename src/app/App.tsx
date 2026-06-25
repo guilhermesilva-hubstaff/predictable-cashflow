@@ -813,8 +813,11 @@ function V1bPredictivePanel() {
                   const k = value / 1000;
                   const fmtK = `$${k % 1 === 0 ? k.toFixed(0) : k.toFixed(1)}k`;
                   return (
-                    <div key={label} className="flex justify-between text-[11px] font-semibold mb-1 last:mb-0" style={{ color }}>
-                      <span>{label}</span>
+                    <div key={label} className="flex items-center justify-between text-[11px] font-semibold mb-1 last:mb-0 text-[#8a8fa8]">
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-2 h-2 rounded-sm flex-shrink-0" style={{ background: color }} />
+                        <span>{label}</span>
+                      </div>
                       <span>{fmtK} ({pct}%)</span>
                     </div>
                   );
