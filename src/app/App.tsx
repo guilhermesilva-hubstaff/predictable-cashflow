@@ -710,8 +710,8 @@ function ExportDropdown() {
           <div className="fixed inset-0 z-20" onClick={() => setOpen(false)} />
           <div className="absolute top-full right-0 mt-1.5 z-30 bg-white rounded-lg border border-[#e8eaf0] shadow-lg w-36 py-1 overflow-hidden">
             {([
-              { label: "Export as CSV", ext: "CSV" },
-              { label: "Export as PDF", ext: "PDF" },
+              { label: "CSV", ext: "CSV" },
+              { label: "PDF", ext: "PDF" },
             ] as const).map(({ label, ext }) => (
               <button key={ext} onClick={() => setOpen(false)} className="w-full text-left px-4 py-2 text-xs text-[#1a1e35] hover:bg-[#f5f6fa] transition-colors">
                 {label}
