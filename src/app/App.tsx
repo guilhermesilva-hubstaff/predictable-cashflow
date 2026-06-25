@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
@@ -696,57 +696,6 @@ function SegmentedWeekBar(props: any) {
   return <g>{rects}</g>;
 }
 
-function ProjectionBreakdownPopover() {
-  const [open, setOpen] = useState(false);
-  const [pos, setPos] = useState({ top: 0, right: 0 });
-  const btnRef = useRef<HTMLButtonElement>(null);
-  const fmtK = (n: number) => { const k = n / 1000; return `$${k % 1 === 0 ? k.toFixed(0) : k.toFixed(1)}k`; };
-  const toggle = () => {
-    if (btnRef.current) {
-      const r = btnRef.current.getBoundingClientRect();
-      setPos({ top: r.bottom + 6, right: window.innerWidth - r.right });
-    }
-    setOpen(o => !o);
-  };
-  return (
-    <div className="relative">
-      <button ref={btnRef} onClick={toggle} className="flex items-center gap-1 text-[11px] text-[#0168dd] hover:text-[#0057bb] transition-colors select-none">
-        View breakdown <ChevronDown size={11} className={`transition-transform duration-150 ${open ? "rotate-180" : ""}`} />
-      </button>
-      {open && (
-        <>
-          <div className="fixed inset-0 z-20" onClick={() => setOpen(false)} />
-          <div className="fixed z-30 bg-white rounded-lg border border-[#e8eaf0] shadow-xl w-52 p-3" style={{ top: pos.top, right: pos.right }}>
-            <div className="space-y-1.5">
-              {([
-                { label: "Confirmed",  color: "#10b981", value: v1bConfirmed, pct: v1bPctC },
-                { label: "Planned",    color: "#0168dd", value: v1bPlanned,   pct: v1bPctP },
-                { label: "~Projected", color: "#85baf5", value: v1bProjected, pct: v1bPctR },
-              ] as const).map(({ label, color, value, pct }) => (
-                <div key={label} className="flex justify-between text-[11px] font-semibold" style={{ color }}>
-                  <span>{label}</span>
-                  <span>{fmtK(value)} ({pct}%)</span>
-                </div>
-              ))}
-            </div>
-            <div className="mt-2.5 h-2 rounded-full overflow-hidden">
-              <div className="h-full flex">
-                <div className="h-full bg-emerald-500" style={{ width: `${v1bPctC}%` }} />
-                <div className="h-full bg-[#0168dd]" style={{ width: `${Math.max(v1bPctP, 0.6)}%` }} />
-                <div className="h-full flex-1 bg-[#85baf5]" />
-              </div>
-            </div>
-            <div className="flex justify-between text-[10px] text-[#8a8fa8] mt-1">
-              <span>{fmt0(v1AvgMonthly)} avg</span>
-              <span>{fmt0(v1AdjProj)} total</span>
-            </div>
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
 function BreakdownPopover() {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<"earning" | "provider">("earning");
@@ -840,13 +789,33 @@ function V1bPredictivePanel() {
           <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-1">Recommended projection</p>
           <div className="flex items-baseline gap-2">
             <p className="text-3xl font-bold text-[#0168dd] tracking-tight">{fmt0(v1AdjProj)}</p>
-            <ProjectionBreakdownPopover />
+            <BreakdownPopover />
           </div>
-          <div className="mt-3 h-2 rounded-full overflow-hidden">
-            <div className="h-full flex">
-              <div className="h-full bg-emerald-500" style={{ width: `${v1bPctC}%` }} />
-              <div className="h-full bg-[#0168dd]" style={{ width: `${Math.max(v1bPctP, 0.6)}%` }} />
-              <div className="h-full flex-1 bg-[#85baf5]" />
+          <div className="relative group mt-3 cursor-default">
+            <div className="h-2 rounded-full overflow-hidden">
+              <div className="h-full flex">
+                <div className="h-full bg-emerald-500" style={{ width: `${v1bPctC}%` }} />
+                <div className="h-full bg-[#0168dd]" style={{ width: `${Math.max(v1bPctP, 0.6)}%` }} />
+                <div className="h-full flex-1 bg-[#85baf5]" />
+              </div>
+            </div>
+            <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block z-20 pointer-events-none">
+              <div className="bg-white border border-[#e8eaf0] rounded-lg shadow-lg p-3 w-48">
+                {([
+                  { label: "Confirmed",  color: "#10b981", value: v1bConfirmed, pct: v1bPctC },
+                  { label: "Planned",    color: "#0168dd", value: v1bPlanned,   pct: v1bPctP },
+                  { label: "~Projected", color: "#85baf5", value: v1bProjected, pct: v1bPctR },
+                ] as const).map(({ label, color, value, pct }) => {
+                  const k = value / 1000;
+                  const fmtK = `$${k % 1 === 0 ? k.toFixed(0) : k.toFixed(1)}k`;
+                  return (
+                    <div key={label} className="flex justify-between text-[11px] font-semibold mb-1 last:mb-0" style={{ color }}>
+                      <span>{label}</span>
+                      <span>{fmtK} ({pct}%)</span>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
           <div className="flex justify-between text-[10px] text-[#8a8fa8] mt-0.5">
