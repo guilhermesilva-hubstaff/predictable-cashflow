@@ -696,6 +696,34 @@ function SegmentedWeekBar(props: any) {
   return <g>{rects}</g>;
 }
 
+function ExportDropdown() {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative">
+      <button onClick={() => setOpen(o => !o)} className="flex items-center gap-1.5 text-xs font-medium text-[#1a1e35] border border-[#e8eaf0] rounded-md px-3 py-1.5 bg-white hover:bg-[#f5f6fa] transition-colors select-none">
+        <Download size={12} className="text-[#8a8fa8]" />
+        Export
+        <ChevronDown size={11} className={`text-[#8a8fa8] transition-transform duration-150 ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-20" onClick={() => setOpen(false)} />
+          <div className="absolute top-full right-0 mt-1.5 z-30 bg-white rounded-lg border border-[#e8eaf0] shadow-lg w-36 py-1 overflow-hidden">
+            {([
+              { label: "Export as CSV", ext: "CSV" },
+              { label: "Export as PDF", ext: "PDF" },
+            ] as const).map(({ label, ext }) => (
+              <button key={ext} onClick={() => setOpen(false)} className="w-full text-left px-4 py-2 text-xs text-[#1a1e35] hover:bg-[#f5f6fa] transition-colors">
+                {label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 function BreakdownPopover() {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<"earning" | "provider">("earning");
@@ -951,10 +979,12 @@ function Version1B() {
     <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
       <h1 className="text-xl font-semibold text-[#1a1e35]">Payments report</h1>
       <div className="bg-white rounded-lg border border-[#e8eaf0] overflow-hidden">
-        <div className="flex items-center gap-2 px-5 py-3 border-b border-[#e8eaf0] bg-[#f9f9fc]">
-          <TrendingUp size={15} className="text-[#0168dd]" />
-          <span className="text-sm font-semibold text-[#1a1e35]">Predictable Cash Flow</span>
-          <span className="text-xs text-[#8a8fa8]">— based on historical payments</span>
+        <div className="flex items-center justify-between px-5 py-3 border-b border-[#e8eaf0] bg-[#f9f9fc]">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold text-[#1a1e35]">Predictable Cash Flow</span>
+            <span className="text-xs text-[#8a8fa8]">— based on historical payments</span>
+          </div>
+          <ExportDropdown />
         </div>
         <V1bPredictivePanel />
       </div>
