@@ -9,7 +9,7 @@ import {
   Activity, Lightbulb, FolderKanban, BarChart2, UserCircle2,
   Settings, Wallet, MonitorSmartphone, Plus, TrendingUp,
   TrendingDown, Info, MoreHorizontal, Columns,
-  Banknote, Gift, Umbrella, Minus,
+  Banknote, Gift, Umbrella, Minus, AlertTriangle,
 } from "lucide-react";
 
 const fmt0 = (n: number) =>
@@ -1001,7 +1001,674 @@ function Version1B() {
   );
 }
 
-function Version1C() {
+// ─── V1C ───────────────────────────────────────────────────────────────────────
+
+const v1cMemberPct  = 18;
+const v1cSeasonPct  = 10;
+const v1cTotalPct   = 28;
+const v1cProj       = Math.round(v1AvgMonthly * (1 + v1cTotalPct / 100));
+const v1cMemberAmt  = Math.round(v1AvgMonthly * v1cMemberPct / 100);
+const v1cSeasonAmt  = Math.round(v1AvgMonthly * v1cSeasonPct / 100);
+
+const v1cConfirmed  = v1bConfirmed;
+const v1cPlanned    = v1bPlanned;
+const v1cUnconf     = v1cProj - v1cConfirmed - v1cPlanned;
+const v1cPctC       = Math.round(v1cConfirmed / v1cProj * 100);
+const v1cPctP       = Math.round(v1cPlanned   / v1cProj * 100);
+const v1cPctR       = 100 - v1cPctC - v1cPctP;
+
+
+const v1cEarningTypes = [
+  { key: "hourly",  label: "Hourly pay",     color: "#0168dd", group: "stable"   },
+  { key: "fixed",   label: "Fixed pay",      color: "#0ea5a0", group: "stable"   },
+  { key: "bonuses", label: "Bonuses",        color: "#f59e0b", group: "variable" },
+  { key: "pto",     label: "PTO & Holidays", color: "#8b5cf6", group: "variable" },
+  { key: "adds",    label: "Additions",      color: "#f97316", group: "variable" },
+] as const;
+
+const v1cEarningTypeData = [
+  { week: "Week 1", dateLabel: "Jun 2–8",   hourly: 4600, fixed: 2400, bonuses: 800,  pto: 400,  adds: 200,  total: 8400  },
+  { week: "Week 2", dateLabel: "Jun 9–15",  hourly: 7000, fixed: 3200, bonuses: 2600, pto: 1000, adds: 400,  total: 14200 },
+  { week: "Week 3", dateLabel: "Jun 16–22", hourly: 5400, fixed: 2600, bonuses: 800,  pto: 800,  adds: 200,  total: 9800  },
+  { week: "Week 4", dateLabel: "Jun 23–30", hourly:11400, fixed: 5080, bonuses: 3600, pto: 1800, adds: 600,  total: 22480 },
+];
+
+const v1cBreakdownTabs = [
+  {
+    key: "prediction" as const,
+    label: "By source of prediction",
+    rows: [
+      { label: "Confirmed",  color: "#10b981", value: 22600 },
+      { label: "Planned",    color: "#0168dd", value:  1600 },
+      { label: "~Projected", color: "#85baf5", value: 43947 },
+    ],
+  },
+  {
+    key: "channel" as const,
+    label: "By cash flow channel",
+    rows: [
+      { label: "Wise",     color: "#0ea5a0", value: 31350 },
+      { label: "Payoneer", color: "#f59e0b", value: 21806 },
+      { label: "Deel",     color: "#7c3aed", value: 12266 },
+      { label: "Export",   color: "#8a8fa8", value:  2725 },
+    ],
+  },
+  {
+    key: "earning" as const,
+    label: "By earning type",
+    rows: [
+      { label: "Hourly pay",     color: "#0168dd", value: 31548 },
+      { label: "Fixed pay",      color: "#0ea5a0", value: 18400 },
+      { label: "Bonuses",        color: "#f59e0b", value:  9530 },
+      { label: "PTO & Holidays", color: "#8b5cf6", value:  5452 },
+      { label: "Additions",      color: "#f97316", value:  3217 },
+    ],
+  },
+];
+
+const v1cProviders = [
+  { key: "Wise",     letter: "W", color: "#0ea5a0" },
+  { key: "Payoneer", letter: "P", color: "#f59e0b" },
+  { key: "Deel",     letter: "D", color: "#7c3aed" },
+  { key: "Export",   letter: "E", color: "#8a8fa8" },
+] as const;
+
+function ProviderLogo({ letter, color, size = 14 }: { letter: string; color: string; size?: number }) {
+  return (
+    <div className="rounded flex items-center justify-center flex-shrink-0 font-bold text-white select-none"
+      style={{ width: size, height: size, background: color, fontSize: Math.round(size * 0.6) }}>
+      {letter}
+    </div>
+  );
+}
+
+function V1cBreakdownPopover() {
+  const [open, setOpen] = useState(false);
+  const [tab, setTab] = useState<"prediction"|"channel"|"earning">("prediction");
+  const activeTab = v1cBreakdownTabs.find(t => t.key === tab)!;
+  const total = activeTab.rows.reduce((s, r) => s + r.value, 0);
+  return (
+    <div className="relative mt-1.5">
+      <button onClick={() => setOpen(o => !o)} className="flex items-center gap-1 text-[11px] text-[#0168dd] hover:text-[#0057bb] transition-colors select-none">
+        View breakdown <ChevronDown size={11} className={`transition-transform duration-150 ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-20" onClick={() => setOpen(false)} />
+          <div className="absolute top-6 right-0 z-30 bg-white rounded-lg border border-[#e8eaf0] shadow-xl w-72 overflow-hidden">
+            <div className="flex border-b border-[#e8eaf0]">
+              {v1cBreakdownTabs.map(t => (
+                <button key={t.key} onClick={() => setTab(t.key)} className={`flex-1 py-2 text-[9px] font-semibold transition-colors border-b-2 -mb-px whitespace-nowrap px-1 ${tab === t.key ? "border-[#0168dd] text-[#0168dd]" : "border-transparent text-[#8a8fa8] hover:text-[#1a1e35]"}`}>
+                  {t.label}
+                </button>
+              ))}
+            </div>
+            <div className="p-3">
+              {activeTab.rows.map(({ label, color, value }) => {
+                const pct = Math.round(value / total * 100);
+                const provider = tab === "channel" ? v1cProviders.find(p => p.key === label) : undefined;
+                return (
+                  <div key={label} className="flex items-center justify-between text-[11px] py-1.5 border-b border-[#f5f6fa] last:border-0">
+                    <div className="flex items-center gap-2">
+                      {provider
+                        ? <ProviderLogo letter={provider.letter} color={color} size={14} />
+                        : <div className="w-2 h-2 rounded-sm flex-shrink-0" style={{ background: color }} />}
+                      <span className="text-[#8a8fa8]">{label}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-right">
+                      <span className="text-[10px] text-[#8a8fa8]">{pct}%</span>
+                      <span className="font-semibold text-[#1a1e35] w-16 text-right">{fmt0(value)}</span>
+                    </div>
+                  </div>
+                );
+              })}
+              <div className="flex justify-between items-center pt-2 mt-1 border-t border-[#e8eaf0] text-[11px] font-semibold">
+                <span className="text-[#8a8fa8]">Total</span>
+                <span className="text-[#0168dd]">{fmt0(v1cProj)}</span>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function AdjustmentsBreakdownPopover() {
+  const [open, setOpen] = useState(false);
+  const fmtK = (n: number) => { const k = n / 1000; return `$${k % 1 === 0 ? k.toFixed(0) : k.toFixed(1)}k`; };
+  const drivers = [
+    { label: "Member change", pct: v1cMemberPct, amt: v1cMemberAmt, color: "#10b981" },
+    { label: "Seasonality",   pct: v1cSeasonPct, amt: v1cSeasonAmt, color: "#f59e0b" },
+  ];
+  return (
+    <div className="relative mt-1.5">
+      <button onClick={() => setOpen(o => !o)} className="flex items-center gap-1 text-[11px] text-[#0168dd] hover:text-[#0057bb] transition-colors select-none">
+        View breakdown <ChevronDown size={11} className={`transition-transform duration-150 ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-20" onClick={() => setOpen(false)} />
+          <div className="absolute top-6 right-0 z-30 bg-white rounded-lg border border-[#e8eaf0] shadow-xl w-60 p-3">
+            <div className="flex justify-between text-[11px] pb-2 mb-2 border-b border-[#e8eaf0]">
+              <span className="text-[#8a8fa8]">Base avg payout</span>
+              <span className="font-semibold text-[#1a1e35]">{fmt0(v1AvgMonthly)}</span>
+            </div>
+            {drivers.map(({ label, pct, amt, color }) => (
+              <div key={label} className="flex justify-between items-center text-[11px] py-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="font-semibold" style={{ color }}>+{pct}%</span>
+                  <span className="text-[#8a8fa8]">{label}</span>
+                </div>
+                <span className="font-semibold text-[#1a1e35]">+{fmtK(amt)}</span>
+              </div>
+            ))}
+            <div className="flex justify-between items-center text-[11px] font-semibold mt-2 pt-2 border-t border-[#e8eaf0]">
+              <span className="text-[#1a1e35]">Projected total <span className="font-normal text-[#8a8fa8]">(+{v1cTotalPct}%)</span></span>
+              <span className="text-[#0168dd]">{fmt0(v1cProj)}</span>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+const v1cProjected  = v1cProj - v1cConfirmed - v1cPlanned;
+const v1cBarHoverRows = [
+  { label: "Confirmed",  color: "#10b981", value: v1cConfirmed, pct: v1cPctC },
+  { label: "Planned",    color: "#0168dd", value: v1cPlanned,   pct: v1cPctP },
+  { label: "~Projected", color: "#85baf5", value: v1cProjected, pct: v1cPctR },
+];
+
+const v1cSourceData = [
+  { week: "Week 1", dateLabel: "Jun 2–8",   paid: 6200, pending: 1000, failed: 1200, tracked: 0,    projected: 0     },
+  { week: "Week 2", dateLabel: "Jun 9–15",  paid: 12800, pending: 1400, failed: 0,   tracked: 0,    projected: 0     },
+  { week: "Week 3", dateLabel: "Jun 16–22", paid: 0,    pending: 0,    failed: 0,   tracked: 1600, projected: 8200  },
+  { week: "Week 4", dateLabel: "Jun 23–30", paid: 0,    pending: 0,    failed: 0,   tracked: 0,    projected: 22480 },
+];
+
+type TriageItem = {
+  group: "failed" | "pending";
+  member: string; initials: string;
+  week: string; dateLabel: string;
+  method: string; reason: string; amount: number;
+};
+
+const v1cTriageItemDefs: TriageItem[] = [
+  { group: "failed",  member: "Alex Ramirez",   initials: "AR", week: "Week 1", dateLabel: "Jun 2–8",  method: "Wise",     reason: "Wise verification failed",  amount: 1200 },
+  { group: "pending", member: "Maria Kowalski", initials: "MK", week: "Week 1", dateLabel: "Jun 2–8",  method: "Payoneer", reason: "Processing delayed",         amount: 1000 },
+  { group: "pending", member: "James Okafor",   initials: "JO", week: "Week 2", dateLabel: "Jun 9–15", method: "Wise",     reason: "Awaiting confirmation",      amount: 1400 },
+];
+
+const v1cTriagePendingAmt = v1cTriageItemDefs.reduce((s, i) => s + i.amount, 0);
+
+function V1cTriageDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const [confirm, setConfirm] = useState<{ item: TriageItem; action: "retry" | "process" } | null>(null);
+  const [done, setDone] = useState<Set<string>>(new Set());
+  if (!open) return null;
+
+  const handleAction = (item: TriageItem) => {
+    setConfirm({ item, action: item.group === "failed" ? "retry" : "process" });
+  };
+  const handleConfirm = () => {
+    if (!confirm) return;
+    setDone(prev => { const next = new Set(prev); next.add(confirm.item.member); return next; });
+    setConfirm(null);
+  };
+
+  const failedItems  = v1cTriageItemDefs.filter(i => i.group === "failed");
+  const pendingItems = v1cTriageItemDefs.filter(i => i.group === "pending");
+
+  return (
+    <>
+      <div className="fixed inset-0 bg-black/30 z-40" onClick={onClose} />
+      <div className="fixed right-0 top-0 bottom-0 w-[360px] bg-white z-50 flex flex-col shadow-2xl">
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[#e8eaf0]">
+          <div>
+            <p className="text-sm font-semibold text-[#1a1e35]">Payments needing attention</p>
+            <p className="text-[11px] text-[#8a8fa8] mt-0.5">{v1cTriageItemDefs.length} items · {fmt0(v1cTriagePendingAmt)} total</p>
+          </div>
+          <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-full text-[#8a8fa8] hover:bg-[#f5f6fa] hover:text-[#1a1e35] text-base leading-none">×</button>
+        </div>
+        {/* Confirmation overlay */}
+        {confirm && (
+          <div className="absolute inset-0 bg-white/95 z-10 flex items-center justify-center p-6">
+            <div className="bg-white border border-[#e8eaf0] rounded-xl shadow-lg p-5 w-full">
+              <p className="text-sm font-semibold text-[#1a1e35] mb-1">
+                {confirm.action === "retry" ? "Retry payment?" : "Process payment now?"}
+              </p>
+              <p className="text-[12px] text-[#8a8fa8] mb-4">
+                {confirm.item.member} · {fmt0(confirm.item.amount)} via {confirm.item.method}
+              </p>
+              <div className="flex gap-2">
+                <button onClick={() => setConfirm(null)} className="flex-1 py-2 text-[12px] border border-[#e8eaf0] rounded-lg text-[#8a8fa8] hover:bg-[#f5f6fa]">Cancel</button>
+                <button onClick={handleConfirm} className="flex-1 py-2 text-[12px] bg-[#0168dd] text-white rounded-lg font-semibold hover:bg-[#0158c0]">
+                  {confirm.action === "retry" ? "Confirm retry" : "Confirm"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
+          {([
+            { items: failedItems,  label: "Failed — needs retry",       accentColor: "#ef4444", bg: "bg-red-50",   border: "border-red-200",   btnCls: "bg-red-500 hover:bg-red-600",     btnLabel: "Retry" },
+            { items: pendingItems, label: "Pending — ready to process", accentColor: "#f59e0b", bg: "bg-amber-50", border: "border-amber-200", btnCls: "bg-amber-500 hover:bg-amber-600", btnLabel: "Process now" },
+          ]).map(({ items, label, accentColor, bg, border, btnCls, btnLabel }) => {
+            if (!items.length) return null;
+            return (
+              <div key={label}>
+                <p className="text-[10px] font-semibold uppercase tracking-widest mb-2" style={{ color: accentColor }}>
+                  {label} ({items.length})
+                </p>
+                <div className="space-y-2">
+                  {items.map(item => {
+                    const isDone = done.has(item.member);
+                    return (
+                      <div key={item.member} className={`rounded-lg border p-3 transition-opacity ${isDone ? "opacity-40" : ""} ${bg} ${border}`}>
+                        <div className="flex items-start justify-between mb-1.5 gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0"
+                              style={{ background: accentColor }}>
+                              {item.initials}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-[12px] font-semibold text-[#1a1e35] truncate">{item.member}</p>
+                              <p className="text-[10px] text-[#8a8fa8]">{item.week} ({item.dateLabel}) · {item.method}</p>
+                            </div>
+                          </div>
+                          <span className="text-[12px] font-semibold text-[#1a1e35] flex-shrink-0">{fmt0(item.amount)}</span>
+                        </div>
+                        <p className="text-[11px] text-[#8a8fa8] mb-2">{item.reason}</p>
+                        {!isDone ? (
+                          <button onClick={() => handleAction(item)} className={`w-full py-1.5 text-[11px] font-semibold rounded-lg text-white ${btnCls}`}>
+                            {btnLabel}
+                          </button>
+                        ) : (
+                          <p className="text-center text-[11px] text-emerald-600 font-semibold py-1">Submitted ✓</p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        {/* Footer */}
+        <div className="px-5 py-3 border-t border-[#e8eaf0]">
+          <a href="#" className="flex items-center gap-1 text-[11px] text-[#0168dd] hover:underline">
+            Open in Payment records <ChevronRight size={11} />
+          </a>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function V1cPredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatusBreakdown: boolean; seasonalityOn: boolean }) {
+  const [chartView, setChartView] = useState<"a" | "b" | "c">("a");
+  const [showTriage, setShowTriage] = useState(false);
+  const adjPct  = seasonalityOn ? v1cTotalPct : v1cMemberPct;
+  const adjProj = Math.round(v1AvgMonthly * (1 + adjPct / 100));
+  const adjPctC = Math.round(v1cConfirmed / adjProj * 100);
+  const adjPctP = Math.round(v1cPlanned   / adjProj * 100);
+  const mergedSourceData = v1cSourceData.map(d => ({
+    week: d.week, dateLabel: d.dateLabel,
+    factual: d.paid + d.pending + d.failed, tracked: d.tracked, projected: d.projected,
+  }));
+  return (
+    <div>
+      <div className="grid grid-cols-3 divide-x divide-[#e8eaf0] border-b border-[#e8eaf0]">
+        {/* Card 1 — base */}
+        <div className="px-5 py-4">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-1">Monthly avg payout</p>
+          <p className="text-3xl font-bold text-[#1a1e35] tracking-tight">{fmt0(v1AvgMonthly)}</p>
+          <p className="text-[11px] text-[#8a8fa8] mt-0.5">last 5 months</p>
+          <div className="flex items-center gap-x-2 gap-y-1 mt-2 flex-wrap text-[10px] text-[#8a8fa8]">
+            <div className="flex items-center gap-1 border-r border-[#e8eaf0] pr-2 mr-1">
+              <UserCircle2 size={13} className="text-[#1a1e35]" /><span className="font-semibold text-[#1a1e35]">{v1CurrMembers}</span>
+            </div>
+            {v1PayTypes.map((pt, i) => (
+              <div key={pt.key} className="flex items-center gap-1">
+                {i > 0 && <span className="text-[#c8cad4]">·</span>}
+                <span className="font-semibold text-[#1a1e35]">{pt.count}</span><span>{pt.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Card 2 — adjustments */}
+        <div className="px-5 py-4">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-1">Adjustments</p>
+          <div className="flex items-baseline gap-2">
+            <span className="text-3xl font-bold tracking-tight text-emerald-600">+{adjPct}%</span>
+            <TrendingUp size={16} className="text-emerald-500" />
+          </div>
+          <div className="mt-2.5 space-y-1.5">
+            {([
+              { label: "Member change", pct: v1cMemberPct, note: `${v1CurrMembers} this cycle vs avg ${v1AvgMembers}`, positive: true },
+              { label: "Seasonality",   pct: v1cSeasonPct, note: "May historically runs ~10% above your normal.",      positive: true },
+            ] as const).map(({ label, pct, note, positive }) => {
+              const isSeason = label === "Seasonality";
+              if (isSeason && !seasonalityOn) return null;
+              return (
+                <div key={label} className="flex items-start gap-2 text-[11px]">
+                  <span className={`mt-0.5 font-bold flex-shrink-0 ${positive ? "text-emerald-500" : "text-red-400"}`}>{positive ? "↑" : "↓"}</span>
+                  <div className="min-w-0">
+                    <span className="text-[#1a1e35] font-medium">{label}</span>
+                    <span className={`ml-1.5 font-semibold ${positive ? "text-emerald-600" : "text-red-500"}`}>{positive ? "+" : ""}{pct}%</span>
+                    <p className="text-[#8a8fa8] text-[10px] mt-0.5 leading-snug">{note}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Card 3 — projection */}
+        <div className="px-5 py-4">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-1">Recommended projection</p>
+          <p className="text-3xl font-bold text-[#0168dd] tracking-tight">{fmt0(adjProj)}</p>
+          <V1cBreakdownPopover />
+          <div className="relative group mt-3 cursor-default">
+            <div className="h-2 rounded-full overflow-hidden">
+              <div className="h-full flex">
+                <div className="h-full bg-emerald-500" style={{ width: `${adjPctC}%` }} />
+                <div className="h-full bg-[#0168dd]" style={{ width: `${Math.max(adjPctP, 0.6)}%` }} />
+                <div className="h-full flex-1 bg-[#85baf5]" />
+              </div>
+            </div>
+            <div className="flex justify-between text-[10px] text-[#8a8fa8] mt-0.5">
+              <span>{fmt0(v1AvgMonthly)} avg</span>
+              <span>{fmt0(adjProj)} total</span>
+            </div>
+            <div className="absolute top-full left-0 mt-2 hidden group-hover:block z-20 pointer-events-none">
+              <div className="bg-white border border-[#e8eaf0] rounded-lg shadow-lg p-3 w-48">
+                {v1cBarHoverRows.map(({ label, color, value, pct }) => {
+                  const k = value / 1000;
+                  const fmtK = `${k % 1 === 0 ? k.toFixed(0) : k.toFixed(1)}k`;
+                  return (
+                    <div key={label} className="flex items-center justify-between text-[11px] font-semibold mb-1 last:mb-0 text-[#8a8fa8]">
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-2 h-2 rounded-sm flex-shrink-0" style={{ background: color }} />
+                        <span>{label}</span>
+                      </div>
+                      <span>{fmtK} ({pct}%)</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Chart — identical to V1B */}
+      <div className="flex divide-x divide-[#e8eaf0]">
+        <div className="flex-1 px-5 py-4 flex flex-col">
+          <div className="flex items-start justify-between mb-3">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-0.5">Week-by-week distribution</p>
+              {chartView === "a" ? (
+                <p className="text-[11px] text-[#8a8fa8]">
+                  {showStatusBreakdown
+                    ? "Past weeks: paid · pending · failed — future: planned + projected"
+                    : "Past weeks show confirmed · current & future show planned + projected"}
+                </p>
+              ) : chartView === "b" ? (
+                <p className="text-[11px] text-[#8a8fa8]">Amounts owed per payment provider per week</p>
+              ) : (
+                <p className="text-[11px] text-[#8a8fa8]">Stable base sits at the bottom · variable earnings stack on top</p>
+              )}
+            </div>
+            <div className="flex items-center bg-[#f0f1f5] rounded-md p-0.5 flex-shrink-0 ml-4">
+              {([["a","By source of prediction"],["b","By cash flow channel"],["c","By earning type"]] as const).map(([v, lbl]) => (
+                <button key={v} onClick={() => setChartView(v)} className={`px-2.5 py-1 rounded text-[10px] font-medium transition-all whitespace-nowrap ${chartView === v ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8]"}`}>{lbl}</button>
+              ))}
+            </div>
+          </div>
+          {chartView === "a" && showStatusBreakdown && v1cTriageItemDefs.length > 0 && (
+            <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3 gap-2">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <AlertTriangle size={12} className="text-amber-500 flex-shrink-0" />
+                <span className="text-[11px] text-amber-800 truncate">
+                  {`${v1cTriageItemDefs.length} payments pending · $${(v1cTriagePendingAmt / 1000).toFixed(1)}k from Weeks 1–2 still need processing`}
+                </span>
+              </div>
+              <button
+                onClick={() => setShowTriage(true)}
+                className="text-[11px] text-[#0168dd] font-semibold flex-shrink-0 hover:underline flex items-center gap-0.5"
+              >Review <ChevronRight size={11} /></button>
+            </div>
+          )}
+          {chartView === "a" ? (
+            showStatusBreakdown ? (
+              <ResponsiveContainer key="v1c-bar-a-status" width="100%" height={160}>
+                <BarChart data={v1cSourceData} margin={{ top: 4, right: 4, left: 0, bottom: 28 }} barCategoryGap="30%">
+                  <CartesianGrid strokeDasharray="2 4" stroke="#e8eaf0" vertical={false} />
+                  <XAxis dataKey="week" tick={(p) => <WeekTick {...p} data={v1cSourceData} />} axisLine={false} tickLine={false} interval={0} />
+                  <YAxis tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 10, fill: "#8a8fa8" }} axisLine={false} tickLine={false} width={32} />
+                  <Tooltip content={({ active, payload }) => {
+                    if (!active || !payload?.length) return null;
+                    const d = payload[0]?.payload as typeof v1cSourceData[0];
+                    if (!d) return null;
+                    const items = [
+                      { key: "paid",      label: "Paid",      color: "#10b981", value: d.paid      },
+                      { key: "pending",   label: "Pending",   color: "#f59e0b", value: d.pending   },
+                      { key: "failed",    label: "Failed",    color: "#ef4444", value: d.failed    },
+                      { key: "tracked",   label: "Planned",   color: "#0168dd", value: d.tracked   },
+                      { key: "projected", label: "Projected", color: "#85baf5", value: d.projected },
+                    ].filter(i => i.value > 0);
+                    const total = items.reduce((s, i) => s + i.value, 0);
+                    return (
+                      <div className="bg-white border border-[#e8eaf0] rounded-lg shadow-lg p-3 text-xs min-w-[160px]">
+                        <p className="font-semibold text-[#1a1e35] mb-1.5">{d.week} · {d.dateLabel}</p>
+                        {items.map(i => (
+                          <div key={i.key} className="flex justify-between gap-4 py-0.5">
+                            <span style={{ color: i.color }}>{i.label}</span>
+                            <span className="font-medium text-[#1a1e35]">{fmt0(i.value)}</span>
+                          </div>
+                        ))}
+                        {items.length > 1 && <div className="flex justify-between gap-4 py-0.5 mt-1 pt-1.5 border-t border-[#e8eaf0]"><span className="text-[#8a8fa8]">Total</span><span className="font-semibold text-[#1a1e35]">{fmt0(total)}</span></div>}
+                      </div>
+                    );
+                  }} cursor={{ fill: "#f5f6fa" }} />
+                  <Bar dataKey="paid"      name="Paid"      stackId="s" fill="#10b981" radius={[0,0,0,0]} />
+                  <Bar dataKey="pending"   name="Pending"   stackId="s" fill="#f59e0b" radius={[0,0,0,0]} />
+                  <Bar dataKey="failed"    name="Failed"    stackId="s" fill="#ef4444" radius={[0,0,0,0]} />
+                  <Bar dataKey="tracked"   name="Planned"   stackId="s" fill="#0168dd" radius={[0,0,0,0]} />
+                  <Bar dataKey="projected" name="Projected" stackId="s" fill="#85baf5" radius={[4,4,0,0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <ResponsiveContainer key="v1c-bar-a-simple" width="100%" height={160}>
+                <BarChart data={mergedSourceData} margin={{ top: 4, right: 4, left: 0, bottom: 28 }} barCategoryGap="30%">
+                  <CartesianGrid strokeDasharray="2 4" stroke="#e8eaf0" vertical={false} />
+                  <XAxis dataKey="week" tick={(p) => <WeekTick {...p} data={mergedSourceData} />} axisLine={false} tickLine={false} interval={0} />
+                  <YAxis tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 10, fill: "#8a8fa8" }} axisLine={false} tickLine={false} width={32} />
+                  <Tooltip content={({ active, payload }) => {
+                    if (!active || !payload?.length) return null;
+                    const d = payload[0]?.payload as typeof mergedSourceData[0];
+                    if (!d) return null;
+                    const items = [
+                      { key: "factual",   label: "Confirmed", color: "#10b981", value: d.factual   },
+                      { key: "tracked",   label: "Planned",   color: "#0168dd", value: d.tracked   },
+                      { key: "projected", label: "Projected", color: "#85baf5", value: d.projected },
+                    ].filter(i => i.value > 0);
+                    const total = items.reduce((s, i) => s + i.value, 0);
+                    return (
+                      <div className="bg-white border border-[#e8eaf0] rounded-lg shadow-lg p-3 text-xs min-w-[160px]">
+                        <p className="font-semibold text-[#1a1e35] mb-1.5">{d.week} · {d.dateLabel}</p>
+                        {items.map(i => (
+                          <div key={i.key} className="flex justify-between gap-4 py-0.5">
+                            <span style={{ color: i.color }}>{i.label}</span>
+                            <span className="font-medium text-[#1a1e35]">{fmt0(i.value)}</span>
+                          </div>
+                        ))}
+                        {items.length > 1 && <div className="flex justify-between gap-4 py-0.5 mt-1 pt-1.5 border-t border-[#e8eaf0]"><span className="text-[#8a8fa8]">Total</span><span className="font-semibold text-[#1a1e35]">{fmt0(total)}</span></div>}
+                      </div>
+                    );
+                  }} cursor={{ fill: "#f5f6fa" }} />
+                  <Bar dataKey="factual"   name="Confirmed" stackId="s" fill="#10b981" radius={[4,4,0,0]} />
+                  <Bar dataKey="tracked"   name="Planned"   stackId="s" fill="#0168dd" radius={[0,0,0,0]} />
+                  <Bar dataKey="projected" name="Projected" stackId="s" fill="#85baf5" radius={[4,4,0,0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )
+          ) : chartView === "b" ? (
+            <ResponsiveContainer key="v1c-bar-b" width="100%" height={160}>
+              <BarChart data={v1ProviderWeekData} margin={{ top: 4, right: 4, left: 0, bottom: 28 }} barCategoryGap="30%">
+                <CartesianGrid strokeDasharray="2 4" stroke="#e8eaf0" vertical={false} />
+                <XAxis dataKey="week" tick={(p) => <WeekTick {...p} data={v1ProviderWeekData} />} axisLine={false} tickLine={false} interval={0} />
+                <YAxis tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 10, fill: "#8a8fa8" }} axisLine={false} tickLine={false} width={32} />
+                <Tooltip content={<ChartTip />} cursor={{ fill: "#f5f6fa" }} />
+                <Bar dataKey="factual"  name="Confirmed" stackId="s" fill="#10b981" radius={[4,4,0,0]} />
+                <Bar dataKey="Wise"     name="Wise"      stackId="s" fill="#0ea5a0" radius={[0,0,0,0]} />
+                <Bar dataKey="Payoneer" name="Payoneer"  stackId="s" fill="#f59e0b" radius={[0,0,0,0]} />
+                <Bar dataKey="Deel"     name="Deel"      stackId="s" fill="#7c3aed" radius={[0,0,0,0]} />
+                <Bar dataKey="Export"   name="Export"    stackId="s" fill="#8a8fa8" radius={[4,4,0,0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <ResponsiveContainer key="v1c-bar-c" width="100%" height={160}>
+              <BarChart data={v1cEarningTypeData} margin={{ top: 4, right: 4, left: 0, bottom: 28 }} barCategoryGap="30%">
+                <CartesianGrid strokeDasharray="2 4" stroke="#e8eaf0" vertical={false} />
+                <XAxis dataKey="week" tick={(p) => <WeekTick {...p} data={v1cEarningTypeData} />} axisLine={false} tickLine={false} interval={0} />
+                <YAxis tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 10, fill: "#8a8fa8" }} axisLine={false} tickLine={false} width={32} />
+                <Tooltip content={({ active, payload }) => {
+                  if (!active || !payload?.length) return null;
+                  const d = payload[0]?.payload as typeof v1cEarningTypeData[0];
+                  if (!d) return null;
+                  return (
+                    <div className="bg-white border border-[#e8eaf0] rounded-lg shadow-lg p-3 text-xs min-w-[180px]">
+                      <p className="font-semibold text-[#1a1e35] mb-1.5">{d.week} · {d.dateLabel}</p>
+                      {v1cEarningTypes.map(({ key, label, color }) => {
+                        const val = d[key as keyof typeof d] as number;
+                        const pct = Math.round(val / d.total * 100);
+                        return (
+                          <div key={key} className="flex justify-between gap-3 py-0.5 text-[11px]">
+                            <span className="flex items-center gap-1.5">
+                              <span className="w-2 h-2 rounded-sm flex-shrink-0 inline-block" style={{ background: color }} />
+                              <span className="text-[#8a8fa8]">{label}</span>
+                            </span>
+                            <span className="font-medium text-[#1a1e35]">{fmt0(val)} <span className="text-[#8a8fa8]">({pct}%)</span></span>
+                          </div>
+                        );
+                      })}
+                      <div className="flex justify-between mt-1 pt-1.5 border-t border-[#e8eaf0] font-semibold text-[11px]">
+                        <span className="text-[#8a8fa8]">Total</span>
+                        <span className="text-[#1a1e35]">{fmt0(d.total)}</span>
+                      </div>
+                    </div>
+                  );
+                }} cursor={{ fill: "#f5f6fa" }} />
+                <Bar dataKey="hourly"  name="Hourly pay"     stackId="s" fill="#0168dd" radius={[0,0,0,0]} />
+                <Bar dataKey="fixed"   name="Fixed pay"      stackId="s" fill="#0ea5a0" radius={[0,0,0,0]} />
+                <Bar dataKey="bonuses" name="Bonuses"        stackId="s" fill="#f59e0b" radius={[0,0,0,0]} />
+                <Bar dataKey="pto"     name="PTO & Holidays" stackId="s" fill="#8b5cf6" radius={[0,0,0,0]} />
+                <Bar dataKey="adds"    name="Additions"      stackId="s" fill="#f97316" radius={[4,4,0,0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+          <div className="flex items-center justify-between mt-1">
+            {chartView === "c" ? (
+              <div className="flex flex-wrap gap-x-5 gap-y-1.5">
+                {(["stable","variable"] as const).map(group => (
+                  <div key={group} className="flex items-center gap-3">
+                    <span className="text-[9px] font-semibold uppercase tracking-widest text-[#8a8fa8]">
+                      {group === "stable" ? "Stable base" : "Variable — Watch"}
+                    </span>
+                    {v1cEarningTypes.filter(t => t.group === group).map(({ key, label, color }) => (
+                      <div key={key} className="flex items-center gap-1.5 text-[11px] text-[#8a8fa8]">
+                        <div className="w-2 h-2 rounded-sm flex-shrink-0" style={{ background: color }} />
+                        {label}
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            ) : chartView === "b" ? (
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                <div className="flex items-center gap-1.5 text-[11px] text-[#8a8fa8]">
+                  <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: "#10b981" }} />
+                  Confirmed
+                </div>
+                {v1cProviders.map(({ key, letter, color }) => (
+                  <div key={key} className="flex items-center gap-1.5 text-[11px] text-[#8a8fa8]">
+                    <ProviderLogo letter={letter} color={color} size={12} />
+                    {key}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              showStatusBreakdown ? (
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                  {([
+                    { label: "Paid",    color: "#10b981", desc: "Successfully paid out"                },
+                    { label: "Pending", color: "#f59e0b", desc: "Payment created, awaiting processing" },
+                    { label: "Failed",  color: "#ef4444", desc: "Payment failed — needs attention"     },
+                  ] as const).map(({ label, color, desc }) => (
+                    <div key={label} className="relative group flex items-center gap-1.5 text-[11px] text-[#8a8fa8] cursor-default">
+                      <div className="w-2 h-2 rounded-sm" style={{ background: color }} />
+                      {label}
+                      <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block z-20 pointer-events-none whitespace-nowrap">
+                        <div className="bg-white border border-[#e8eaf0] rounded-lg shadow-lg p-3 text-xs">
+                          <p className="font-semibold mb-0.5" style={{ color }}>{label}</p>
+                          <p className="text-[#8a8fa8]">{desc}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  <span className="text-[#c8cad4] text-[10px]">·</span>
+                  {([
+                    { label: "Planned",   color: "#0168dd", desc: "Upcoming tracked payments"            },
+                    { label: "Projected", color: "#85baf5", desc: "Estimated based on historical trends" },
+                  ] as const).map(({ label, color, desc }) => (
+                    <div key={label} className="relative group flex items-center gap-1.5 text-[11px] text-[#8a8fa8] cursor-default">
+                      <div className="w-2 h-2 rounded-sm" style={{ background: color }} />
+                      {label}
+                      <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block z-20 pointer-events-none whitespace-nowrap">
+                        <div className="bg-white border border-[#e8eaf0] rounded-lg shadow-lg p-3 text-xs">
+                          <p className="font-semibold mb-0.5" style={{ color }}>{label}</p>
+                          <p className="text-[#8a8fa8]">{desc}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-x-4 gap-y-1">
+                  {([
+                    { label: "Confirmed", color: "#10b981", desc: "Payments already received"            },
+                    { label: "Planned",   color: "#0168dd", desc: "Upcoming tracked payments"            },
+                    { label: "Projected", color: "#85baf5", desc: "Estimated based on historical trends" },
+                  ] as const).map(({ label, color, desc }) => (
+                    <div key={label} className="relative group flex items-center gap-1.5 text-[11px] text-[#8a8fa8] cursor-default">
+                      <div className="w-2 h-2 rounded-sm" style={{ background: color }} />
+                      {label}
+                      <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block z-20 pointer-events-none whitespace-nowrap">
+                        <div className="bg-white border border-[#e8eaf0] rounded-lg shadow-lg p-3 text-xs">
+                          <p className="font-semibold mb-0.5" style={{ color }}>{label}</p>
+                          <p className="text-[#8a8fa8]">{desc}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )
+            )}
+          </div>
+        </div>
+      </div>
+      <V1cTriageDrawer open={showTriage} onClose={() => setShowTriage(false)} />
+    </div>
+  );
+}
+
+function Version1C({ showStatusBreakdown, seasonalityOn }: { showStatusBreakdown: boolean; seasonalityOn: boolean }) {
   const [bottomTab, setBottomTab] = useState<"history"|"future">("history");
   return (
     <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
@@ -1014,7 +1681,7 @@ function Version1C() {
           </div>
           <ExportDropdown />
         </div>
-        <V1bPredictivePanel />
+        <V1cPredictivePanel showStatusBreakdown={showStatusBreakdown} seasonalityOn={seasonalityOn} />
       </div>
       <div className="mt-6">
         <p className="text-base font-semibold text-[#1a1e35] mb-3">Payment Activity</p>
@@ -1402,6 +2069,8 @@ function Version2() {
 
 export default function App() {
   const [version, setVersion] = useState<"v1"|"v1b"|"v1c"|"v2">("v1b");
+  const [showStatusBreakdown, setShowStatusBreakdown] = useState(true);
+  const [seasonalityOn, setSeasonalityOn] = useState(true);
 
   return (
     <div className="flex h-screen w-full overflow-hidden font-[Inter,sans-serif]">
@@ -1416,6 +2085,21 @@ export default function App() {
             )}
           </div>
           <div className="flex items-center gap-3">
+            {version === "v1c" && (
+              <div className="flex items-center gap-4 border-r border-[#e8eaf0] pr-4">
+                {[
+                  { label: "Status breakdown", val: showStatusBreakdown, set: setShowStatusBreakdown },
+                  { label: "Seasonality",      val: seasonalityOn,       set: setSeasonalityOn       },
+                ].map(({ label, val, set }) => (
+                  <button key={label} onClick={() => set(p => !p)} className="flex items-center gap-1.5 text-[11px] text-[#8a8fa8] select-none">
+                    <span className={`relative w-7 h-4 rounded-full transition-colors flex-shrink-0 inline-flex ${val ? "bg-[#0168dd]" : "bg-[#c8cad4]"}`}>
+                      <span className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow-sm transition-transform ${val ? "translate-x-3.5" : "translate-x-0.5"}`} />
+                    </span>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
             <div className="flex items-center bg-[#f0f1f5] rounded-lg p-0.5">
               <button onClick={() => setVersion("v1")}  className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${version === "v1"  ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>Version 1</button>
               <button onClick={() => setVersion("v1b")} className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${version === "v1b" ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>Version 1B</button>
@@ -1427,7 +2111,7 @@ export default function App() {
         </div>
         {version === "v1"  && <Version1  />}
         {version === "v1b" && <Version1B />}
-        {version === "v1c" && <Version1C />}
+        {version === "v1c" && <Version1C showStatusBreakdown={showStatusBreakdown} seasonalityOn={seasonalityOn} />}
         {version === "v2"  && <Version2  />}
       </div>
     </div>
