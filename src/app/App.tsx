@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
@@ -8,7 +8,7 @@ import {
   Users, CalendarDays, Pencil, LayoutDashboard, ClipboardList,
   Activity, Lightbulb, FolderKanban, BarChart2, UserCircle2,
   Settings, Wallet, MonitorSmartphone, Plus, TrendingUp,
-  TrendingDown, Info, MoreHorizontal, Columns,
+  TrendingDown, Info, MoreHorizontal, Columns, X,
   Banknote, Gift, Umbrella, Minus, AlertTriangle,
 } from "lucide-react";
 
@@ -1001,6 +1001,16 @@ function Version1B() {
   );
 }
 
+type ManualAdjustment = {
+  id: string;
+  label: string;
+  type: "add" | "reduce";
+  unit: "pct" | "dollar";
+  value: number;    // exact typed number
+  dollars: number;  // always positive
+  pct: number;      // always positive (approx when typed in dollars)
+};
+
 // ─── V1C ───────────────────────────────────────────────────────────────────────
 
 const v1cMemberPct  = 18;
@@ -1308,13 +1318,155 @@ function V1cTriageDrawer({ open, onClose }: { open: boolean; onClose: () => void
   );
 }
 
+function AddAdjustmentDialog({
+  open, onClose, onSave, base, currentProjection, initial,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onSave: (adj: ManualAdjustment) => void;
+  base: number;
+  currentProjection: number;
+  initial?: ManualAdjustment;
+}) {
+  const [label, setLabel] = useState(initial?.label ?? "Buffer");
+  const [adjType, setAdjType] = useState<"add" | "reduce">(initial?.type ?? "add");
+  const [unit, setUnit] = useState<"pct" | "dollar">(initial?.unit ?? "pct");
+  const [rawValue, setRawValue] = useState(initial ? String(initial.value) : "");
+  const [amountTouched, setAmountTouched] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setLabel(initial?.label ?? "Buffer");
+      setAdjType(initial?.type ?? "add");
+      setUnit(initial?.unit ?? "pct");
+      setRawValue(initial ? String(initial.value) : "");
+      setAmountTouched(false);
+    }
+  }, [open]);
+
+  const parsed = parseFloat(rawValue.replace(/[^0-9.]/g, ""));
+  const isValidAmount = !isNaN(parsed) && isFinite(parsed) && parsed > 0;
+
+  let dollars = 0;
+  let pct = 0;
+  if (isValidAmount) {
+    if (unit === "dollar") {
+      dollars = parsed;
+      pct = (parsed / base) * 100;
+    } else {
+      pct = parsed;
+      dollars = base * parsed / 100;
+    }
+  }
+
+  const signedDollars = adjType === "add" ? dollars : -dollars;
+  const newProjection = Math.max(0, Math.round(currentProjection + signedDollars));
+  const isValid = isValidAmount;
+  const amountError = amountTouched && !isValidAmount ? "Enter an amount greater than 0" : null;
+  const showSanityWarn = isValidAmount && dollars > base;
+  const showClampWarn = adjType === "reduce" && isValidAmount && currentProjection + signedDollars < 0;
+
+  const handleSave = () => {
+    if (!isValid) return;
+    onSave({ id: initial?.id ?? Math.random().toString(36).slice(2), label: label || "Adjustment", type: adjType, unit, value: parsed, dollars, pct });
+    onClose();
+  };
+
+  if (!open) return null;
+  return (
+    <>
+      <div className="fixed inset-0 z-40 bg-black/30" onClick={onClose} />
+      <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
+        <div className="bg-white rounded-xl shadow-2xl w-96 p-6 pointer-events-auto">
+          <h2 className="text-[15px] font-semibold text-[#1a1e35] mb-5">
+            {initial ? "Edit adjustment" : "Add adjustment"}
+          </h2>
+
+          {/* Label */}
+          <div className="mb-4">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-1.5">Label</p>
+            <input type="text" value={label} onChange={e => setLabel(e.target.value)}
+              className="w-full border border-[#e8eaf0] rounded-lg px-3 py-2 text-sm text-[#1a1e35] focus:outline-none focus:ring-2 focus:ring-[#0168dd]/20 focus:border-[#0168dd] transition-colors" />
+          </div>
+
+          {/* Type */}
+          <div className="mb-4">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-1.5">Type</p>
+            <div className="flex bg-[#f0f1f5] rounded-lg p-0.5 w-fit">
+              {(["add", "reduce"] as const).map(t => (
+                <button key={t} onClick={() => setAdjType(t)}
+                  className={`px-4 py-1.5 rounded-md text-sm font-semibold transition-all ${adjType === t ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>
+                  {t === "add" ? "Add" : "Reduce"}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Amount */}
+          <div className="mb-1">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-1.5">Amount</p>
+            <div className="flex gap-2">
+              <div className="flex bg-[#f0f1f5] rounded-lg p-0.5 flex-shrink-0">
+                {(["pct", "dollar"] as const).map(u => (
+                  <button key={u} onClick={() => setUnit(u)}
+                    className={`px-2.5 py-1.5 rounded-md text-sm font-semibold transition-all ${unit === u ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8]"}`}>
+                    {u === "pct" ? "%" : "$"}
+                  </button>
+                ))}
+              </div>
+              <input type="text" inputMode="decimal" value={rawValue}
+                onChange={e => setRawValue(e.target.value)}
+                onBlur={() => setAmountTouched(true)}
+                placeholder={unit === "pct" ? "e.g. 9" : "e.g. 5000"}
+                className={`flex-1 border rounded-lg px-3 py-2 text-sm text-[#1a1e35] focus:outline-none focus:ring-2 transition-colors ${amountError ? "border-red-400 focus:ring-red-200 focus:border-red-400" : "border-[#e8eaf0] focus:ring-[#0168dd]/20 focus:border-[#0168dd]"}`} />
+            </div>
+            {amountError && <p className="text-[11px] text-red-500 mt-1">{amountError}</p>}
+          </div>
+
+          {/* Helper line */}
+          {isValidAmount && (
+            <p className="text-[11px] text-[#8a8fa8] mt-2 leading-snug">
+              {unit === "dollar"
+                ? <>≈{Math.round(pct)}% of your {fmt0(base)} base · new projection <span className="font-semibold text-[#0168dd]">{fmt0(newProjection)}</span></>
+                : <>= {fmt0(Math.round(dollars))} of your {fmt0(base)} base · new projection <span className="font-semibold text-[#0168dd]">{fmt0(newProjection)}</span></>}
+            </p>
+          )}
+
+          {/* Warnings */}
+          {showSanityWarn && <p className="text-[11px] text-amber-600 mt-1.5">Large adjustment — double-check the amount.</p>}
+          {showClampWarn  && <p className="text-[11px] text-red-500 mt-1.5">This reduction would bring the projection below $0.</p>}
+
+          {/* Footer */}
+          <div className="flex items-center justify-between mt-6 pt-4 border-t border-[#e8eaf0]">
+            <button onClick={onClose} className="px-4 py-2 text-sm font-medium text-[#8a8fa8] hover:text-[#1a1e35] transition-colors">Cancel</button>
+            <button onClick={handleSave} disabled={!isValid}
+              className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${isValid ? "bg-[#0168dd] text-white hover:bg-[#0057bb]" : "bg-[#e8eaf0] text-[#c8cad4] cursor-not-allowed"}`}>
+              {initial ? "Save" : "Add"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
 function V1cPredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatusBreakdown: boolean; seasonalityOn: boolean }) {
   const [chartView, setChartView] = useState<"a" | "b" | "c">("a");
   const [showTriage, setShowTriage] = useState(false);
-  const adjPct  = seasonalityOn ? v1cTotalPct : v1cMemberPct;
-  const adjProj = Math.round(v1AvgMonthly * (1 + adjPct / 100));
+  const [manualAdjustments, setManualAdjustments] = useState<ManualAdjustment[]>([]);
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [editingAdj, setEditingAdj] = useState<ManualAdjustment | null>(null);
+
+  const manualNet = manualAdjustments.reduce((s, a) => s + (a.type === "add" ? a.dollars : -a.dollars), 0);
+  const systemDollars = v1cMemberAmt + (seasonalityOn ? v1cSeasonAmt : 0);
+  const totalAboveBase = systemDollars + manualNet;
+  const adjProj = Math.max(0, Math.round(v1AvgMonthly + totalAboveBase));
+  const adjPct = Math.round(totalAboveBase / v1AvgMonthly * 100);
   const adjPctC = Math.round(v1cConfirmed / adjProj * 100);
   const adjPctP = Math.round(v1cPlanned   / adjProj * 100);
+  const projForDialog = editingAdj
+    ? adjProj - (editingAdj.type === "add" ? editingAdj.dollars : -editingAdj.dollars)
+    : adjProj;
   const mergedSourceData = v1cSourceData.map(d => ({
     week: d.week, dateLabel: d.dateLabel,
     factual: d.paid + d.pending + d.failed, tracked: d.tracked, projected: d.projected,
@@ -1342,29 +1494,44 @@ function V1cPredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
 
         {/* Card 2 — adjustments */}
         <div className="px-5 py-4">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-1">Adjustments</p>
-          <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-bold tracking-tight text-emerald-600">+{adjPct}%</span>
-            <TrendingUp size={16} className="text-emerald-500" />
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8]">Adjustments</p>
+            <button onClick={() => { setEditingAdj(null); setShowAddDialog(true); }}
+              className="flex items-center gap-0.5 text-[10px] font-medium text-[#0168dd] border border-[#0168dd]/40 rounded-md px-2 py-0.5 hover:bg-[#0168dd]/5 transition-colors select-none">
+              <Plus size={10} /> Add adjustment
+            </button>
           </div>
-          <div className="mt-2.5 space-y-1.5">
+          <div className="flex items-baseline gap-2">
+            <span className={`text-3xl font-bold tracking-tight ${adjPct >= 0 ? "text-emerald-600" : "text-red-500"}`}>{adjPct >= 0 ? "+" : ""}{adjPct}%</span>
+            {adjPct >= 0 ? <TrendingUp size={16} className="text-emerald-500" /> : <TrendingDown size={16} className="text-red-400" />}
+          </div>
+          <div className="mt-2 divide-y divide-[#f0f1f5]">
             {([
               { label: "Member change", pct: v1cMemberPct, note: `${v1CurrMembers} this cycle vs avg ${v1AvgMembers}`, positive: true },
-              { label: "Seasonality",   pct: v1cSeasonPct, note: "May historically runs ~10% above your normal.",      positive: true },
+              { label: "Seasonality",   pct: v1cSeasonPct, note: "May is typically above avg.",                       positive: true },
             ] as const).map(({ label, pct, note, positive }) => {
               const isSeason = label === "Seasonality";
               if (isSeason && !seasonalityOn) return null;
               return (
-                <div key={label} className="flex items-start gap-2 text-[11px]">
-                  <span className={`mt-0.5 font-bold flex-shrink-0 ${positive ? "text-emerald-500" : "text-red-400"}`}>{positive ? "↑" : "↓"}</span>
-                  <div className="min-w-0">
-                    <span className="text-[#1a1e35] font-medium">{label}</span>
-                    <span className={`ml-1.5 font-semibold ${positive ? "text-emerald-600" : "text-red-500"}`}>{positive ? "+" : ""}{pct}%</span>
-                    <p className="text-[#8a8fa8] text-[10px] mt-0.5 leading-snug">{note}</p>
-                  </div>
+                <div key={label} className="flex items-center gap-1.5 text-[11px] py-1.5 min-w-0">
+                  <span className={`font-semibold flex-shrink-0 ${positive ? "text-emerald-600" : "text-red-500"}`}>{positive ? "+" : ""}{pct}%</span>
+                  <span className="text-[#1a1e35] font-medium flex-shrink-0">{label}</span>
+                  <span className="text-[#d0d3de] flex-shrink-0">—</span>
+                  <span className="text-[#8a8fa8] truncate">{note}</span>
                 </div>
               );
             })}
+            {manualAdjustments.map(adj => (
+              <div key={adj.id} className="flex items-center gap-1.5 text-[11px] py-1.5 min-w-0">
+                <span className={`font-semibold flex-shrink-0 ${adj.type === "add" ? "text-emerald-600" : "text-red-500"}`}>{adj.type === "add" ? "+" : "−"}{adj.unit === "pct" ? `${adj.value}%` : `≈${Math.round(adj.pct)}%`}</span>
+                <span className="text-[#1a1e35] font-medium flex-shrink-0">{adj.label}</span>
+                <span className="text-[#d0d3de] flex-shrink-0">—</span>
+                <span className="text-[#8a8fa8] flex-shrink-0">{adj.unit === "dollar" ? fmt0(Math.round(adj.dollars)) : `≈${fmt0(Math.round(adj.dollars))}`}</span>
+                <span className="text-[9px] font-medium bg-[#f0f1f5] text-[#8a8fa8] rounded px-1.5 py-0.5 flex-shrink-0">Added by you</span>
+                <button onClick={() => { setEditingAdj(adj); setShowAddDialog(true); }} className="ml-auto flex-shrink-0 p-0.5 rounded text-[#8a8fa8] hover:text-[#0168dd] hover:bg-[#f0f1f5] transition-colors"><Pencil size={11} /></button>
+                <button onClick={() => setManualAdjustments(prev => prev.filter(a => a.id !== adj.id))} className="flex-shrink-0 p-0.5 rounded text-[#8a8fa8] hover:text-red-500 hover:bg-red-50 transition-colors"><X size={11} /></button>
+              </div>
+            ))}
           </div>
         </div>
 
@@ -1664,6 +1831,20 @@ function V1cPredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
         </div>
       </div>
       <V1cTriageDrawer open={showTriage} onClose={() => setShowTriage(false)} />
+      <AddAdjustmentDialog
+        open={showAddDialog}
+        onClose={() => setShowAddDialog(false)}
+        onSave={adj => {
+          if (editingAdj) {
+            setManualAdjustments(prev => prev.map(a => a.id === adj.id ? adj : a));
+          } else {
+            setManualAdjustments(prev => [...prev, adj]);
+          }
+        }}
+        base={v1AvgMonthly}
+        currentProjection={projForDialog}
+        initial={editingAdj ?? undefined}
+      />
     </div>
   );
 }
