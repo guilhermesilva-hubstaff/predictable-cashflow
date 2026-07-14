@@ -1,16 +1,17 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, Fragment } from "react";
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
-  ComposedChart, Line, ReferenceLine,
+  ComposedChart, ReferenceLine, LabelList,
 } from "recharts";
 import {
   ArrowLeft, ChevronDown, ChevronRight, Download, Send, Clock,
   Users, CalendarDays, Pencil, LayoutDashboard, ClipboardList,
   Activity, Lightbulb, FolderKanban, BarChart2, UserCircle2,
   Settings, Wallet, MonitorSmartphone, Plus, TrendingUp,
-  TrendingDown, Info, MoreHorizontal, Columns, X,
-  Banknote, Gift, Umbrella, Minus, AlertTriangle,
+  TrendingDown, MoreHorizontal, Columns, X,
+  Banknote, Gift, Umbrella, Minus, AlertTriangle, SlidersHorizontal, Info,
+  FileSpreadsheet, Filter,
 } from "lucide-react";
 
 const fmt0 = (n: number) =>
@@ -231,6 +232,34 @@ const v2WeeklyMembers = [
   },
 ];
 
+// 1L future-payment "By source" roster — 15 members summing to the Wise total ($10,600).
+const v1lWiseMembers = [
+  ...v2WeeklyMembers,
+  ...[
+    { name: "Sofia Rossi",  avatar: "SR", color: "#e5764e", total: 620 },
+    { name: "Liam OBrien",  avatar: "LO", color: "#0ea5a0", total: 640 },
+    { name: "Yuki Tanaka",  avatar: "YT", color: "#8b5cf6", total: 600 },
+    { name: "Noah Kim",     avatar: "NK", color: "#0168dd", total: 660 },
+    { name: "Emma Novak",   avatar: "EN", color: "#10b981", total: 580 },
+    { name: "Diego Santos", avatar: "DS", color: "#f59e0b", total: 700 },
+    { name: "Chloe Dubois", avatar: "CD", color: "#e5764e", total: 610 },
+    { name: "Omar Haddad",  avatar: "OH", color: "#0ea5a0", total: 645 },
+    { name: "Zara Ali",     avatar: "ZA", color: "#8b5cf6", total: 540 },
+  ].map(m => {
+    const tracked = Math.round(m.total * 0.6);
+    const est = m.total - tracked;
+    return {
+      name: m.name,
+      email: `${m.name.toLowerCase().replace(/[^a-z]+/g, ".")}@hubstaff.com`,
+      avatar: m.avatar, color: m.color, total: m.total,
+      items: [
+        { label: "Tracked hours",       sub: "Timesheets", hours: `${Math.round(tracked / 20)}:00`, rate: "$20.00/hr", status: "Confirmed" as const, amount: tracked },
+        { label: "Estimated remaining", sub: "Timesheets", hours: `~${Math.round(est / 20)}:00`,     rate: "$20.00/hr", status: "Projected" as const, amount: est },
+      ],
+    };
+  }),
+];
+
 // ─── Shared helpers ────────────────────────────────────────────────────────────
 
 function ChartTip({ active, payload, label }: any) {
@@ -280,7 +309,7 @@ function ChevronLeft({ size = 16, className = "" }: { size?: number; className?:
   return <ChevronRight size={size} className={`rotate-180 ${className}`} />;
 }
 
-function Sidebar({ active }: { active: "v1" | "v1c" | "v1d" | "v1e" | "v2" }) {
+function Sidebar({ active }: { active: "v1" | "v1c" | "v1d" | "v1e" | "v1f" | "v1g" | "v1h" | "v1i" | "v1j" | "v1k" | "v1l" | "v2" }) {
   const topNav = [
     { icon: LayoutDashboard, label: "Dashboard" },
     { icon: ClipboardList,   label: "Timesheets" },
@@ -288,7 +317,7 @@ function Sidebar({ active }: { active: "v1" | "v1c" | "v1d" | "v1e" | "v2" }) {
     { icon: Lightbulb,       label: "Insights" },
     { icon: FolderKanban,    label: "Project management" },
     { icon: CalendarDays,    label: "Calendar" },
-    { icon: BarChart2,       label: "Reports",  isActive: active === "v1" || active === "v1c" || active === "v1d" || active === "v1e" },
+    { icon: BarChart2,       label: "Reports",  isActive: active === "v1" || active === "v1c" || active === "v1d" || active === "v1e" || active === "v1f" || active === "v1g" || active === "v1h" || active === "v1i" || active === "v1j" || active === "v1k" || active === "v1l" },
     { icon: UserCircle2,     label: "People" },
   ];
   return (
@@ -358,7 +387,7 @@ function V1PredictivePanel() {
     <div>
       <div className="grid grid-cols-4 divide-x divide-[#e8eaf0] border-b border-[#e8eaf0]">
         <div className="px-5 py-4">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-1">Monthly avg payout</p>
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-1 h-[21px] flex items-center">Monthly avg payout</p>
           <p className="text-3xl font-bold text-[#1a1e35] tracking-tight">{fmt0(v1AvgMonthly)}</p>
           <p className="text-[11px] text-[#8a8fa8] mt-0.5">last 5 months</p>
           <ResponsiveContainer width="100%" height={32} className="mt-2">
@@ -369,7 +398,7 @@ function V1PredictivePanel() {
           </ResponsiveContainer>
         </div>
         <div className="px-5 py-4">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-1">Member change</p>
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-1">Headcount change</p>
           <div className="flex items-baseline gap-2">
             <span className={`text-3xl font-bold tracking-tight ${up ? "text-emerald-600" : "text-red-500"}`}>{up ? "+" : ""}{v1DeltaPct.toFixed(0)}%</span>
             {up ? <TrendingUp size={16} className="text-emerald-500" /> : <TrendingDown size={16} className="text-red-400" />}
@@ -385,7 +414,7 @@ function V1PredictivePanel() {
           </div>
         </div>
         <div className="px-5 py-4">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-1">Recommended projection</p>
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-1 h-[21px] flex items-center">Recommended projection</p>
           <p className="text-3xl font-bold text-[#0168dd] tracking-tight">{fmt0(v1AdjProj)}</p>
           <p className="text-[11px] text-[#8a8fa8] mt-0.5">avg × ({v1CurrMembers}/{v1AvgMembers} members)</p>
           <div className="mt-3 h-1.5 bg-[#e8f2fd] rounded-full overflow-hidden">
@@ -791,12 +820,12 @@ function V1bPredictivePanel() {
     <div>
       <div className="grid grid-cols-3 divide-x divide-[#e8eaf0] border-b border-[#e8eaf0]">
         <div className="px-5 py-4">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-1">Monthly avg payout</p>
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-1 h-[21px] flex items-center">Monthly avg payout</p>
           <p className="text-3xl font-bold text-[#1a1e35] tracking-tight">{fmt0(v1AvgMonthly)}</p>
           <p className="text-[11px] text-[#8a8fa8] mt-0.5">last 5 months</p>
         </div>
         <div className="px-5 py-4">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-1">Member change</p>
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-1">Headcount change</p>
           <div className="flex items-baseline gap-2">
             <span className={`text-3xl font-bold tracking-tight ${up ? "text-emerald-600" : "text-red-500"}`}>{up ? "+" : ""}{v1DeltaPct.toFixed(0)}%</span>
             {up ? <TrendingUp size={16} className="text-emerald-500" /> : <TrendingDown size={16} className="text-red-400" />}
@@ -815,7 +844,7 @@ function V1bPredictivePanel() {
           </div>
         </div>
         <div className="px-5 py-4">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-1">Recommended projection</p>
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-1 h-[21px] flex items-center">Recommended projection</p>
           <div className="flex items-baseline gap-2">
             <p className="text-3xl font-bold text-[#0168dd] tracking-tight">{fmt0(v1AdjProj)}</p>
             <BreakdownPopover />
@@ -1093,20 +1122,20 @@ function ProviderLetterBadge({ letter, color, size = 14 }: { letter: string; col
   );
 }
 
-function V1cBreakdownPopover() {
+function V1cBreakdownPopover({ dark = false, align = "right" }: { dark?: boolean; align?: "left" | "right" } = {}) {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<"prediction"|"channel"|"earning">("prediction");
   const activeTab = v1cBreakdownTabs.find(t => t.key === tab)!;
   const total = activeTab.rows.reduce((s, r) => s + r.value, 0);
   return (
     <div className="relative mt-1.5">
-      <button onClick={() => setOpen(o => !o)} className="flex items-center gap-1 text-[11px] text-[#0168dd] hover:text-[#0057bb] transition-colors select-none">
+      <button onClick={() => setOpen(o => !o)} className={`flex items-center gap-1 text-[11px] whitespace-nowrap transition-colors select-none ${dark ? "text-[#1a1e35] hover:text-[#0168dd]" : "text-[#0168dd] hover:text-[#0057bb]"}`}>
         View breakdown <ChevronDown size={11} className={`transition-transform duration-150 ${open ? "rotate-180" : ""}`} />
       </button>
       {open && (
         <>
           <div className="fixed inset-0 z-20" onClick={() => setOpen(false)} />
-          <div className="absolute top-6 right-0 z-30 bg-white rounded-lg border border-[#e8eaf0] shadow-xl w-72 overflow-hidden">
+          <div className={`absolute top-6 ${align === "left" ? "left-0" : "right-0"} z-30 bg-white rounded-lg border border-[#e8eaf0] shadow-xl w-72 overflow-hidden`}>
             <div className="flex border-b border-[#e8eaf0]">
               {v1cBreakdownTabs.map(t => (
                 <button key={t.key} onClick={() => setTab(t.key)} className={`flex-1 py-2 text-[9px] font-semibold transition-colors border-b-2 -mb-px whitespace-nowrap px-1 ${tab === t.key ? "border-[#0168dd] text-[#0168dd]" : "border-transparent text-[#8a8fa8] hover:text-[#1a1e35]"}`}>
@@ -1149,7 +1178,7 @@ function AdjustmentsBreakdownPopover() {
   const [open, setOpen] = useState(false);
   const fmtK = (n: number) => { const k = n / 1000; return `$${k % 1 === 0 ? k.toFixed(0) : k.toFixed(1)}k`; };
   const drivers = [
-    { label: "Member change", pct: v1cMemberPct, amt: v1cMemberAmt, color: "#10b981" },
+    { label: "Headcount change", pct: v1cMemberPct, amt: v1cMemberAmt, color: "#10b981" },
     { label: "Seasonality",   pct: v1cSeasonPct, amt: v1cSeasonAmt, color: "#f59e0b" },
   ];
   return (
@@ -1196,7 +1225,7 @@ const v1cSourceData = [
   { week: "Week 1", dateLabel: "Jun 2–8",   paid: 6200, pending: 1000, failed: 1200, tracked: 0,    projected: 0     },
   { week: "Week 2", dateLabel: "Jun 9–15",  paid: 12800, pending: 1400, failed: 0,   tracked: 0,    projected: 0     },
   { week: "Week 3", dateLabel: "Jun 16–22", paid: 0,    pending: 0,    failed: 0,   tracked: 1600, projected: 8200  },
-  { week: "Week 4", dateLabel: "Jun 23–30", paid: 0,    pending: 0,    failed: 0,   tracked: 0,    projected: 22480 },
+  { week: "Week 4", dateLabel: "Jun 23–30", paid: 0,    pending: 0,    failed: 0,   tracked: 0,    projected: v1AvgMonthly - 32400 },  // W1–W3 sum 32,400 → June gross = the base
 ];
 
 type TriageItem = {
@@ -1379,9 +1408,12 @@ function AddAdjustmentDialog({
       <div className="fixed inset-0 z-40 bg-black/30" onClick={onClose} />
       <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
         <div className="bg-white rounded-xl shadow-2xl w-96 p-6 pointer-events-auto">
-          <h2 className="text-[15px] font-semibold text-[#1a1e35] mb-5">
+          <h2 className="text-[15px] font-semibold text-[#1a1e35] mb-1">
             {initial ? "Edit adjustment" : "Add adjustment"}
           </h2>
+          <p className="text-[12px] text-[#8a8fa8] leading-snug mb-5">
+            This estimate is built from your payment history, so it can miss one-offs. Nudge it up or down — add a buffer to stay covered, or reduce it for a cost that won't repeat.
+          </p>
 
           {/* Label */}
           <div className="mb-4">
@@ -1477,7 +1509,7 @@ function V1cPredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
       <div className="grid grid-cols-3 divide-x divide-[#e8eaf0] border-b border-[#e8eaf0]">
         {/* Card 1 — base */}
         <div className="px-5 py-4">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-1">Monthly avg payout</p>
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-1 h-[21px] flex items-center">Monthly avg payout</p>
           <p className="text-3xl font-bold text-[#1a1e35] tracking-tight">{fmt0(v1AvgMonthly)}</p>
           <p className="text-[11px] text-[#8a8fa8] mt-0.5">last 5 months</p>
           <div className="flex items-center gap-x-2 gap-y-1 mt-2 flex-wrap text-[10px] text-[#8a8fa8]">
@@ -1496,7 +1528,7 @@ function V1cPredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
         {/* Card 2 — adjustments */}
         <div className="px-5 py-4">
           <div className="flex items-center justify-between mb-1">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8]">Adjustments</p>
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] h-[21px] flex items-center">Adjustments</p>
             <button onClick={() => { setEditingAdj(null); setShowAddDialog(true); }}
               className="flex items-center gap-0.5 text-[10px] font-medium text-[#0168dd] border border-[#0168dd]/40 rounded-md px-2 py-0.5 hover:bg-[#0168dd]/5 transition-colors select-none">
               <Plus size={10} /> Add adjustment
@@ -1508,7 +1540,7 @@ function V1cPredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
           </div>
           <div className="mt-2 divide-y divide-[#f0f1f5]">
             {([
-              { label: "Member change", pct: v1cMemberPct, note: `${v1CurrMembers} this cycle vs avg ${v1AvgMembers}`, positive: true },
+              { label: "Headcount change", pct: v1cMemberPct, note: `${v1CurrMembers} this cycle vs avg ${v1AvgMembers}`, positive: true },
               { label: "Seasonality",   pct: v1cSeasonPct, note: "May is typically above avg.",                       positive: true },
             ] as const).map(({ label, pct, note, positive }) => {
               const isSeason = label === "Seasonality";
@@ -1538,7 +1570,7 @@ function V1cPredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
 
         {/* Card 3 — projection */}
         <div className="px-5 py-4">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-1">Recommended projection</p>
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-1 h-[21px] flex items-center">Recommended projection</p>
           <p className="text-3xl font-bold text-[#0168dd] tracking-tight">{fmt0(adjProj)}</p>
           <V1cBreakdownPopover />
           <div className="relative group mt-3 cursor-default">
@@ -2116,12 +2148,34 @@ function ProviderSettingsSheet({
 }
 
 function ProviderLogo({ id, size = 32 }: { id: string; size?: number }) {
+  // Real Zone brand marks (symbol only, no container) — from the Zone Tokens & Components file.
   if (id === "wise") return (
-    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" style={{ flexShrink: 0 }}>
-      <rect width="32" height="32" rx="8" fill="#00B9FF"/>
-      <path d="M7.5 11L11 21L16 14L21 21L24.5 11H22L21 13.5L16 21L11 13.5L10 11H7.5Z" fill="white"/>
+    <svg width={size} height={size} viewBox="0 0 48 48" fill="none" preserveAspectRatio="xMidYMid meet" style={{ flexShrink: 0 }}>
+      <path d="M14.0834 16.0538L3 29.3493H22.7899L25.0136 23.0801H16.5335L21.715 16.9305L21.7317 16.7674L18.3625 10.8142H33.5206L21.7705 44H29.8114L44 4H7.34463L14.0834 16.0538Z" fill="#163300"/>
     </svg>
   );
+  if (id === "bitwage") return (
+    <svg width={size} height={size} viewBox="0 0 24.0009 31.9999" fill="none" preserveAspectRatio="xMidYMid meet" style={{ flexShrink: 0 }}>
+      <path d="M15.9979 8.00305H7.99893V16.002H15.9979V24.0009H7.99893C7.99893 19.5807 4.41616 16.002 0 16.002V24.0009C4.42025 24.0009 7.99893 27.5837 7.99893 31.9999H15.9979L24.0009 24.0009V16.002L15.9979 8.00305Z" fill="#1C1C1C"/>
+      <path d="M0 0V8.00302H7.99893C7.99893 3.58277 4.42025 0 0 0Z" fill="#1C1C1C"/>
+    </svg>
+  );
+  if (id === "paypal") return (
+    <svg width={size} height={size} viewBox="0 0 35.4656 41.85" fill="none" preserveAspectRatio="xMidYMid meet" style={{ flexShrink: 0 }}>
+      <path d="M30.1966 3.15562C28.2588 0.946923 24.7559 0 20.2747 0H7.26888C6.82551 1.64171e-05 6.39668 0.158197 6.0595 0.446103C5.72232 0.734008 5.4989 1.13275 5.42941 1.57065L0.014053 35.9162C-0.0935867 36.5935 0.430844 37.2068 1.11729 37.2068H9.1466L11.1631 24.4164L11.1005 24.8169C11.2442 23.9128 12.0174 23.246 12.933 23.246H16.7485C24.2441 23.246 30.1133 20.2015 31.8277 11.3944C31.8786 11.1339 31.9227 10.8804 31.9608 10.6327C31.7444 10.5181 31.7444 10.5181 31.9608 10.6327C32.4713 7.37749 31.9573 5.1617 30.1966 3.15562Z" fill="#27346A"/>
+      <path d="M14.2354 9.46005C14.4549 9.35553 14.695 9.30137 14.9381 9.30151H25.1344C26.3418 9.30151 27.468 9.38009 28.4971 9.54572C28.7851 9.59164 29.0716 9.64645 29.3562 9.7101C29.7595 9.7991 30.1582 9.90804 30.5508 10.0365C31.0567 10.2055 31.5279 10.4022 31.9609 10.6327C32.4713 7.37624 31.9573 5.1617 30.1966 3.15562C28.2577 0.946923 24.7559 0 20.2747 0H7.26777C6.352 0 5.57293 0.666698 5.42941 1.57065L0.0140537 35.9149C-0.093586 36.5933 0.430845 37.2058 1.11618 37.2058H9.1466L13.3302 10.6755C13.3714 10.4147 13.4752 10.1679 13.6329 9.95615C13.7906 9.74442 13.9974 9.57417 14.2354 9.46005Z" fill="#27346A"/>
+      <path d="M31.8277 11.3944C30.1133 20.2002 24.2442 23.246 16.7485 23.246H12.9319C12.0163 23.246 11.2429 23.9128 11.1007 24.8169L8.59199 40.7202C8.49826 41.3129 8.95663 41.85 9.5563 41.85H16.3248C16.7125 41.8499 17.0875 41.7115 17.3823 41.4596C17.677 41.2077 17.8723 40.859 17.9329 40.476L17.9988 40.1311L19.2745 32.0462L19.3567 31.5993C19.4172 31.2164 19.6125 30.8676 19.9072 30.6158C20.2019 30.3639 20.5769 30.2255 20.9646 30.2253H21.9776C28.5343 30.2253 33.6683 27.5616 35.1686 19.8577C35.7948 16.6383 35.4708 13.9503 33.8142 12.0623C33.3117 11.4905 32.6878 11.0182 31.9609 10.6327C31.9216 10.8816 31.8787 11.1339 31.8277 11.3944Z" fill="#2790C3"/>
+      <path d="M30.1665 9.91731C29.8992 9.83925 29.6293 9.77014 29.3574 9.7101C29.0727 9.6475 28.7862 9.59305 28.4984 9.54683C27.4682 9.38009 26.3429 9.30151 25.1344 9.30151L14.9393 9.30137C14.6959 9.30082 14.4557 9.35546 14.2365 9.46117C13.9982 9.57493 13.7907 9.74436 13.6329 9.95615C13.4752 10.1679 13.372 10.4157 13.3312 10.6766L11.1007 24.8169C11.2432 23.9128 12.0174 23.246 12.9332 23.246H16.7498C24.2454 23.246 30.1144 20.2015 31.8288 11.3944C31.8798 11.1339 31.9227 10.8815 31.962 10.6327C31.5279 10.4035 31.058 10.2055 30.5519 10.0376C30.4242 9.99527 30.2956 9.95517 30.1665 9.91731Z" fill="#1F264F"/>
+    </svg>
+  );
+  if (id === "deel") return (
+    <svg width={size} height={size} viewBox="0 0 25.3431 23.9913" fill="none" preserveAspectRatio="xMidYMid meet" style={{ flexShrink: 0 }}>
+      <path d="M0 14.5794C0 8.06321 4.15956 5.16756 8.72063 5.16756C12.8834 5.16756 14.6387 7.81245 14.6387 7.81245V0H19.1473V19.253C19.1473 20.8334 19.2017 22.2595 19.312 23.5311H14.6402V21.3702C14.6402 21.3702 12.8513 23.9913 8.7221 23.9913C4.32007 23.9913 0 21.4653 0 14.5794ZM9.87217 20.5319C13.0653 20.5319 15.1298 18.1015 15.1298 14.5794C15.1298 10.9342 13.0638 8.62696 9.87217 8.62696C6.68049 8.62696 4.69086 10.8203 4.69086 14.5794C4.69086 18.3386 6.76428 20.5319 9.87217 20.5319Z" fill="#1B1B1B"/>
+      <path d="M21 19.3047H25.3431V23.5162H21V19.3047Z" fill="#1B1B1B"/>
+    </svg>
+  );
+  if (id === "export") return <FileSpreadsheet size={size} className="text-[#1a1e35]" style={{ flexShrink: 0 }} />;
+  // Payoneer: pending correct Zone asset (node 9293:73 exported a rainbow ring, not the Payoneer mark).
   if (id === "payoneer") return (
     <svg width={size} height={size} viewBox="0 0 32 32" fill="none" style={{ flexShrink: 0 }}>
       <rect width="32" height="32" rx="8" fill="#F05A28"/>
@@ -2130,8 +2184,7 @@ function ProviderLogo({ id, size = 32 }: { id: string; size?: number }) {
   );
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" fill="none" style={{ flexShrink: 0 }}>
-      <rect width="32" height="32" rx="8" fill="#003087"/>
-      <text x="16" y="21" textAnchor="middle" fill="white" fontSize="10" fontWeight="700" fontFamily="system-ui,sans-serif">PP</text>
+      <rect width="32" height="32" rx="8" fill="#e8eaf0"/>
     </svg>
   );
 }
@@ -2223,7 +2276,7 @@ function FundingEmailPreviewDialog({
   );
 }
 
-function FundYourAccountsPanel() {
+function FundYourAccountsPanel({ showBars = true }: { showBars?: boolean }) {
   const [providers, setProviders] = useState<FundingProvider[]>(fundInitProviders);
   const [prefundProvider, setPrefundProvider] = useState<FundingProvider | null>(null);
   const [settingsProvider, setSettingsProvider] = useState<FundingProvider | null>(null);
@@ -2339,9 +2392,11 @@ function FundYourAccountsPanel() {
                           </span>
                         )}
                       </div>
-                      <div className="h-1.5 bg-[#f0f1f5] rounded-full overflow-hidden">
-                        <div className={`h-full rounded-full transition-all ${p.status === "funded" ? "bg-emerald-400" : "bg-amber-400"}`} style={{ width: `${pct}%` }} />
-                      </div>
+                      {showBars && (
+                        <div className="h-1.5 bg-[#f0f1f5] rounded-full overflow-hidden">
+                          <div className={`h-full rounded-full transition-all ${p.status === "funded" ? "bg-emerald-400" : "bg-amber-400"}`} style={{ width: `${pct}%` }} />
+                        </div>
+                      )}
                     </>
                   ) : null}
                 </div>
@@ -2411,7 +2466,7 @@ function FundYourAccountsPanel() {
                         </div>
                       )}
                     </div>
-                    {p.status !== "no-connection" && p.balance !== undefined && p.needed !== undefined && (
+                    {showBars && p.status !== "no-connection" && p.balance !== undefined && p.needed !== undefined && (
                       <div className="mt-2 ml-11 flex items-center gap-2">
                         <div className="flex-1 h-1.5 bg-[#f0f1f5] rounded-full overflow-hidden">
                           <div className={`h-full rounded-full transition-all ${p.status === "funded" ? "bg-emerald-400" : "bg-amber-400"}`} style={{ width: `${pct}%` }} />
@@ -2486,20 +2541,51 @@ type V1eRange = "1M" | "3M" | "6M" | "12M";
 
 type V1eBar = { label: string; actual: number; projected: number; isCurrent?: boolean };
 
+// Forward-looking: current month (split actual+projected) + N months ahead (fully projected).
 const v1e3mBars: V1eBar[] = [
-  { label: "May", actual: 53700, projected: 0 },
-  { label: "Jun", actual: 32000, projected: 20147, isCurrent: true },
-  { label: "Jul", actual: 0,     projected: 57500 },
+  { label: "Jun", actual: 32000, projected: v1AvgMonthly - 32000, isCurrent: true },
+  { label: "Jul", actual: 0,     projected: 58000 },
+  { label: "Aug", actual: 0,     projected: 56500 },
 ];
 const v1e6mBars: V1eBar[] = [
-  { label: "Mar", actual: 49800, projected: 0 },
-  { label: "Apr", actual: 56200, projected: 0 },
-  { label: "May", actual: 53700, projected: 0 },
-  { label: "Jun", actual: 32000, projected: 20147, isCurrent: true },
-  { label: "Jul", actual: 0,     projected: 58200 },
-  { label: "Aug", actual: 0,     projected: 55800 },
+  { label: "Jun", actual: 32000, projected: v1AvgMonthly - 32000, isCurrent: true },
+  { label: "Jul", actual: 0, projected: 58000 },
+  { label: "Aug", actual: 0, projected: 56500 },
+  { label: "Sep", actual: 0, projected: 59000 },
+  { label: "Oct", actual: 0, projected: 57500 },
+  { label: "Nov", actual: 0, projected: 60000 },
 ];
 const v1e12mBars: V1eBar[] = [
+  { label: "Jun '26", actual: 32000, projected: v1AvgMonthly - 32000, isCurrent: true },
+  { label: "Jul '26", actual: 0, projected: 58000 },
+  { label: "Aug '26", actual: 0, projected: 56500 },
+  { label: "Sep '26", actual: 0, projected: 59000 },
+  { label: "Oct '26", actual: 0, projected: 57500 },
+  { label: "Nov '26", actual: 0, projected: 60000 },
+  { label: "Dec '26", actual: 0, projected: 62000 },
+  { label: "Jan '27", actual: 0, projected: 58500 },
+  { label: "Feb '27", actual: 0, projected: 59500 },
+  { label: "Mar '27", actual: 0, projected: 61000 },
+  { label: "Apr '27", actual: 0, projected: 60500 },
+  { label: "May '27", actual: 0, projected: 62500 },
+];
+
+// Same month last year (for the 12M YoY side-by-side comparison).
+const v1e3mYoY  = [{ label:"Jun", yoy:46800 }, { label:"Jul", yoy:48100 }, { label:"Aug", yoy:47000 }];
+const v1e6mYoY  = [
+  { label:"Jun", yoy:46800 }, { label:"Jul", yoy:48100 }, { label:"Aug", yoy:47000 },
+  { label:"Sep", yoy:49000 }, { label:"Oct", yoy:48200 }, { label:"Nov", yoy:50000 },
+];
+const v1e12mYoY = [
+  { label:"Jun '26", yoy:46800 }, { label:"Jul '26", yoy:48100 }, { label:"Aug '26", yoy:47000 },
+  { label:"Sep '26", yoy:49000 }, { label:"Oct '26", yoy:48200 }, { label:"Nov '26", yoy:50000 },
+  { label:"Dec '26", yoy:51500 }, { label:"Jan '27", yoy:49200 }, { label:"Feb '27", yoy:50100 },
+  { label:"Mar '27", yoy:51000 }, { label:"Apr '27", yoy:50500 }, { label:"May '27", yoy:52000 },
+];
+
+// Full month navigation for the single-month picker — PAST (settled), current (split), and near future.
+// Lets users select any specific month and look back into history.
+const v1eMonthNav: V1eBar[] = [
   { label: "Jul '25", actual: 48300, projected: 0 },
   { label: "Aug '25", actual: 51200, projected: 0 },
   { label: "Sep '25", actual: 49800, projected: 0 },
@@ -2511,19 +2597,13 @@ const v1e12mBars: V1eBar[] = [
   { label: "Mar '26", actual: 49800, projected: 0 },
   { label: "Apr '26", actual: 56200, projected: 0 },
   { label: "May '26", actual: 53700, projected: 0 },
-  { label: "Jun '26", actual: 32000, projected: 20147, isCurrent: true },
-];
-
-const v1e3mYoY  = [{ label:"May", yoy:44200 }, { label:"Jun", yoy:46800 }, { label:"Jul", yoy:48100 }];
-const v1e6mYoY  = [
-  { label:"Mar", yoy:41200 }, { label:"Apr", yoy:45800 }, { label:"May", yoy:44200 },
-  { label:"Jun", yoy:46800 }, { label:"Jul", yoy:48100 }, { label:"Aug", yoy:46400 },
-];
-const v1e12mYoY = [
-  { label:"Jul '25", yoy:42100 }, { label:"Aug '25", yoy:44800 }, { label:"Sep '25", yoy:43200 },
-  { label:"Oct '25", yoy:45300 }, { label:"Nov '25", yoy:43900 }, { label:"Dec '25", yoy:48200 },
-  { label:"Jan '26", yoy:45600 }, { label:"Feb '26", yoy:47200 }, { label:"Mar '26", yoy:43400 },
-  { label:"Apr '26", yoy:48900 }, { label:"May '26", yoy:46700 }, { label:"Jun '26", yoy:43100 },
+  { label: "Jun '26", actual: 32000, projected: v1AvgMonthly - 32000, isCurrent: true },
+  { label: "Jul '26", actual: 0, projected: 58000 },
+  { label: "Aug '26", actual: 0, projected: 56500 },
+  { label: "Sep '26", actual: 0, projected: 59000 },
+  { label: "Oct '26", actual: 0, projected: 57500 },
+  { label: "Nov '26", actual: 0, projected: 60000 },
+  { label: "Dec '26", actual: 0, projected: 62000 },
 ];
 
 // Segment definitions — the same three lenses V1c offers, reused across ranges.
@@ -2581,6 +2661,13 @@ function v1eFullMonthLabel(barLabel: string): string {
   const year = ym ? `20${ym[1]}` : "2026";
   return `${v1eMonthNames[key] ?? key} ${year}`;
 }
+// Same month, one year earlier: "Jul '25" → "Jul '24".
+function v1ePrevYearLabel(barLabel: string): string {
+  const m = barLabel.match(/^(.*) '(\d\d)$/);
+  if (!m) return `${barLabel} (last yr)`;
+  const py = String(Number(m[2]) - 1).padStart(2, "0");
+  return `${m[1]} '${py}`;
+}
 
 type V1eWeekRow = {
   week: string; dateLabel: string; total: number;
@@ -2637,14 +2724,29 @@ function v1eBuildWeeks(monthKey: string, actual: number, projected: number): V1e
 }
 
 const v1eRangeCfg: Record<V1eRange, {
-  memberPct: number; seasonPct: number; periodLabel: string; todayBar: string;
+  memberPct: number; seasonPct: number; baseline: number; lookback: string;
+  periodLabel: string; todayBar: string;
   bars: V1eBar[]; yoy: { label: string; yoy: number }[];
 }> = {
-  "1M":  { memberPct: 18, seasonPct: 10, periodLabel: "June 2026",          todayBar: "",        bars: [], yoy: [] },
-  "3M":  { memberPct: 14, seasonPct: 1,  periodLabel: "May – Jul 2026",      todayBar: "Jun",     bars: v1e3mBars, yoy: v1e3mYoY  },
-  "6M":  { memberPct: 12, seasonPct: 0,  periodLabel: "Mar – Aug 2026",      todayBar: "Jun",     bars: v1e6mBars, yoy: v1e6mYoY  },
-  "12M": { memberPct:  9, seasonPct: 0,  periodLabel: "Jul 2025 – Jun 2026", todayBar: "Jun '26", bars: v1e12mBars, yoy: v1e12mYoY },
+  // baseline = trailing-window monthly average (longer lookback pulls in older, lower months as the team grows)
+  // seasonality shrinks as the window widens toward a full year, where it nets out to ~0
+  "1M":  { memberPct: 18, seasonPct: 10, baseline: 53240, lookback: "5 months",  periodLabel: "June 2026",           todayBar: "",        bars: [], yoy: [] },
+  "3M":  { memberPct: 14, seasonPct: 5,  baseline: 52600, lookback: "6 months",  periodLabel: "Jun – Aug 2026",      todayBar: "Jun",     bars: v1e3mBars, yoy: v1e3mYoY  },
+  "6M":  { memberPct: 12, seasonPct: 3,  baseline: 51700, lookback: "9 months",  periodLabel: "Jun – Nov 2026",      todayBar: "Jun",     bars: v1e6mBars, yoy: v1e6mYoY  },
+  "12M": { memberPct:  9, seasonPct: 0,  baseline: 50800, lookback: "12 months", periodLabel: "Jun 2026 – May 2027", todayBar: "Jun '26", bars: v1e12mBars, yoy: v1e12mYoY },
 };
+
+// Skeleton shown while a range change "re-queries" (data pull is heavy / not instant).
+function ChartSkeleton({ bars = 8 }: { bars?: number }) {
+  const heights = [62, 84, 55, 90, 70, 48, 82, 66, 88, 58, 76, 52];
+  return (
+    <div className="h-[180px] flex items-end gap-2 px-1 animate-pulse" aria-hidden="true">
+      {Array.from({ length: bars }).map((_, i) => (
+        <div key={i} className="flex-1 bg-[#eef0f4] rounded-t" style={{ height: `${heights[i % heights.length]}%` }} />
+      ))}
+    </div>
+  );
+}
 
 function V1ePredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatusBreakdown: boolean; seasonalityOn: boolean }) {
   const [range, setRange]           = useState<V1eRange>("1M");
@@ -2656,20 +2758,37 @@ function V1ePredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
   const [manualAdjustments, setManualAdjustments] = useState<ManualAdjustment[]>([]);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingAdj, setEditingAdj] = useState<ManualAdjustment | null>(null);
+  const [loading, setLoading]       = useState(false); // brief skeleton while a range change "re-queries"
+
+  // Connected range: changing the range re-pulls data for the whole card.
+  const applyRange = (r: V1eRange) => {
+    setRange(r); setDrillMonth(null); setMonthPickerOpen(false);
+    if (r !== "12M") setShowYoY(false);
+    setLoading(true); setTimeout(() => setLoading(false), 550);
+  };
 
   const cfg  = v1eRangeCfg[range];
+  const baseline = cfg.baseline;   // trailing-window average for the selected range
   const is1M = range === "1M";
   const isWeekly = is1M || !!drillMonth;
+
+  const adjCompare = is1M ? "vs your typical month"
+                   : range === "3M" ? "vs your typical 3 months"
+                   : range === "6M" ? "vs your typical 6 months"
+                   : "vs last year";
+
+  // The whole card is scoped to this period — surface it in the title.
+  const headerPeriod = drillMonth ? v1eFullMonthLabel(drillMonth) : is1M ? v1eFullMonthLabel(oneMonth) : cfg.periodLabel;
 
   // Adjustments (range-aware) + manual — mirrors V1c's summary math.
   const memberPct = cfg.memberPct;
   const seasonPct = is1M ? (seasonalityOn ? cfg.seasonPct : 0) : cfg.seasonPct;
-  const memberAmt = Math.round(v1AvgMonthly * memberPct / 100);
-  const seasonAmt = Math.round(v1AvgMonthly * seasonPct / 100);
+  const memberAmt = Math.round(baseline * memberPct / 100);
+  const seasonAmt = Math.round(baseline * seasonPct / 100);
   const manualNet = manualAdjustments.reduce((s, a) => s + (a.type === "add" ? a.dollars : -a.dollars), 0);
   const totalAboveBase = memberAmt + seasonAmt + manualNet;
-  const adjProj = Math.max(0, Math.round(v1AvgMonthly + totalAboveBase));
-  const adjPct = Math.round(totalAboveBase / v1AvgMonthly * 100);
+  const adjProj = Math.max(0, Math.round(baseline + totalAboveBase));
+  const adjPct = Math.round(totalAboveBase / baseline * 100);
   const adjPctC = Math.round(v1cConfirmed / adjProj * 100);
   const adjPctP = Math.round(v1cPlanned   / adjProj * 100);
   const projForDialog = editingAdj
@@ -2782,13 +2901,64 @@ function V1ePredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
 
   return (
     <>
+      {/* ── Card header — global range control governs the whole card ─────── */}
+      <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-[#e8eaf0] bg-[#f9f9fc] flex-wrap">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold text-[#1a1e35]">Predictable Cash Flow</span>
+          <span className="text-xs text-[#8a8fa8]">· <span className="font-semibold text-[#0168dd]">{headerPeriod}</span></span>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center bg-[#f0f1f5] rounded-md p-0.5">
+            {(["1M","3M","6M","12M"] as V1eRange[]).map(r => (
+              <button key={r} onClick={() => applyRange(r)}
+                className={`px-2.5 py-0.5 rounded text-[11px] font-medium transition-all ${range === r ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>
+                {r}
+              </button>
+            ))}
+          </div>
+          <div className="relative flex items-center gap-1 text-[11px]">
+            <button onClick={() => { if (is1M && !drillMonth) stepMonth(-1); }}
+              disabled={is1M && !drillMonth && oneMonthIdx <= 0}
+              className="p-0.5 rounded text-[#8a8fa8] hover:text-[#1a1e35] hover:bg-[#eef0f4] transition-colors disabled:opacity-30 disabled:hover:bg-transparent">{chevLeft}</button>
+            {drillMonth ? (
+              <span className="font-medium text-[#1a1e35] min-w-[130px] text-center">{drillMonth} — weekly</span>
+            ) : is1M ? (
+              <button onClick={() => setMonthPickerOpen(o => !o)}
+                className="text-[11px] font-medium text-[#1a1e35] min-w-[130px] text-center hover:bg-[#eef0f4] rounded px-2 py-0.5 flex items-center justify-center gap-1 transition-colors">
+                {v1eFullMonthLabel(oneMonth)}
+                <ChevronDown size={11} className={`text-[#8a8fa8] transition-transform ${monthPickerOpen ? "rotate-180" : ""}`} />
+              </button>
+            ) : (
+              <span className="font-medium text-[#1a1e35] min-w-[130px] text-center">{cfg.periodLabel}</span>
+            )}
+            <button onClick={() => { if (is1M && !drillMonth) stepMonth(1); }}
+              disabled={is1M && !drillMonth && oneMonthIdx >= v1e12mBars.length - 1}
+              className="p-0.5 rounded text-[#8a8fa8] hover:text-[#1a1e35] hover:bg-[#eef0f4] transition-colors disabled:opacity-30 disabled:hover:bg-transparent">{chevRight}</button>
+            {monthPickerOpen && is1M && !drillMonth && (
+              <>
+                <div className="fixed inset-0 z-20" onClick={() => setMonthPickerOpen(false)} />
+                <div className="absolute top-8 left-7 z-30 bg-white rounded-lg border border-[#e8eaf0] shadow-xl py-1 w-40 max-h-56 overflow-y-auto">
+                  {v1e12mBars.map(b => (
+                    <button key={b.label} onClick={() => { setOneMonth(b.label); setMonthPickerOpen(false); setLoading(true); setTimeout(() => setLoading(false), 550); }}
+                      className={`w-full text-left px-3 py-1.5 text-[11px] transition-colors ${b.label === oneMonth ? "bg-[#eef3ff] text-[#0168dd] font-medium" : "text-[#1a1e35] hover:bg-[#f5f6fa]"}`}>
+                      {v1eFullMonthLabel(b.label)}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+          <ExportDropdown />
+        </div>
+      </div>
+
       {/* ── Top 3-column summary (matches Version 1D) ────────────────────── */}
       <div className="grid grid-cols-3 divide-x divide-[#e8eaf0] border-b border-[#e8eaf0]">
         {/* Card 1 — base */}
         <div className="px-5 py-4">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-1">Monthly avg payout</p>
-          <p className="text-3xl font-bold text-[#1a1e35] tracking-tight">{fmt0(v1AvgMonthly)}</p>
-          <p className="text-[11px] text-[#8a8fa8] mt-0.5">trailing {is1M ? "5" : "12"} months</p>
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-1 h-[21px] flex items-center">Monthly avg payout</p>
+          <p className="text-[10px] text-[#8a8fa8] leading-snug">The average of what you actually paid out over the last {cfg.lookback} — the baseline for this forecast.</p>
+          <p className="text-3xl font-bold text-[#1a1e35] tracking-tight mt-2">{fmt0(baseline)}</p>
           <div className="flex items-center gap-x-2 gap-y-1 mt-2 flex-wrap text-[10px] text-[#8a8fa8]">
             <div className="flex items-center gap-1 border-r border-[#e8eaf0] pr-2 mr-1">
               <UserCircle2 size={13} className="text-[#1a1e35]" /><span className="font-semibold text-[#1a1e35]">{v1CurrMembers}</span>
@@ -2805,19 +2975,21 @@ function V1ePredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
         {/* Card 2 — adjustments */}
         <div className="px-5 py-4">
           <div className="flex items-center justify-between mb-1">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8]">Adjustments</p>
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] h-[21px] flex items-center">Adjustments</p>
             <button onClick={() => { setEditingAdj(null); setShowAddDialog(true); }}
               className="flex items-center gap-0.5 text-[10px] font-medium text-[#0168dd] border border-[#0168dd]/40 rounded-md px-2 py-0.5 hover:bg-[#0168dd]/5 transition-colors select-none">
               <Plus size={10} /> Add adjustment
             </button>
           </div>
+          <p className="text-[10px] text-[#8a8fa8] leading-snug mb-2">Applied on top of your baseline (member changes, seasonality, and manual adjustments).</p>
           <div className="flex items-baseline gap-2">
             <span className={`text-3xl font-bold tracking-tight ${adjPct >= 0 ? "text-emerald-600" : "text-red-500"}`}>{adjPct >= 0 ? "+" : ""}{adjPct}%</span>
             {adjPct >= 0 ? <TrendingUp size={16} className="text-emerald-500" /> : <TrendingDown size={16} className="text-red-400" />}
           </div>
+          <p className="text-[10px] text-[#8a8fa8] mb-1">{adjCompare}</p>
           <div className="mt-2 divide-y divide-[#f0f1f5]">
             {([
-              { label: "Member change", pct: memberPct, note: memberNote, positive: true },
+              { label: "Headcount change", pct: memberPct, note: memberNote, positive: true },
               { label: "Seasonality",   pct: seasonPct, note: "May is typically above avg.", positive: true },
             ] as const).map(({ label, pct, note, positive }) => {
               if (label === "Seasonality" && seasonPct === 0) return null;
@@ -2846,8 +3018,464 @@ function V1ePredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
 
         {/* Card 3 — projection */}
         <div className="px-5 py-4">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-1">Recommended projection</p>
-          <p className="text-3xl font-bold text-[#0168dd] tracking-tight">{fmt0(adjProj)}</p>
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-1 h-[21px] flex items-center">Recommended projection</p>
+          <p className="text-[10px] text-[#8a8fa8] leading-snug">An estimate from your payment history — not a guaranteed figure. Add a buffer, or <a href="#" onClick={e => e.preventDefault()} className="font-medium text-[#5b607a] underline decoration-dotted decoration-[#b0b4c5] underline-offset-2 hover:text-[#1a1e35] transition-colors">see how to improve accuracy</a>.</p>
+          <p className="text-3xl font-bold text-[#0168dd] tracking-tight mt-2">{fmt0(is1M ? adjProj : (windowTotal ?? adjProj))}</p>
+          <V1cBreakdownPopover />
+          <div className="relative group mt-3 cursor-default">
+            <div className="h-2 rounded-full overflow-hidden">
+              <div className="h-full flex">
+                <div className="h-full bg-emerald-500" style={{ width: `${adjPctC}%` }} />
+                <div className="h-full bg-[#0168dd]" style={{ width: `${Math.max(adjPctP, 0.6)}%` }} />
+                <div className="h-full flex-1 bg-[#85baf5]" />
+              </div>
+            </div>
+            <div className="flex justify-between text-[10px] text-[#8a8fa8] mt-0.5">
+              <span>{fmt0(baseline)}/mo avg</span>
+              <span>{fmt0(adjProj)}/mo{is1M ? "" : " avg"}</span>
+            </div>
+            <div className="absolute top-full left-0 mt-2 hidden group-hover:block z-20 pointer-events-none">
+              <div className="bg-white border border-[#e8eaf0] rounded-lg shadow-lg p-3 w-48">
+                {v1cBarHoverRows.map(({ label, color, value, pct }) => {
+                  const k = value / 1000;
+                  const fmtK = `${k % 1 === 0 ? k.toFixed(0) : k.toFixed(1)}k`;
+                  return (
+                    <div key={label} className="flex items-center justify-between text-[11px] font-semibold mb-1 last:mb-0 text-[#8a8fa8]">
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-2 h-2 rounded-sm flex-shrink-0" style={{ background: color }} />
+                        <span>{label}</span>
+                      </div>
+                      <span>{fmtK} ({pct}%)</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Chart controls ───────────────────────────────────────────────── */}
+      <div className="px-5 pt-4 pb-0">
+        {/* Row 1 — distribution title (left) + segmentation tabs (right, segmented-pill style) */}
+        <div className="flex items-start justify-between mb-3 gap-4">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-0.5">
+              {isWeekly ? "Week-by-week distribution" : "Month-by-month distribution"}
+            </p>
+            <p className="text-[11px] text-[#8a8fa8]">{chartCaption}</p>
+          </div>
+          <div className="flex items-center bg-[#f0f1f5] rounded-md p-0.5 flex-shrink-0">
+            {([["source","By source of prediction"],["channel","By cash flow channel"],["type","By earning type"]] as const).map(([id, label]) => (
+              <button key={id} onClick={() => setSegTab(id)}
+                className={`px-2.5 py-1 rounded text-[10px] font-medium transition-all whitespace-nowrap ${segTab === id ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Chart-level control — YoY side-by-side comparison (12M only) */}
+        {range === "12M" && (
+          <div className="flex items-center justify-end my-3">
+            <button onClick={() => setShowYoY(p => !p)} className="flex items-center gap-1.5 text-[10px] select-none cursor-pointer">
+              <span className={`relative w-6 h-3.5 rounded-full transition-colors flex-shrink-0 ${showYoY ? "bg-[#0168dd]" : "bg-[#c8cad4]"}`}>
+                <span className={`absolute top-0.5 w-2.5 h-2.5 rounded-full bg-white shadow-sm transition-transform ${showYoY ? "translate-x-2.5" : "translate-x-0.5"}`} />
+              </span>
+              <span className="text-[#8a8fa8]">vs last year</span>
+            </button>
+          </div>
+        )}
+
+        {/* Breadcrumb */}
+        {drillMonth && (
+          <button onClick={() => setDrillMonth(null)}
+            className="mt-2 flex items-center gap-1 text-[10px] text-[#0168dd] hover:underline">
+            {chevLeft} Back to {range} view
+          </button>
+        )}
+      </div>
+
+      {/* ── Alert banner — only when status breakdown is on ──────────────── */}
+      {showStatusBreakdown && (
+        <div className="px-5 pt-1">
+          <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5 text-[11px]">
+            <div className="flex items-center gap-2 text-amber-800">
+              <AlertTriangle size={12} className="text-amber-500 flex-shrink-0" />
+              3 payments pending · $3.6k from Weeks 1–2 still need processing
+            </div>
+            <button className="text-[11px] text-[#0168dd] font-semibold flex-shrink-0 hover:underline flex items-center gap-0.5">Review <ChevronRight size={11} /></button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Chart ────────────────────────────────────────────────────────── */}
+      <div className="px-5 pt-3 pb-4">
+        {loading ? (
+          <ChartSkeleton bars={isWeekly ? 4 : (cfg.bars.length || 12)} />
+        ) : isWeekly ? (
+          <ResponsiveContainer width="100%" height={180}>
+            <BarChart data={weekRows} barCategoryGap="30%" margin={{ top: 20, right: 4, left: 0, bottom: 4 }}>
+              <CartesianGrid vertical={false} stroke="#f0f1f5" />
+              <XAxis dataKey="dateLabel" tick={{ fontSize: 9, fill: "#8a8fa8" }} tickLine={false} axisLine={false} interval={0} />
+              <YAxis tick={{ fontSize: 10, fill: "#8a8fa8" }} tickFormatter={(v: number) => `$${Math.round(v/1000)}k`} axisLine={false} tickLine={false} width={36} />
+              <Tooltip content={renderTip(weekSegBars)} cursor={{ fill: "#f5f6fa" }} />
+              {weekMonthIsCurrent && (
+                <ReferenceLine x={weekRows[1]?.dateLabel} stroke="#0168dd" strokeDasharray="3 3"
+                  label={{ value: "Today", position: "insideTopRight", fontSize: 8, fill: "#0168dd" }} />
+              )}
+              {weekSegBars.map((sb, idx) => (
+                <Bar key={sb.key} dataKey={sb.key} stackId="w" fill={sb.color} name={sb.label}
+                  radius={idx === weekSegBars.length - 1 ? [3, 3, 0, 0] : undefined}>
+                  {idx === weekSegBars.length - 1 && (
+                    <LabelList dataKey="total" position="top" offset={6}
+                      formatter={(v: number) => `$${Math.round(v / 1000)}k`}
+                      style={{ fontSize: 10, fontWeight: 600, fill: "#5b607a" }} />
+                  )}
+                </Bar>
+              ))}
+            </BarChart>
+          </ResponsiveContainer>
+        ) : (
+          <ResponsiveContainer width="100%" height={180}>
+            <ComposedChart data={monthlyRows} barCategoryGap="28%" margin={{ top: 20, right: 4, left: 0, bottom: 4 }}>
+              <CartesianGrid vertical={false} stroke="#f0f1f5" />
+              <XAxis dataKey="label" tick={{ fontSize: range === "12M" ? 9 : 10, fill: "#8a8fa8" }} tickLine={false} axisLine={false} interval={0} />
+              <YAxis tick={{ fontSize: 10, fill: "#8a8fa8" }} tickFormatter={(v: number) => `$${Math.round(v/1000)}k`} axisLine={false} tickLine={false} width={36} />
+              <Tooltip cursor={{ fill: "#f5f6fa" }} content={({ active, payload }: any) => {
+                if (!active || !payload?.length) return null;
+                const d = payload[0]?.payload;
+                if (!d) return null;
+                const items = monthSegBars.map(sb => ({ ...sb, value: (d[sb.key] ?? 0) as number })).filter(i => i.value > 0);
+                const total = items.reduce((s, i) => s + i.value, 0);
+                return (
+                  <div className="bg-white border border-[#e8eaf0] rounded-lg shadow-lg p-3 text-xs min-w-[180px]">
+                    <p className="font-semibold text-[#1a1e35] mb-1.5">{d.label}</p>
+                    {items.map(i => (
+                      <div key={i.key} className="flex justify-between gap-4 py-0.5">
+                        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm inline-block flex-shrink-0" style={{ background: i.color }} /><span className="text-[#8a8fa8]">{i.label}</span></span>
+                        <span className="font-medium text-[#1a1e35]">{fmt0(i.value)}</span>
+                      </div>
+                    ))}
+                    <div className="flex justify-between gap-4 py-0.5 mt-1 pt-1.5 border-t border-[#e8eaf0]">
+                      <span className="text-[#8a8fa8]">Total</span>
+                      <span className="font-semibold text-[#1a1e35]">{fmt0(total)}</span>
+                    </div>
+                    {showYoY && (d.yoy ?? 0) > 0 && (
+                      <div className="flex justify-between gap-4 py-0.5 mt-1 pt-1.5 border-t border-[#e8eaf0]">
+                        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm inline-block flex-shrink-0" style={{ background: "#c8cad4" }} /><span className="text-[#8a8fa8]">Last year · {v1ePrevYearLabel(d.label)}</span></span>
+                        <span className="font-medium text-[#1a1e35]">{fmt0(d.yoy)}</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              }} />
+              <ReferenceLine x={cfg.todayBar} stroke="#0168dd" strokeDasharray="3 3"
+                label={{ value: "Today", position: "top", fontSize: 8, fill: "#0168dd" }} />
+              {monthSegBars.map((sb, idx) => (
+                <Bar key={sb.key} dataKey={sb.key} stackId="m" fill={sb.color} name={sb.label}
+                  radius={idx === monthSegBars.length - 1 ? [3, 3, 0, 0] : undefined}
+                  cursor="pointer" onClick={(d: any) => d?.label && setDrillMonth(d.label)}>
+                  {monthlyRows.map((row, ri) => (
+                    <Cell key={ri}
+                      fillOpacity={segTab === "source" ? (sb.key === "projected" ? row.projOpacity : 1) : row.barOpacity} />
+                  ))}
+                  {idx === monthSegBars.length - 1 && (
+                    <LabelList dataKey="total" position="top" offset={6}
+                      formatter={(v: number) => `$${Math.round(v / 1000)}k`}
+                      style={{ fontSize: 10, fontWeight: 600, fill: "#5b607a" }} />
+                  )}
+                </Bar>
+              ))}
+              {showYoY && range === "12M" && (
+                <Bar dataKey="yoy" stackId="prev" fill="#c8cad4" name="Last year" radius={[3, 3, 0, 0]} isAnimationActive={false} />
+              )}
+            </ComposedChart>
+          </ResponsiveContainer>
+        )}
+
+        {/* Legend */}
+        <div className="flex items-center gap-x-3 gap-y-1 mt-1.5 flex-wrap">
+          {activeSegBars.map(sb => (
+            <span key={sb.key} className="flex items-center gap-1 text-[10px] text-[#8a8fa8]">
+              <span className="w-2 h-2 rounded-sm flex-shrink-0" style={{ background: sb.color }} />
+              {sb.label}
+            </span>
+          ))}
+          {showYoY && !isWeekly && range === "12M" && (
+            <span className="flex items-center gap-1 text-[10px] text-[#8a8fa8]">
+              <span className="w-2 h-2 rounded-sm flex-shrink-0" style={{ background: "#c8cad4" }} />
+              Last year (same month)
+            </span>
+          )}
+          {!isWeekly && (range === "6M" || range === "12M") && (
+            <span className="text-[9px] text-[#c0c3d3] italic ml-auto">Confidence fades on projected months</span>
+          )}
+        </div>
+      </div>
+
+      <AddAdjustmentDialog
+        open={showAddDialog}
+        onClose={() => setShowAddDialog(false)}
+        onSave={adj => {
+          if (editingAdj) {
+            setManualAdjustments(prev => prev.map(a => a.id === adj.id ? adj : a));
+          } else {
+            setManualAdjustments(prev => [...prev, adj]);
+          }
+        }}
+        base={baseline}
+        currentProjection={projForDialog}
+        initial={editingAdj ?? undefined}
+      />
+    </>
+  );
+}
+
+function Version1E({ showStatusBreakdown, seasonalityOn }: { showStatusBreakdown: boolean; seasonalityOn: boolean }) {
+  const [bottomTab, setBottomTab] = useState<"history"|"future">("history");
+  return (
+    <div className="flex-1 overflow-y-auto px-6 py-5 space-y-8">
+      <h1 className="text-xl font-semibold text-[#1a1e35]">Payments report</h1>
+      <div className="bg-white rounded-lg border border-[#e8eaf0] overflow-hidden">
+        <V1ePredictivePanel showStatusBreakdown={showStatusBreakdown} seasonalityOn={seasonalityOn} />
+      </div>
+      <FundYourAccountsPanel />
+      <div>
+        <p className="text-base font-semibold text-[#1a1e35] mb-3">Payment Activity</p>
+        <div className="flex items-center gap-0 mb-3 border-b border-[#e8eaf0]">
+          {([["history","Payment History"],["future","Future Tracked So Far"]] as const).map(([id, label]) => (
+            <button key={id} onClick={() => setBottomTab(id)} className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${bottomTab === id ? "border-[#0168dd] text-[#0168dd]" : "border-transparent text-[#8a8fa8] hover:text-[#1a1e35]"}`}>{label}</button>
+          ))}
+        </div>
+        {bottomTab === "history" ? <V1PaymentHistory /> : <V1FutureTracked />}
+      </div>
+    </div>
+  );
+}
+
+// ─── Version 1F — copy of Version 1E ─────────────────────────────────────────
+
+function V1fPredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatusBreakdown: boolean; seasonalityOn: boolean }) {
+  const [range, setRange]           = useState<V1eRange>("1M");
+  const [showYoY, setShowYoY]       = useState(false);
+  const [drillMonth, setDrillMonth] = useState<string | null>(null);
+  const [segTab, setSegTab]         = useState<V1eSeg>("source");
+  const [oneMonth, setOneMonth]     = useState<string>("Jun '26"); // selected month for the 1M view
+  const [monthPickerOpen, setMonthPickerOpen] = useState(false);
+  const [manualAdjustments, setManualAdjustments] = useState<ManualAdjustment[]>([]);
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [editingAdj, setEditingAdj] = useState<ManualAdjustment | null>(null);
+
+  const [loading, setLoading] = useState(false);
+
+  // Chart-only range: re-pulls the chart; the top summary stays fixed to the current month.
+  const applyRange = (r: V1eRange) => {
+    setRange(r); setDrillMonth(null); setMonthPickerOpen(false);
+    if (r !== "12M") setShowYoY(false);
+    setLoading(true); setTimeout(() => setLoading(false), 550);
+  };
+
+  const cfg  = v1eRangeCfg[range];
+  const is1M = range === "1M";
+  const isWeekly = is1M || !!drillMonth;
+
+  // DECOUPLED: the top summary is ALWAYS the current month, independent of the chart's range.
+  const memberPct = v1eRangeCfg["1M"].memberPct;
+  const seasonPct = seasonalityOn ? v1eRangeCfg["1M"].seasonPct : 0;
+  const memberAmt = Math.round(v1AvgMonthly * memberPct / 100);
+  const seasonAmt = Math.round(v1AvgMonthly * seasonPct / 100);
+  const manualNet = manualAdjustments.reduce((s, a) => s + (a.type === "add" ? a.dollars : -a.dollars), 0);
+  const totalAboveBase = memberAmt + seasonAmt + manualNet;
+  const adjProj = Math.max(0, Math.round(v1AvgMonthly + totalAboveBase));
+  const adjPct = Math.round(totalAboveBase / v1AvgMonthly * 100);
+  const adjPctC = Math.round(v1cConfirmed / adjProj * 100);
+  const adjPctP = Math.round(v1cPlanned   / adjProj * 100);
+  const projForDialog = editingAdj
+    ? adjProj - (editingAdj.type === "add" ? editingAdj.dollars : -editingAdj.dollars)
+    : adjProj;
+  const windowTotal = null;   // always current month — no window plan total
+
+  const memberNote = `${v1CurrMembers} this cycle vs avg ${v1AvgMembers}`;
+
+  // Monthly rows — every month split by channel + earning; confidence fades on projections.
+  let futureStep = 0;
+  const monthlyRows = cfg.bars.map((b, i) => {
+    const total = b.actual + b.projected;
+    const isFut = b.actual === 0 && b.projected > 0;
+    const isCur = !!b.isCurrent;
+    let projOpacity = 1;
+    if (isCur || isFut) { projOpacity = [0.9, 0.75, 0.62, 0.52][Math.min(futureStep, 3)]; futureStep += 1; }
+    return {
+      ...b, total, yoy: cfg.yoy[i]?.yoy ?? 0,
+      isFut, isCur, projOpacity, barOpacity: isFut ? projOpacity : 1,
+      ...v1eSplit(total, v1eChannelSeg),
+      ...v1eSplit(total, v1eEarningSeg),
+    };
+  });
+
+  // Which month drives the weekly view: a drilled month, else the 1M picker selection.
+  const activeWeekLabel = drillMonth ?? (is1M ? oneMonth : null);
+  const weekMonthKey = activeWeekLabel ? activeWeekLabel.replace(/ '2[0-9]+$/, "") : "Jun";
+  const weekBar = activeWeekLabel
+    ? (cfg.bars.find(b => b.label === activeWeekLabel) ?? v1eMonthNav.find(b => b.label === activeWeekLabel))
+    : undefined;
+  const weekRows: V1eWeekRow[] = activeWeekLabel
+    ? v1eBuildWeeks(weekMonthKey, weekBar?.actual ?? 0, weekBar?.projected ?? 0)
+    : v1eJuneWeekRows;
+  const weekMonthIsCurrent = weekMonthKey === "Jun";
+
+  // 1M month stepper helpers (steps through the trailing-12-months list).
+  const oneMonthIdx = v1eMonthNav.findIndex(b => b.label === oneMonth);
+  const stepMonth = (dir: -1 | 1) => {
+    const next = oneMonthIdx + dir;
+    if (next >= 0 && next < v1eMonthNav.length) setOneMonth(v1eMonthNav[next].label);
+  };
+
+  type SegBar = { key: string; label: string; color: string };
+  const weekSegBars: SegBar[] =
+    segTab === "source"
+      ? (showStatusBreakdown
+          ? [
+              { key: "paid",      label: "Paid",      color: "#10b981" },
+              { key: "pending",   label: "Pending",   color: "#f59e0b" },
+              { key: "failed",    label: "Failed",    color: "#ef4444" },
+              { key: "tracked",   label: "Planned",   color: "#0168dd" },
+              { key: "projected", label: "Projected", color: "#85baf5" },
+            ]
+          : [
+              { key: "factual",   label: "Confirmed", color: "#10b981" },
+              { key: "tracked",   label: "Planned",   color: "#0168dd" },
+              { key: "projected", label: "Projected", color: "#85baf5" },
+            ])
+      : segTab === "channel"
+      ? [{ key: "chFactual", label: "Confirmed", color: "#10b981" }, ...v1eChannelSeg.map(s => ({ key: s.key, label: s.label, color: s.color }))]
+      : v1eEarningSeg.map(s => ({ key: s.key, label: s.label, color: s.color }));
+
+  const monthSegBars: SegBar[] =
+    segTab === "source"
+      ? [{ key: "actual", label: "Actuals", color: "#10b981" }, { key: "projected", label: "Projected", color: "#85baf5" }]
+      : segTab === "channel"
+      ? v1eChannelSeg.map(s => ({ key: s.key, label: s.label, color: s.color }))
+      : v1eEarningSeg.map(s => ({ key: s.key, label: s.label, color: s.color }));
+
+  const activeSegBars = isWeekly ? weekSegBars : monthSegBars;
+
+  const renderTip = (segBars: SegBar[]) => ({ active, payload, label }: any) => {
+    if (!active || !payload?.length) return null;
+    const d = payload[0]?.payload;
+    if (!d) return null;
+    const header = d.dateLabel ?? label;
+    const items = segBars.map(sb => ({ ...sb, value: (d[sb.key] ?? 0) as number })).filter(i => i.value > 0);
+    const total = items.reduce((s, i) => s + i.value, 0);
+    return (
+      <div className="bg-white border border-[#e8eaf0] rounded-lg shadow-lg p-3 text-xs min-w-[170px]">
+        <p className="font-semibold text-[#1a1e35] mb-1.5">{header}</p>
+        {items.map(i => (
+          <div key={i.key} className="flex justify-between gap-4 py-0.5">
+            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm inline-block flex-shrink-0" style={{ background: i.color }} /><span className="text-[#8a8fa8]">{i.label}</span></span>
+            <span className="font-medium text-[#1a1e35]">{fmt0(i.value)}</span>
+          </div>
+        ))}
+        {items.length > 1 && (
+          <div className="flex justify-between gap-4 py-0.5 mt-1 pt-1.5 border-t border-[#e8eaf0]">
+            <span className="text-[#8a8fa8]">Total</span>
+            <span className="font-semibold text-[#1a1e35]">{fmt0(total)}</span>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const chartCaption = isWeekly
+    ? (segTab === "source"  ? `${drillMonth ?? "June"} · actuals vs projected, week by week`
+     : segTab === "channel" ? `${drillMonth ?? "June"} · by payment provider, week by week`
+     :                        `${drillMonth ?? "June"} · by earning type, week by week`)
+    : (segTab === "source"  ? "Monthly actuals vs projected · click a bar for its weekly breakdown"
+     : segTab === "channel" ? "Monthly totals by payment provider · click a bar for its weekly breakdown"
+     :                        "Monthly totals by earning type · click a bar for its weekly breakdown");
+
+  const chevLeft  = <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>;
+  const chevRight = <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>;
+
+  return (
+    <>
+      {/* ══ SUMMARY CARD — fixed to the current month ══════════════════════ */}
+      <div className="bg-white rounded-lg border border-[#e8eaf0] overflow-hidden">
+        <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-[#e8eaf0] bg-[#f9f9fc]">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold text-[#1a1e35]">Predictable Cash Flow</span>
+            <span className="text-xs text-[#8a8fa8]">· <span className="font-semibold text-[#0168dd]">{v1eFullMonthLabel("Jun '26")}</span> · this month</span>
+          </div>
+          <ExportDropdown />
+        </div>
+      <div className="grid grid-cols-3 divide-x divide-[#e8eaf0]">
+        {/* Card 1 — base */}
+        <div className="px-5 py-4">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-1 h-[21px] flex items-center">Monthly avg payout</p>
+          <p className="text-[10px] text-[#8a8fa8] leading-snug">The average of what you actually paid out over the last 5 months — the baseline for this forecast.</p>
+          <p className="text-3xl font-bold text-[#1a1e35] tracking-tight mt-2">{fmt0(v1AvgMonthly)}</p>
+          <div className="flex items-center gap-x-2 gap-y-1 mt-2 flex-wrap text-[10px] text-[#8a8fa8]">
+            <div className="flex items-center gap-1 border-r border-[#e8eaf0] pr-2 mr-1">
+              <UserCircle2 size={13} className="text-[#1a1e35]" /><span className="font-semibold text-[#1a1e35]">{v1CurrMembers}</span>
+            </div>
+            {v1PayTypes.map((pt, i) => (
+              <div key={pt.key} className="flex items-center gap-1">
+                {i > 0 && <span className="text-[#c8cad4]">·</span>}
+                <span className="font-semibold text-[#1a1e35]">{pt.count}</span><span>{pt.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Card 2 — adjustments */}
+        <div className="px-5 py-4">
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] h-[21px] flex items-center">Adjustments</p>
+            <button onClick={() => { setEditingAdj(null); setShowAddDialog(true); }}
+              className="flex items-center gap-0.5 text-[10px] font-medium text-[#0168dd] border border-[#0168dd]/40 rounded-md px-2 py-0.5 hover:bg-[#0168dd]/5 transition-colors select-none">
+              <Plus size={10} /> Add adjustment
+            </button>
+          </div>
+          <p className="text-[10px] text-[#8a8fa8] leading-snug mb-2">Applied on top of your baseline (member changes, seasonality, and manual adjustments).</p>
+          <div className="flex items-baseline gap-2">
+            <span className={`text-3xl font-bold tracking-tight ${adjPct >= 0 ? "text-emerald-600" : "text-red-500"}`}>{adjPct >= 0 ? "+" : ""}{adjPct}%</span>
+            {adjPct >= 0 ? <TrendingUp size={16} className="text-emerald-500" /> : <TrendingDown size={16} className="text-red-400" />}
+          </div>
+          <div className="mt-2 divide-y divide-[#f0f1f5]">
+            {([
+              { label: "Headcount change", pct: memberPct, note: memberNote, positive: true },
+              { label: "Seasonality",   pct: seasonPct, note: "May is typically above avg.", positive: true },
+            ] as const).map(({ label, pct, note, positive }) => {
+              if (label === "Seasonality" && seasonPct === 0) return null;
+              return (
+                <div key={label} className="flex items-center gap-1.5 text-[11px] py-1.5 min-w-0">
+                  <span className={`font-semibold flex-shrink-0 ${positive ? "text-emerald-600" : "text-red-500"}`}>{positive ? "+" : ""}{pct}%</span>
+                  <span className="text-[#1a1e35] font-medium flex-shrink-0">{label}</span>
+                  <span className="text-[#d0d3de] flex-shrink-0">—</span>
+                  <span className="text-[#8a8fa8] truncate">{note}</span>
+                </div>
+              );
+            })}
+            {manualAdjustments.map(adj => (
+              <div key={adj.id} className="flex items-center gap-1.5 text-[11px] py-1.5 min-w-0">
+                <span className={`font-semibold flex-shrink-0 ${adj.type === "add" ? "text-emerald-600" : "text-red-500"}`}>{adj.type === "add" ? "+" : "−"}{adj.unit === "pct" ? `${adj.value}%` : `≈${Math.round(adj.pct)}%`}</span>
+                <span className="text-[#1a1e35] font-medium flex-shrink-0">{adj.label}</span>
+                <span className="text-[#d0d3de] flex-shrink-0">—</span>
+                <span className="text-[#8a8fa8] flex-shrink-0">{adj.unit === "dollar" ? fmt0(Math.round(adj.dollars)) : `≈${fmt0(Math.round(adj.dollars))}`}</span>
+                <span className="text-[9px] font-medium bg-[#f0f1f5] text-[#8a8fa8] rounded px-1.5 py-0.5 flex-shrink-0">Added by you</span>
+                <button onClick={() => { setEditingAdj(adj); setShowAddDialog(true); }} className="ml-auto flex-shrink-0 p-0.5 rounded text-[#8a8fa8] hover:text-[#0168dd] hover:bg-[#f0f1f5] transition-colors"><Pencil size={11} /></button>
+                <button onClick={() => setManualAdjustments(prev => prev.filter(a => a.id !== adj.id))} className="flex-shrink-0 p-0.5 rounded text-[#8a8fa8] hover:text-red-500 hover:bg-red-50 transition-colors"><X size={11} /></button>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Card 3 — projection */}
+        <div className="px-5 py-4">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-1 h-[21px] flex items-center">Recommended projection</p>
+          <p className="text-[10px] text-[#8a8fa8] leading-snug">An estimate from your payment history — not a guaranteed figure. Add a buffer, or <a href="#" onClick={e => e.preventDefault()} className="font-medium text-[#5b607a] underline decoration-dotted decoration-[#b0b4c5] underline-offset-2 hover:text-[#1a1e35] transition-colors">see how to improve accuracy</a>.</p>
+          <p className="text-3xl font-bold text-[#0168dd] tracking-tight mt-2">{fmt0(adjProj)}</p>
           <V1cBreakdownPopover />
           <div className="relative group mt-3 cursor-default">
             <div className="h-2 rounded-full overflow-hidden">
@@ -2889,14 +3517,63 @@ function V1ePredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
         </div>
       </div>
 
+      </div>{/* ══ end SUMMARY CARD ══ */}
+
+      {/* ══ CHART CARD — separate explorer with its own range control ══════ */}
+      <div className="bg-white rounded-lg border border-[#e8eaf0] overflow-hidden">
+        <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-[#e8eaf0] bg-[#f9f9fc] flex-wrap">
+          <div>
+            <p className="text-sm font-semibold text-[#1a1e35]">Explore your payments over time</p>
+            <p className="text-[11px] text-[#8a8fa8]">Projected payouts ahead — browsing here doesn't change the numbers above.</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center bg-[#f0f1f5] rounded-md p-0.5">
+              {(["1M","3M","6M","12M"] as V1eRange[]).map(r => (
+                <button key={r} onClick={() => applyRange(r)}
+                  className={`px-2.5 py-0.5 rounded text-[11px] font-medium transition-all ${range === r ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>
+                  {r}
+                </button>
+              ))}
+            </div>
+            <div className="relative flex items-center gap-1 text-[11px]">
+              <button onClick={() => { if (is1M && !drillMonth) stepMonth(-1); }}
+                disabled={is1M && !drillMonth && oneMonthIdx <= 0}
+                className="p-0.5 rounded text-[#8a8fa8] hover:text-[#1a1e35] hover:bg-[#eef0f4] transition-colors disabled:opacity-30 disabled:hover:bg-transparent">{chevLeft}</button>
+              {drillMonth ? (
+                <span className="font-medium text-[#1a1e35] min-w-[130px] text-center">{drillMonth} — weekly</span>
+              ) : is1M ? (
+                <button onClick={() => setMonthPickerOpen(o => !o)}
+                  className="text-[11px] font-medium text-[#1a1e35] min-w-[130px] text-center hover:bg-[#eef0f4] rounded px-2 py-0.5 flex items-center justify-center gap-1 transition-colors">
+                  {v1eFullMonthLabel(oneMonth)}
+                  <ChevronDown size={11} className={`text-[#8a8fa8] transition-transform ${monthPickerOpen ? "rotate-180" : ""}`} />
+                </button>
+              ) : (
+                <span className="font-medium text-[#1a1e35] min-w-[130px] text-center">{cfg.periodLabel}</span>
+              )}
+              <button onClick={() => { if (is1M && !drillMonth) stepMonth(1); }}
+                disabled={is1M && !drillMonth && oneMonthIdx >= v1eMonthNav.length - 1}
+                className="p-0.5 rounded text-[#8a8fa8] hover:text-[#1a1e35] hover:bg-[#eef0f4] transition-colors disabled:opacity-30 disabled:hover:bg-transparent">{chevRight}</button>
+              {monthPickerOpen && is1M && !drillMonth && (
+                <>
+                  <div className="fixed inset-0 z-20" onClick={() => setMonthPickerOpen(false)} />
+                  <div className="absolute top-8 left-7 z-30 bg-white rounded-lg border border-[#e8eaf0] shadow-xl py-1 w-40 max-h-56 overflow-y-auto">
+                    {v1eMonthNav.map(b => (
+                      <button key={b.label} onClick={() => { setOneMonth(b.label); setMonthPickerOpen(false); setLoading(true); setTimeout(() => setLoading(false), 550); }}
+                        className={`w-full text-left px-3 py-1.5 text-[11px] transition-colors ${b.label === oneMonth ? "bg-[#eef3ff] text-[#0168dd] font-medium" : "text-[#1a1e35] hover:bg-[#f5f6fa]"}`}>
+                        {v1eFullMonthLabel(b.label)}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
       {/* ── Chart controls ───────────────────────────────────────────────── */}
       <div className="px-5 pt-4 pb-0">
         {/* Row 1 — distribution title (left) + segmentation tabs (right, segmented-pill style) */}
         <div className="flex items-start justify-between mb-3 gap-4">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-0.5">
-              {isWeekly ? "Week-by-week distribution" : "Month-by-month distribution"}
-            </p>
             <p className="text-[11px] text-[#8a8fa8]">{chartCaption}</p>
           </div>
           <div className="flex items-center bg-[#f0f1f5] rounded-md p-0.5 flex-shrink-0">
@@ -2909,65 +3586,17 @@ function V1ePredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
           </div>
         </div>
 
-        {/* Row 2 — time-range selector + period stepper (left) + YoY toggle (right) */}
-        <div className="flex items-center justify-between flex-wrap gap-2 my-4">
-          <div className="flex items-center gap-3">
-            {/* Range selector — plain-button style */}
-            <div className="flex items-center gap-1">
-              {(["1M","3M","6M","12M"] as V1eRange[]).map(r => (
-                <button key={r} onClick={() => { setRange(r); setDrillMonth(null); setMonthPickerOpen(false); if (r !== "12M") setShowYoY(false); }}
-                  className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors ${range === r ? "bg-[#eef3ff] text-[#0168dd]" : "text-[#8a8fa8] hover:text-[#1a1e35] hover:bg-[#f0f1f5]"}`}>
-                  {r}
-                </button>
-              ))}
-            </div>
-            {/* Period stepper — month is a picker in 1M view */}
-            <div className="relative flex items-center gap-1 text-[11px]">
-              <button
-                onClick={() => { if (is1M && !drillMonth) stepMonth(-1); }}
-                disabled={is1M && !drillMonth && oneMonthIdx <= 0}
-                className="p-0.5 rounded text-[#8a8fa8] hover:text-[#1a1e35] hover:bg-[#f0f1f5] transition-colors disabled:opacity-30 disabled:hover:bg-transparent">{chevLeft}</button>
-              {drillMonth ? (
-                <span className="font-medium text-[#1a1e35] min-w-[140px] text-center">{drillMonth} — weekly</span>
-              ) : is1M ? (
-                <button onClick={() => setMonthPickerOpen(o => !o)}
-                  className="font-medium text-[#1a1e35] min-w-[140px] text-center hover:bg-[#f0f1f5] rounded px-2 py-0.5 flex items-center justify-center gap-1 transition-colors">
-                  {v1eFullMonthLabel(oneMonth)}
-                  <ChevronDown size={11} className={`text-[#8a8fa8] transition-transform ${monthPickerOpen ? "rotate-180" : ""}`} />
-                </button>
-              ) : (
-                <span className="font-medium text-[#1a1e35] min-w-[140px] text-center">{cfg.periodLabel}</span>
-              )}
-              <button
-                onClick={() => { if (is1M && !drillMonth) stepMonth(1); }}
-                disabled={is1M && !drillMonth && oneMonthIdx >= v1e12mBars.length - 1}
-                className="p-0.5 rounded text-[#8a8fa8] hover:text-[#1a1e35] hover:bg-[#f0f1f5] transition-colors disabled:opacity-30 disabled:hover:bg-transparent">{chevRight}</button>
-
-              {monthPickerOpen && is1M && !drillMonth && (
-                <>
-                  <div className="fixed inset-0 z-20" onClick={() => setMonthPickerOpen(false)} />
-                  <div className="absolute top-8 left-7 z-30 bg-white rounded-lg border border-[#e8eaf0] shadow-xl py-1 w-40 max-h-56 overflow-y-auto">
-                    {v1e12mBars.map(b => (
-                      <button key={b.label} onClick={() => { setOneMonth(b.label); setMonthPickerOpen(false); }}
-                        className={`w-full text-left px-3 py-1.5 text-[11px] transition-colors ${b.label === oneMonth ? "bg-[#eef3ff] text-[#0168dd] font-medium" : "text-[#1a1e35] hover:bg-[#f5f6fa]"}`}>
-                        {v1eFullMonthLabel(b.label)}
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-          {/* YoY toggle — only relevant with a full 12 months of history */}
-          {range === "12M" && (
+        {/* Chart-level control — YoY side-by-side comparison (12M only) */}
+        {range === "12M" && (
+          <div className="flex items-center justify-end my-3">
             <button onClick={() => setShowYoY(p => !p)} className="flex items-center gap-1.5 text-[10px] select-none cursor-pointer">
               <span className={`relative w-6 h-3.5 rounded-full transition-colors flex-shrink-0 ${showYoY ? "bg-[#0168dd]" : "bg-[#c8cad4]"}`}>
                 <span className={`absolute top-0.5 w-2.5 h-2.5 rounded-full bg-white shadow-sm transition-transform ${showYoY ? "translate-x-2.5" : "translate-x-0.5"}`} />
               </span>
               <span className="text-[#8a8fa8]">vs last year</span>
             </button>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Breadcrumb */}
         {drillMonth && (
@@ -2993,9 +3622,11 @@ function V1ePredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
 
       {/* ── Chart ────────────────────────────────────────────────────────── */}
       <div className="px-5 pt-3 pb-4">
-        {isWeekly ? (
+        {loading ? (
+          <ChartSkeleton bars={isWeekly ? 4 : (cfg.bars.length || 12)} />
+        ) : isWeekly ? (
           <ResponsiveContainer width="100%" height={180}>
-            <BarChart data={weekRows} barCategoryGap="30%" margin={{ top: 4, right: 4, left: 0, bottom: 4 }}>
+            <BarChart data={weekRows} barCategoryGap="30%" margin={{ top: 20, right: 4, left: 0, bottom: 4 }}>
               <CartesianGrid vertical={false} stroke="#f0f1f5" />
               <XAxis dataKey="dateLabel" tick={{ fontSize: 9, fill: "#8a8fa8" }} tickLine={false} axisLine={false} interval={0} />
               <YAxis tick={{ fontSize: 10, fill: "#8a8fa8" }} tickFormatter={(v: number) => `$${Math.round(v/1000)}k`} axisLine={false} tickLine={false} width={36} />
@@ -3006,17 +3637,50 @@ function V1ePredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
               )}
               {weekSegBars.map((sb, idx) => (
                 <Bar key={sb.key} dataKey={sb.key} stackId="w" fill={sb.color} name={sb.label}
-                  radius={idx === weekSegBars.length - 1 ? [3, 3, 0, 0] : undefined} />
+                  radius={idx === weekSegBars.length - 1 ? [3, 3, 0, 0] : undefined}>
+                  {idx === weekSegBars.length - 1 && (
+                    <LabelList dataKey="total" position="top" offset={6}
+                      formatter={(v: number) => `$${Math.round(v / 1000)}k`}
+                      style={{ fontSize: 10, fontWeight: 600, fill: "#5b607a" }} />
+                  )}
+                </Bar>
               ))}
             </BarChart>
           </ResponsiveContainer>
         ) : (
           <ResponsiveContainer width="100%" height={180}>
-            <ComposedChart data={monthlyRows} barCategoryGap="28%" margin={{ top: 4, right: 4, left: 0, bottom: 4 }}>
+            <ComposedChart data={monthlyRows} barCategoryGap="28%" margin={{ top: 20, right: 4, left: 0, bottom: 4 }}>
               <CartesianGrid vertical={false} stroke="#f0f1f5" />
               <XAxis dataKey="label" tick={{ fontSize: range === "12M" ? 9 : 10, fill: "#8a8fa8" }} tickLine={false} axisLine={false} interval={0} />
               <YAxis tick={{ fontSize: 10, fill: "#8a8fa8" }} tickFormatter={(v: number) => `$${Math.round(v/1000)}k`} axisLine={false} tickLine={false} width={36} />
-              <Tooltip content={renderTip(monthSegBars)} cursor={{ fill: "#f5f6fa" }} />
+              <Tooltip cursor={{ fill: "#f5f6fa" }} content={({ active, payload }: any) => {
+                if (!active || !payload?.length) return null;
+                const d = payload[0]?.payload;
+                if (!d) return null;
+                const items = monthSegBars.map(sb => ({ ...sb, value: (d[sb.key] ?? 0) as number })).filter(i => i.value > 0);
+                const total = items.reduce((s, i) => s + i.value, 0);
+                return (
+                  <div className="bg-white border border-[#e8eaf0] rounded-lg shadow-lg p-3 text-xs min-w-[180px]">
+                    <p className="font-semibold text-[#1a1e35] mb-1.5">{d.label}</p>
+                    {items.map(i => (
+                      <div key={i.key} className="flex justify-between gap-4 py-0.5">
+                        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm inline-block flex-shrink-0" style={{ background: i.color }} /><span className="text-[#8a8fa8]">{i.label}</span></span>
+                        <span className="font-medium text-[#1a1e35]">{fmt0(i.value)}</span>
+                      </div>
+                    ))}
+                    <div className="flex justify-between gap-4 py-0.5 mt-1 pt-1.5 border-t border-[#e8eaf0]">
+                      <span className="text-[#8a8fa8]">Total</span>
+                      <span className="font-semibold text-[#1a1e35]">{fmt0(total)}</span>
+                    </div>
+                    {showYoY && (d.yoy ?? 0) > 0 && (
+                      <div className="flex justify-between gap-4 py-0.5 mt-1 pt-1.5 border-t border-[#e8eaf0]">
+                        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm inline-block flex-shrink-0" style={{ background: "#c8cad4" }} /><span className="text-[#8a8fa8]">Last year · {v1ePrevYearLabel(d.label)}</span></span>
+                        <span className="font-medium text-[#1a1e35]">{fmt0(d.yoy)}</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              }} />
               <ReferenceLine x={cfg.todayBar} stroke="#0168dd" strokeDasharray="3 3"
                 label={{ value: "Today", position: "top", fontSize: 8, fill: "#0168dd" }} />
               {monthSegBars.map((sb, idx) => (
@@ -3027,11 +3691,15 @@ function V1ePredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
                     <Cell key={ri}
                       fillOpacity={segTab === "source" ? (sb.key === "projected" ? row.projOpacity : 1) : row.barOpacity} />
                   ))}
+                  {idx === monthSegBars.length - 1 && (
+                    <LabelList dataKey="total" position="top" offset={6}
+                      formatter={(v: number) => `$${Math.round(v / 1000)}k`}
+                      style={{ fontSize: 10, fontWeight: 600, fill: "#5b607a" }} />
+                  )}
                 </Bar>
               ))}
               {showYoY && range === "12M" && (
-                <Line dataKey="yoy" stroke="#c0c3d3" strokeWidth={1.5} strokeDasharray="4 2"
-                  dot={{ r: 2, fill: "#c0c3d3", strokeWidth: 0 }} name="Last year" isAnimationActive={false} />
+                <Bar dataKey="yoy" stackId="prev" fill="#c8cad4" name="Last year" radius={[3, 3, 0, 0]} isAnimationActive={false} />
               )}
             </ComposedChart>
           </ResponsiveContainer>
@@ -3047,8 +3715,8 @@ function V1ePredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
           ))}
           {showYoY && !isWeekly && range === "12M" && (
             <span className="flex items-center gap-1 text-[10px] text-[#8a8fa8]">
-              <span className="inline-block w-4 border-t border-dashed border-[#c0c3d3]" />
-              Last year
+              <span className="w-2 h-2 rounded-sm flex-shrink-0" style={{ background: "#c8cad4" }} />
+              Last year (same month)
             </span>
           )}
           {!isWeekly && (range === "6M" || range === "12M") && (
@@ -3056,6 +3724,7 @@ function V1ePredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
           )}
         </div>
       </div>
+      </div>{/* ══ end CHART CARD ══ */}
 
       <AddAdjustmentDialog
         open={showAddDialog}
@@ -3075,21 +3744,12 @@ function V1ePredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
   );
 }
 
-function Version1E({ showStatusBreakdown, seasonalityOn }: { showStatusBreakdown: boolean; seasonalityOn: boolean }) {
+function Version1F({ showStatusBreakdown, seasonalityOn }: { showStatusBreakdown: boolean; seasonalityOn: boolean }) {
   const [bottomTab, setBottomTab] = useState<"history"|"future">("history");
   return (
     <div className="flex-1 overflow-y-auto px-6 py-5 space-y-8">
       <h1 className="text-xl font-semibold text-[#1a1e35]">Payments report</h1>
-      <div className="bg-white rounded-lg border border-[#e8eaf0] overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-3 border-b border-[#e8eaf0] bg-[#f9f9fc]">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-[#1a1e35]">Predictable Cash Flow</span>
-            <span className="text-xs text-[#8a8fa8]">— based on historical payments</span>
-          </div>
-          <ExportDropdown />
-        </div>
-        <V1ePredictivePanel showStatusBreakdown={showStatusBreakdown} seasonalityOn={seasonalityOn} />
-      </div>
+      <V1fPredictivePanel showStatusBreakdown={showStatusBreakdown} seasonalityOn={seasonalityOn} />
       <FundYourAccountsPanel />
       <div>
         <p className="text-base font-semibold text-[#1a1e35] mb-3">Payment Activity</p>
@@ -3099,6 +3759,2053 @@ function Version1E({ showStatusBreakdown, seasonalityOn }: { showStatusBreakdown
           ))}
         </div>
         {bottomTab === "history" ? <V1PaymentHistory /> : <V1FutureTracked />}
+      </div>
+    </div>
+  );
+}
+
+// ─── Version 1G — copy of Version 1F ─────────────────────────────────────────
+
+// Wider, table-based management dialog: the whole build-up (baseline + auto drivers
+// + your manual adjustments) in one editable list — add / edit / remove inline.
+function V1gManageAdjustmentsDialog({
+  open, onClose, base, memberPct, memberAmt, memberNote, seasonPct, seasonAmt,
+  manualAdjustments, setManualAdjustments, finalTotal,
+}: {
+  open: boolean;
+  onClose: () => void;
+  base: number;
+  memberPct: number; memberAmt: number; memberNote: string;
+  seasonPct: number; seasonAmt: number;
+  manualAdjustments: ManualAdjustment[];
+  setManualAdjustments: (updater: (prev: ManualAdjustment[]) => ManualAdjustment[]) => void;
+  finalTotal: number;
+}) {
+  const [draftId, setDraftId] = useState<string | null>(null); // "new" | <id> | null
+  const [dLabel, setDLabel] = useState("Buffer");
+  const [dType, setDType]   = useState<"add" | "reduce">("add");
+  const [dUnit, setDUnit]   = useState<"pct" | "dollar">("pct");
+  const [dValue, setDValue] = useState("");
+
+  useEffect(() => { if (!open) setDraftId(null); }, [open]);
+
+  if (!open) return null;
+
+  const startAdd  = () => { setDraftId("new"); setDLabel("Buffer"); setDType("add"); setDUnit("pct"); setDValue(""); };
+  const startEdit = (a: ManualAdjustment) => { setDraftId(a.id); setDLabel(a.label); setDType(a.type); setDUnit(a.unit); setDValue(String(a.value)); };
+  const cancel    = () => setDraftId(null);
+
+  const parsed = parseFloat(dValue.replace(/[^0-9.]/g, ""));
+  const valid  = !isNaN(parsed) && isFinite(parsed) && parsed > 0;
+  const draftDollars = valid ? (dUnit === "dollar" ? parsed : base * parsed / 100) : 0;
+  const draftPct     = valid ? (dUnit === "dollar" ? parsed / base * 100 : parsed)  : 0;
+
+  const commit = () => {
+    if (!valid) return;
+    const rec: ManualAdjustment = {
+      id: draftId === "new" ? Math.random().toString(36).slice(2) : draftId!,
+      label: dLabel || "Adjustment", type: dType, unit: dUnit, value: parsed, dollars: draftDollars, pct: draftPct,
+    };
+    setManualAdjustments(prev => draftId === "new" ? [...prev, rec] : prev.map(a => a.id === draftId ? rec : a));
+    setDraftId(null);
+  };
+  const remove = (id: string) => setManualAdjustments(prev => prev.filter(a => a.id !== id));
+
+  const editRow = (key: string) => (
+    <tr key={key} className="bg-[#f7f9fc]">
+      <td className="py-2 px-3">
+        <input value={dLabel} onChange={e => setDLabel(e.target.value)} placeholder="Label"
+          className="w-full border border-[#e8eaf0] rounded-md px-2 py-1 text-[12px] text-[#1a1e35] focus:outline-none focus:ring-2 focus:ring-[#0168dd]/20 focus:border-[#0168dd] transition-colors" />
+      </td>
+      <td className="py-2 px-3">
+        <div className="flex bg-[#f0f1f5] rounded-md p-0.5 w-fit">
+          {(["add", "reduce"] as const).map(t => (
+            <button key={t} onClick={() => setDType(t)} className={`px-2 py-0.5 rounded text-[11px] font-semibold transition-all ${dType === t ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8]"}`}>{t === "add" ? "Add" : "Reduce"}</button>
+          ))}
+        </div>
+      </td>
+      <td className="py-2 px-3">
+        <div className="flex gap-1">
+          <div className="flex bg-[#f0f1f5] rounded-md p-0.5 flex-shrink-0">
+            {(["pct", "dollar"] as const).map(u => (
+              <button key={u} onClick={() => setDUnit(u)} className={`px-1.5 py-0.5 rounded text-[11px] font-semibold transition-all ${dUnit === u ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8]"}`}>{u === "pct" ? "%" : "$"}</button>
+            ))}
+          </div>
+          <input value={dValue} onChange={e => setDValue(e.target.value)} inputMode="decimal" placeholder={dUnit === "pct" ? "e.g. 5" : "e.g. 5000"}
+            className="w-16 border border-[#e8eaf0] rounded-md px-2 py-1 text-[12px] text-[#1a1e35] focus:outline-none focus:ring-2 focus:ring-[#0168dd]/20 focus:border-[#0168dd] transition-colors" />
+        </div>
+      </td>
+      <td className="py-2 px-3 text-right text-[12px] font-semibold text-[#1a1e35] whitespace-nowrap">{valid ? `${dType === "add" ? "+" : "−"}${fmt0(draftDollars)}` : "—"}</td>
+      <td className="py-2 px-3">
+        <div className="flex items-center gap-1 justify-end">
+          <button onClick={commit} disabled={!valid} className={`px-2 py-1 rounded-md text-[11px] font-semibold transition-all ${valid ? "bg-[#0168dd] text-white hover:bg-[#0057bb]" : "bg-[#e8eaf0] text-[#c8cad4] cursor-not-allowed"}`}>Save</button>
+          <button onClick={cancel} className="px-2 py-1 rounded-md text-[11px] font-medium text-[#8a8fa8] hover:text-[#1a1e35] transition-colors">Cancel</button>
+        </div>
+      </td>
+    </tr>
+  );
+
+  const autoBadge = <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-[#f0f1f5] text-[#8a8fa8]">Auto</span>;
+
+  return (
+    <>
+      <div className="fixed inset-0 z-40 bg-black/30" onClick={onClose} />
+      <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none p-4">
+        <div className="bg-white rounded-xl shadow-2xl w-[600px] max-w-full pointer-events-auto">
+          <div className="flex items-start justify-between px-6 pt-5 pb-4 border-b border-[#e8eaf0]">
+            <div>
+              <h2 className="text-[15px] font-semibold text-[#1a1e35]">Adjustments</h2>
+              <p className="text-[11px] text-[#8a8fa8] mt-0.5 max-w-[440px] leading-snug">How we get from your baseline to the recommended figure. Auto rows come from your payment history; add or remove your own below.</p>
+            </div>
+            <button onClick={onClose} className="p-1 rounded-md text-[#8a8fa8] hover:text-[#1a1e35] hover:bg-[#f0f1f5] transition-colors flex-shrink-0"><X size={16} /></button>
+          </div>
+
+          <div className="px-6 py-4">
+            <table className="w-full text-[12px]">
+              <thead>
+                <tr className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] border-b border-[#e8eaf0]">
+                  <th className="text-left py-2 px-3">Label</th>
+                  <th className="text-left py-2 px-3">Type</th>
+                  <th className="text-left py-2 px-3">Amount</th>
+                  <th className="text-right py-2 px-3">Total</th>
+                  <th className="py-2 px-3 w-[92px]"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#f0f1f5]">
+                <tr>
+                  <td className="py-2.5 px-3 text-[#1a1e35] font-medium">Baseline <span className="text-[#8a8fa8] font-normal">· monthly avg</span></td>
+                  <td className="py-2.5 px-3 text-[#8a8fa8]">—</td>
+                  <td className="py-2.5 px-3 text-[#8a8fa8]">—</td>
+                  <td className="py-2.5 px-3 text-right font-semibold text-[#1a1e35] whitespace-nowrap">{fmt0(base)}</td>
+                  <td className="py-2.5 px-3"></td>
+                </tr>
+                <tr>
+                  <td className="py-2.5 px-3 text-[#1a1e35] font-medium">Headcount change <span className="text-[#8a8fa8] font-normal">· {memberNote}</span></td>
+                  <td className="py-2.5 px-3">{autoBadge}</td>
+                  <td className="py-2.5 px-3 text-emerald-600 font-semibold">+{memberPct}%</td>
+                  <td className="py-2.5 px-3 text-right font-semibold text-emerald-600 whitespace-nowrap">+{fmt0(memberAmt)}</td>
+                  <td className="py-2.5 px-3"></td>
+                </tr>
+                {seasonPct !== 0 && (
+                  <tr>
+                    <td className="py-2.5 px-3 text-[#1a1e35] font-medium">Seasonality <span className="text-[#8a8fa8] font-normal">· typically above avg</span></td>
+                    <td className="py-2.5 px-3">{autoBadge}</td>
+                    <td className="py-2.5 px-3 text-emerald-600 font-semibold">+{seasonPct}%</td>
+                    <td className="py-2.5 px-3 text-right font-semibold text-emerald-600 whitespace-nowrap">+{fmt0(seasonAmt)}</td>
+                    <td className="py-2.5 px-3"></td>
+                  </tr>
+                )}
+                {manualAdjustments.map(a => (
+                  draftId === a.id ? editRow(a.id) : (
+                    <tr key={a.id}>
+                      <td className="py-2.5 px-3 text-[#1a1e35] font-medium">{a.label}</td>
+                      <td className="py-2.5 px-3"><span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${a.type === "add" ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-500"}`}>{a.type === "add" ? "Add" : "Reduce"}</span></td>
+                      <td className={`py-2.5 px-3 font-semibold ${a.type === "add" ? "text-emerald-600" : "text-red-500"}`}>{a.type === "add" ? "+" : "−"}{a.unit === "pct" ? `${a.value}%` : fmt0(a.dollars)}</td>
+                      <td className={`py-2.5 px-3 text-right font-semibold whitespace-nowrap ${a.type === "add" ? "text-emerald-600" : "text-red-500"}`}>{a.type === "add" ? "+" : "−"}{fmt0(a.dollars)}</td>
+                      <td className="py-2.5 px-3">
+                        <div className="flex items-center gap-1 justify-end">
+                          <button onClick={() => startEdit(a)} className="p-1 rounded text-[#8a8fa8] hover:text-[#0168dd] hover:bg-[#f0f1f5] transition-colors"><Pencil size={12} /></button>
+                          <button onClick={() => remove(a.id)} className="p-1 rounded text-[#8a8fa8] hover:text-red-500 hover:bg-red-50 transition-colors"><X size={12} /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                ))}
+                {draftId === "new" && editRow("new-draft")}
+                {draftId === null && (
+                  <tr>
+                    <td colSpan={5} className="py-2 px-3">
+                      <button onClick={startAdd} className="flex items-center gap-1 text-[12px] font-medium text-[#0168dd] hover:text-[#0057bb] transition-colors select-none">
+                        <Plus size={13} /> Add adjustment
+                      </button>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+              <tfoot>
+                <tr className="border-t-2 border-[#e8eaf0]">
+                  <td className="py-3 px-3 text-[#1a1e35] font-semibold">Estimated to fund</td>
+                  <td className="py-3 px-3"></td>
+                  <td className="py-3 px-3"></td>
+                  <td className="py-3 px-3 text-right text-[15px] font-bold text-[#0168dd] whitespace-nowrap">{fmt0(finalTotal)}</td>
+                  <td className="py-3 px-3"></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
+          <div className="flex items-center justify-end px-6 py-4 border-t border-[#e8eaf0]">
+            <button onClick={onClose} className="px-5 py-2 rounded-lg text-sm font-semibold bg-[#0168dd] text-white hover:bg-[#0057bb] transition-colors">Done</button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// Narrow "Fund your accounts" card for the 1H side-by-side layout: same content
+// as the full panel's card view, stacked vertically, no progress bars.
+function V1hFundCard() {
+  const providers = fundInitProviders;
+  const [emailProvider, setEmailProvider] = useState<FundingProvider | null>(null);
+  return (
+    <div className="bg-white rounded-lg border border-[#e8eaf0] h-full flex flex-col">
+      <div className="px-4 h-[55px] flex items-center border-b border-[#e8eaf0] bg-white rounded-t-lg">
+        <p className="text-sm font-semibold text-[#1a1e35]">Fund your accounts</p>
+      </div>
+      <div className="px-4 divide-y divide-[#e8eaf0] flex-1">
+        {providers.map(p => {
+          const connected = p.status !== "no-connection" && p.status !== "unavailable";
+          const shortfall = p.balance !== undefined && p.needed !== undefined ? p.needed - p.balance : null;
+          return (
+            <div key={p.id} className="py-3.5 flex flex-col gap-2">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <ProviderLogo id={p.id} size={18} />
+                  <button
+                    onClick={() => connected ? setEmailProvider(p) : undefined}
+                    className={`text-xs font-semibold text-[#1a1e35] ${connected ? "hover:text-[#0168dd] hover:underline" : ""} transition-colors`}
+                  >{p.name}</button>
+                </div>
+                {p.status === "no-connection" ? (
+                  <button className="px-2.5 py-1.5 rounded-md text-[10px] font-semibold text-[#0168dd] hover:bg-[#0168dd]/5 transition-colors whitespace-nowrap">Connect</button>
+                ) : (
+                  <a href="#" onClick={e => e.preventDefault()} className="px-2.5 py-1.5 rounded-md text-[10px] font-semibold text-[#0168dd] hover:bg-[#0168dd]/5 transition-colors whitespace-nowrap inline-flex items-center gap-1">
+                    Go to {p.name}
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17 17 7"/><path d="M7 7h10v10"/></svg>
+                  </a>
+                )}
+              </div>
+              {connected ? (
+                <div className="flex items-end justify-between">
+                  <div>
+                    <p className="text-[10px] text-[#8a8fa8]">Balance</p>
+                    <p className="text-sm font-bold text-[#1a1e35]">{fmt0(p.balance!)}</p>
+                  </div>
+                  {p.status === "needs-funding" && shortfall !== null && (
+                    <div className="text-right">
+                      <p className="text-[10px] text-[#8a8fa8]">Add to cover</p>
+                      <p className="text-sm font-bold text-amber-600">+{fmt0(shortfall)}</p>
+                    </div>
+                  )}
+                  {p.status === "funded" && (
+                    <span className="text-xs font-semibold text-emerald-600 flex items-center gap-1 pb-0.5">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                      Funded
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded uppercase tracking-wide self-start bg-[#f0f1f5] text-[#c0c3d3]">not connected</span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      {emailProvider && (
+        <FundingEmailPreviewDialog
+          provider={emailProvider}
+          onClose={() => setEmailProvider(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+// ── 1J — "Add to cover" as a date-card timeline + expandable provider detail ──
+// Due = gross going out that day. Add = what's still needed after the account
+// balance — a true gap only where the balance is readable (Wise, Bitwage);
+// otherwise "fund X" with no fabricated balance (Payoneer, PayPal).
+const v1jBalances: Record<string, number | undefined> = {
+  wise: 2000,
+  bitwage: 400,
+  payoneer: undefined,
+  paypal: undefined,
+  deel: 900,
+  export: undefined,
+};
+type V1jAdd = { kind: "covered" | "add" | "fund"; amount: number };
+const v1jAddFor = (id: string, due: number): V1jAdd => {
+  const bal = v1jBalances[id];
+  if (bal !== undefined) {
+    const gap = Math.max(0, due - bal);
+    return gap === 0 ? { kind: "covered", amount: 0 } : { kind: "add", amount: gap };
+  }
+  return { kind: "fund", amount: due };
+};
+
+function V1jAddToCoverCard({ onViewSchedule }: { onViewSchedule: () => void }) {
+  const [windowDays, setWindowDays] = useState<7 | 15 | 30>(7);
+  const [selected, setSelected] = useState<string | null>("Jun 22");
+
+  // Timeline = the most recent completed run + everything due inside the window.
+  const funded = v1gFundSchedule.filter(e => e.funded);
+  const lastFunded = funded[funded.length - 1];
+  const upcoming = v1gFundSchedule.filter(e => !e.funded && e.daysOut > 0 && e.daysOut <= windowDays);
+  const visible = [...(lastFunded ? [lastFunded] : []), ...upcoming];
+  const sel = selected ? visible.find(e => e.date === selected) : undefined;
+
+  // Header total = the sum of the visible upcoming rows' adds (same window).
+  const totalAdd = upcoming.reduce((s, e) => s + e.providers.reduce((x, p) => x + v1jAddFor(p.id, p.amount).amount, 0), 0);
+
+  const check = <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>;
+  const paidCheck = <svg width="13" height="13" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="#10b981"/><polyline points="16.5 9 10.6 14.8 7.5 11.8" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>;
+
+  return (
+    <div className="col-span-9 bg-white rounded-lg border border-[#e8eaf0] flex flex-col">
+      <div className="px-4 h-[55px] flex items-center justify-between gap-3 border-b border-[#e8eaf0] bg-white rounded-t-lg">
+        <div className="flex items-center gap-2.5">
+          <p className="text-sm font-semibold text-[#1a1e35]">Add to cover</p>
+          <p className="text-[11px] text-[#8a8fa8]"><span className="text-sm font-bold text-[#1a1e35]">{fmt0(totalAdd)}</span> to add</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center bg-[#f0f1f5] rounded-md p-0.5">
+            {([7, 15, 30] as const).map(d => (
+              <button key={d} onClick={() => setWindowDays(d)}
+                className={`px-2 py-0.5 rounded text-[11px] font-medium transition-all ${windowDays === d ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>{d}d</button>
+            ))}
+          </div>
+          <button onClick={onViewSchedule} className="text-[11px] font-medium text-[#0168dd] border border-[#0168dd]/40 rounded-md px-2.5 py-1 hover:bg-[#0168dd]/5 transition-colors select-none">View full schedule</button>
+        </div>
+      </div>
+
+      <div className="px-4 py-4 flex-1">
+        {/* Timeline — date cards sitting on a line */}
+        <div className="relative">
+          <div className="absolute left-0 right-0 top-1/2 h-0.5 rounded-full bg-[#c8cad4]" />
+          <div className="relative flex gap-8">
+            {visible.map(e => {
+              const isSel = selected === e.date;
+              const projected = e.tag === "projected";
+              const total = v1gSum(e);
+              return (
+                <button key={e.date} onClick={() => setSelected(isSel ? null : e.date)}
+                  className={`relative flex-1 min-w-0 text-left rounded-lg px-3 py-2.5 border transition-colors ${isSel ? "border-[#0168dd] bg-[#f0f7ff]" : projected ? "border-dashed border-[#e2e5ee] bg-white" : "border-[#e8eaf0] bg-white hover:border-[#c8cad4]"}`}>
+                  <div className="flex items-center gap-1.5">
+                    <span className={`text-xs font-semibold whitespace-nowrap ${projected ? "text-[#8a8fa8]" : "text-[#1a1e35]"}`}>{e.dow}, {e.date}</span>
+                    {e.tag === "next" && <span className="text-[9px] font-semibold px-1 py-0.5 rounded bg-[#e8f2fd] text-[#0168dd]">next</span>}
+                    {e.funded && paidCheck}
+                  </div>
+                  <p className={`text-sm font-bold mt-1 ${e.funded || projected ? "text-[#8a8fa8]" : "text-[#5b607a]"}`}>{fmt0(total)}</p>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Detail — per-provider anatomy for the selected date */}
+        {sel && (
+          <div className="mt-4 bg-[#f9f9fc] border border-[#e8eaf0] rounded-lg px-3 py-1">
+            <div className="divide-y divide-[#e8eaf0]">
+              {sel.providers.map(p => {
+                const meta = v1gProviderMeta[p.id];
+                const bal = v1jBalances[p.id];
+                const res = v1jAddFor(p.id, p.amount);
+                return (
+                  <div key={p.id} className="py-2 flex items-center gap-2">
+                    <ProviderLogo id={p.id} size={18} />
+                    <span className="text-xs font-medium text-[#1a1e35] w-20 flex-shrink-0">{meta.name}</span>
+                    {sel.funded ? (
+                      <>
+                        <span className="text-[11px] text-[#8a8fa8] flex-1 min-w-0"></span>
+                        <span className="text-[11px] text-[#8a8fa8] w-24 text-right flex-shrink-0"><span className="font-semibold text-[#1a1e35]">{fmt0(p.amount)}</span> sent</span>
+                        <span className="w-28 text-right flex-shrink-0">
+                          <span className="text-xs font-semibold text-emerald-600 inline-flex items-center gap-1 justify-end">{paidCheck} paid</span>
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-[11px] text-[#8a8fa8] flex-1 min-w-0">{bal !== undefined && <>balance <span className="font-semibold text-[#1a1e35]">{fmt0(bal)}</span></>}</span>
+                        <span className="text-[11px] text-[#8a8fa8] w-24 text-right flex-shrink-0"><span className="font-semibold text-[#1a1e35]">{fmt0(p.amount)}</span> due</span>
+                        <span className="w-28 text-right flex-shrink-0">
+                          {res.kind === "covered" ? (
+                            <span className="text-xs font-semibold text-emerald-600 inline-flex items-center gap-1 justify-end">{check} covered</span>
+                          ) : (
+                            <span className="text-xs font-bold text-amber-600">fund {fmt0(res.amount)}</span>
+                          )}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── 1K — "Next payments": the next two pay runs as self-contained cards ──────
+// Static (not clickable): each card is a mini table — Provider | Balance | Due
+// | Fund — so the repeated words become column headers. The "next" card gets a
+// stronger gray border instead of a blue treatment.
+// One fund-by date as a self-contained card: deadline header, payroll caption,
+// provider table (Provider · Balance · Due · Fund), total pinned to the bottom.
+// Shared by the 1K summary card and its full-schedule dialog so they stay identical.
+const v1kDowFull: Record<string, string> = { Sun: "Sunday", Mon: "Monday", Tue: "Tuesday", Wed: "Wednesday", Thu: "Thursday", Fri: "Friday", Sat: "Saturday" };
+
+function V1kFundDateCard({ e, v1l = false, condensed = false, onProviderClick }: { e: V1gFundDate; v1l?: boolean; condensed?: boolean; onProviderClick?: (providerId: string) => void }) {
+  const isNext = e.tag === "next";
+  const projected = e.tag === "projected";
+  const check = <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>;
+  const fundTotal = e.providers.reduce((s, p) => s + v1jAddFor(p.id, p.amount).amount, 0);
+  const dueTotal = e.providers.reduce((s, p) => s + p.amount, 0);
+  const monthDay = (e.fundBy ?? "").split(", ")[1] ?? e.fundBy;
+  const weekday = v1kDowFull[(e.fundBy ?? "").split(", ")[0]] ?? "";
+  const showTable = !condensed;
+  const [showDialog, setShowDialog] = useState(false);
+
+  const providerTable = (
+    <table className="w-full">
+      <thead>
+        <tr className="text-[9px] font-semibold uppercase tracking-wide text-[#8a8fa8]">
+          <th className="text-left font-semibold pb-1.5 border-b border-[#e8eaf0]">Provider</th>
+          <th className="text-right font-semibold pb-1.5 pl-4 border-b border-[#e8eaf0]">Balance</th>
+          <th className="text-right font-semibold pb-1.5 pl-4 border-b border-[#e8eaf0]">Due</th>
+          <th className="text-right font-semibold pb-1.5 pl-4 border-b border-[#e8eaf0]">{e.funded ? "Status" : "Fund"}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {e.providers.map(p => {
+          const meta = v1gProviderMeta[p.id];
+          const bal = v1jBalances[p.id];
+          const res = v1jAddFor(p.id, p.amount);
+          return (
+            <tr key={p.id} className="border-b border-[#f0f1f5] last:border-0">
+              <td className="py-2">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <ProviderLogo id={p.id} size={16} />
+                  {p.id === "export" ? (
+                    <span className="text-xs font-medium text-[#1a1e35] truncate">{meta.name}</span>
+                  ) : (
+                    <a href="#" onClick={ev => { ev.preventDefault(); onProviderClick?.(p.id); }} className="text-xs font-medium text-[#1a1e35] underline decoration-[#c0c3d3] underline-offset-2 hover:decoration-[#1a1e35] truncate inline-flex items-center gap-1 min-w-0">
+                      <span className="truncate">{meta.name}</span>
+                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#8a8fa8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0"><path d="M7 17 17 7"/><path d="M7 7h10v10"/></svg>
+                    </a>
+                  )}
+                </div>
+              </td>
+              <td className={`py-2 pl-4 text-right whitespace-nowrap tabular-nums ${v1l ? "text-[12px] text-[#8a8fa8]" : "text-[11px] font-semibold text-[#5b607a]"}`}>{bal !== undefined ? fmt0(bal) : (v1l ? "Unknown" : "—")}</td>
+              <td className={`py-2 pl-4 text-right whitespace-nowrap tabular-nums ${v1l ? "text-[12px] text-[#8a8fa8]" : "text-[11px] font-semibold text-[#5b607a]"}`}>{fmt0(p.amount)}</td>
+              <td className="py-2 pl-4 text-right whitespace-nowrap">
+                {e.funded ? (
+                  <span className="text-[11px] font-semibold text-emerald-600 inline-flex items-center gap-1 justify-end">{check} paid</span>
+                ) : res.kind === "covered" ? (
+                  <span className="text-[11px] font-semibold text-emerald-600 inline-flex items-center gap-1 justify-end">{check} covered</span>
+                ) : (
+                  <span className={v1l ? "text-[12px] text-[#1a1e35] tabular-nums" : "text-xs font-bold text-amber-600"}>{fmt0(res.amount)}</span>
+                )}
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  );
+
+  return (
+    <div className={`rounded-lg border bg-white px-4 py-3 flex flex-col h-full ${isNext ? "border-[#c0c3d3]" : "border-[#e8eaf0]"}`}>
+      <div className="flex items-start justify-between gap-2">
+        <p className={condensed ? "whitespace-nowrap min-w-0" : "min-w-0"}>
+          <span className={`text-sm font-bold whitespace-nowrap ${projected ? "text-[#8a8fa8]" : "text-[#1a1e35]"}`}>{monthDay}</span>
+          <span className="text-sm text-[#8a8fa8] whitespace-nowrap">, {weekday}</span>
+          {condensed && isNext && <>{" "}<span className="inline-flex items-center gap-1 align-middle text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#e8f2fd] text-[#0168dd]"><CalendarDays size={10} /> next</span></>}
+          {condensed && projected && <>{" "}<span className="align-middle text-[10px] text-[#c0c3d3]">projected</span></>}
+          {!v1l && <>{" "}<span className="whitespace-nowrap"><span className="text-[#c8cad4] mr-1.5">·</span><span className={`text-[11px] ${e.funded ? "text-emerald-600 font-medium" : "text-[#8a8fa8]"}`}>{e.funded ? "Paid" : "Fund deadline"}</span></span></>}
+        </p>
+        {condensed ? (
+          <button onClick={() => setShowDialog(true)} className="text-[11px] font-medium text-[#0168dd] hover:text-[#0057bb] transition-colors select-none flex-shrink-0">View details</button>
+        ) : isNext ? (
+          <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#e8f2fd] text-[#0168dd] flex-shrink-0"><CalendarDays size={10} /> next</span>
+        ) : projected ? (
+          <span className="text-[10px] text-[#c0c3d3] flex-shrink-0 mt-0.5">projected</span>
+        ) : null}
+      </div>
+      <p className="text-[11px] text-[#8a8fa8]">{v1l ? <>Cycle ends {monthDay} · triggers {e.date}</> : <>Payroll runs {e.date} · paid ~{e.paidOn}</>}</p>
+
+      {showTable && <div className="mt-3">{providerTable}</div>}
+
+      <div className={`${showTable ? "mt-auto" : "mt-4"} pt-2 border-t border-[#e8eaf0] flex items-center justify-between gap-2`}>
+        <span className={`text-[#1a1e35] ${v1l ? "text-[12px] font-medium" : "text-[11px] font-semibold"}`}>{e.funded ? "Total paid" : "Total to fund"}{condensed && <span className="font-normal text-[#8a8fa8]"> · {e.providers.length} payment method{e.providers.length > 1 ? "s" : ""}</span>}</span>
+        <span className={v1l ? "text-[12px] font-semibold text-[#1a1e35] tabular-nums" : `text-xs font-bold ${e.funded ? "text-emerald-600" : "text-[#1a1e35]"}`}>{fmt0(e.funded ? dueTotal : fundTotal)}</span>
+      </div>
+
+      {showDialog && (
+        <>
+          <div className="fixed inset-0 z-40 bg-black/30" onClick={() => setShowDialog(false)} />
+          <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none p-4">
+            <div className="bg-white rounded-xl shadow-2xl w-[420px] max-w-full pointer-events-auto">
+              <div className="flex items-start justify-between px-5 pt-4 pb-3 border-b border-[#e8eaf0]">
+                <div>
+                  <p>
+                    <span className="text-sm font-bold text-[#1a1e35]">{monthDay}</span>
+                    <span className="text-sm text-[#8a8fa8]">, {weekday}</span>
+                    {isNext && <>{" "}<span className="inline-flex items-center gap-1 align-middle text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#e8f2fd] text-[#0168dd]"><CalendarDays size={10} /> next</span></>}
+                  </p>
+                  <p className="text-[11px] text-[#8a8fa8] mt-0.5">Cycle ends {monthDay} · triggers {e.date}</p>
+                </div>
+                <button onClick={() => setShowDialog(false)} className="p-1 rounded-md text-[#8a8fa8] hover:text-[#1a1e35] hover:bg-[#f0f1f5] transition-colors flex-shrink-0"><X size={16} /></button>
+              </div>
+              <div className="px-5 py-3">
+                {providerTable}
+                <div className="mt-2 pt-2 border-t border-[#e8eaf0] flex items-center justify-between">
+                  <span className="text-[12px] font-medium text-[#1a1e35]">{e.funded ? "Total paid" : "Total to fund"}</span>
+                  <span className="text-sm font-bold text-[#1a1e35] tabular-nums">{fmt0(e.funded ? dueTotal : fundTotal)}</span>
+                </div>
+              </div>
+              <div className="flex items-center justify-end px-5 py-3 border-t border-[#e8eaf0]">
+                <button onClick={() => setShowDialog(false)} className="px-5 py-2 rounded-lg text-sm font-semibold bg-[#0168dd] text-white hover:bg-[#0057bb] transition-colors">Done</button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// 1K — "Learn more": explains the funding lifecycle, the columns, and caveats.
+function V1kLearnMoreDialog({ open, onClose, v1l = false }: { open: boolean; onClose: () => void; v1l?: boolean }) {
+  if (!open) return null;
+  const nx = v1gFundSchedule.find(e => e.tag === "next");
+  const fundByDay = (nx?.fundBy ?? "").split(", ")[1] ?? "—";
+  const triggerDay = nx?.date ?? "—";
+  const steps = v1l
+    ? [
+        { label: "Cycle ends", date: fundByDay, desc: "Your payroll period closes." },
+        { label: "Payment triggered", date: triggerDay, desc: "We start the payment." },
+      ]
+    : [
+        { label: "Fund by", date: fundByDay, desc: "Money must be in the account", accent: true },
+        { label: "Payroll runs", date: triggerDay, desc: "The payment is triggered" },
+        { label: "Paid", date: `~${nx?.paidOn ?? "—"}`, desc: "Employees receive it" },
+      ];
+  const gapDef = <>What you still need to add <span className="text-[#1a1e35] font-medium">after</span> the balance. “Covered” means the balance already handles it.</>;
+  const terms: [string, React.ReactNode][] = v1l
+    ? [
+        ["Due", "The total going out on that date (the gross payment)."],
+        ["Gap to fund", gapDef],
+        ["Total gap to fund", "The sum to add across all accounts for that date."],
+      ]
+    : [
+        ["Balance", "What's in the account right now."],
+        ["Due", "The total going out on that date (the gross payment)."],
+        ["Fund", gapDef],
+        ["Total to fund", "The sum to add across all accounts for that date."],
+      ];
+  const goodToKnow: React.ReactNode[] = v1l
+    ? [
+        "Funding transfers can take 1–3 days — add money in advance so it lands by the trigger date.",
+        "Actual payment timing is an estimate and varies by provider.",
+        <>When we can’t read an account’s balance, we show the full payout as the gap to fund — not a confirmed gap.</>,
+      ]
+    : [
+        "Bank transfers can take a few days — fund a little earlier to be safe.",
+        "“Paid” is an estimate and varies by provider.",
+        "When we can’t read an account’s balance, we show the full payout to fund — not a confirmed gap.",
+      ];
+  return (
+    <>
+      <div className="fixed inset-0 z-40 bg-black/30" onClick={onClose} />
+      <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none p-4">
+        <div className="bg-white rounded-xl shadow-2xl w-[520px] max-w-full max-h-[85vh] flex flex-col pointer-events-auto">
+          <div className="flex items-start justify-between px-6 pt-5 pb-4 border-b border-[#e8eaf0] flex-shrink-0">
+            <div>
+              <h2 className="text-[15px] font-semibold text-[#1a1e35]">How funding works</h2>
+              <p className="text-[11px] text-[#8a8fa8] mt-0.5">A quick guide to the dates and amounts on this card.</p>
+            </div>
+            <button onClick={onClose} className="p-1 rounded-md text-[#8a8fa8] hover:text-[#1a1e35] hover:bg-[#f0f1f5] transition-colors flex-shrink-0"><X size={16} /></button>
+          </div>
+
+          <div className="px-6 py-4 overflow-y-auto space-y-5">
+            {/* Timing lifecycle */}
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-2">Timing</p>
+              {v1l && <p className="text-[11px] text-[#8a8fa8] mb-2.5 leading-snug">For the cycle ending on <span className="font-medium text-[#1a1e35]">{fundByDay}</span>, payments will be triggered on <span className="font-medium text-[#1a1e35]">{triggerDay}</span>.</p>}
+              <div className="flex items-stretch gap-1.5">
+                {steps.map((s, i) => (
+                  <Fragment key={s.label}>
+                    <div className="flex-1 rounded-lg border border-[#e8eaf0] bg-[#f9f9fc] px-2.5 py-2">
+                      <p className={`text-[9px] font-semibold uppercase tracking-wide ${s.accent ? "text-amber-600" : "text-[#8a8fa8]"}`}>{s.label}</p>
+                      <p className="text-sm font-bold text-[#1a1e35] mt-0.5">{s.date}</p>
+                      <p className="text-[10px] text-[#8a8fa8] mt-1 leading-snug">{s.desc}</p>
+                    </div>
+                    {i < steps.length - 1 && <div className="flex items-center text-[#c0c3d3] flex-shrink-0"><ChevronRight size={14} /></div>}
+                  </Fragment>
+                ))}
+              </div>
+            </div>
+
+            {/* Column glossary */}
+            <div className="pt-4 border-t border-[#f0f1f5]">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-2">What the columns mean</p>
+              <div className="space-y-2">
+                {terms.map(([term, def]) => (
+                  <div key={term} className="flex gap-3">
+                    <span className={`${v1l ? "w-28" : "w-24"} flex-shrink-0 text-xs font-semibold ${term === "Fund" || term === "Gap to fund" ? "text-amber-600" : "text-[#1a1e35]"}`}>{term}</span>
+                    <span className="text-[11px] text-[#8a8fa8] leading-snug">{def}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Caveats */}
+            <div className="pt-4 border-t border-[#f0f1f5]">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-2">Good to know</p>
+              <ul className="space-y-1.5 text-[11px] text-[#8a8fa8] leading-snug">
+                {goodToKnow.map((t, i) => (
+                  <li key={i} className="flex gap-2"><span className="text-[#c0c3d3]">•</span><span>{t}</span></li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end px-6 py-4 border-t border-[#e8eaf0] flex-shrink-0">
+            <button onClick={onClose} className="px-5 py-2 rounded-lg text-sm font-semibold bg-[#0168dd] text-white hover:bg-[#0057bb] transition-colors">Got it</button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function V1kNextPaymentsCard({ onViewSchedule, v1l = false, condensed = false, onProviderClick }: { onViewSchedule: () => void; v1l?: boolean; condensed?: boolean; onProviderClick?: (providerId: string) => void }) {
+  const upcoming = v1gFundSchedule.filter(e => !e.funded && e.daysOut > 0).slice(0, 2);
+  const [showLearn, setShowLearn] = useState(false);
+  const learnMoreBtn = (
+    <button onClick={() => setShowLearn(true)} className="inline-flex items-center gap-1 text-[11px] font-medium text-[#5b607a] rounded-md px-2.5 py-1 hover:bg-[#f0f1f5] hover:text-[#1a1e35] transition-colors select-none"><Info size={12} /> Learn more</button>
+  );
+  return (
+    <div className="col-span-9 bg-white rounded-lg border border-[#e8eaf0] flex flex-col">
+      {v1l ? (
+        /* 1L — Learn more sits next to the title; no full-schedule link */
+        <div className="px-4 h-[55px] flex items-center gap-3 border-b border-[#e8eaf0] bg-white rounded-t-lg">
+          <p className="text-sm font-semibold text-[#1a1e35]">Next dates to fund</p>
+          {learnMoreBtn}
+        </div>
+      ) : (
+        <div className="px-4 h-[55px] flex items-center justify-between gap-3 border-b border-[#e8eaf0] bg-white rounded-t-lg">
+          <p className="text-sm font-semibold text-[#1a1e35]">Next dates to fund</p>
+          <div className="flex items-center gap-2">
+            {learnMoreBtn}
+            <button onClick={onViewSchedule} className="text-[11px] font-medium text-[#0168dd] border border-[#0168dd]/40 rounded-md px-2.5 py-1 hover:bg-[#0168dd]/5 transition-colors select-none">View full schedule</button>
+          </div>
+        </div>
+      )}
+      <V1kLearnMoreDialog open={showLearn} onClose={() => setShowLearn(false)} v1l={v1l} />
+      <div className="px-4 py-4 flex-1">
+        <div className="grid grid-cols-2 gap-4 items-stretch">
+          {upcoming.map(e => <V1kFundDateCard key={e.date} e={e} v1l={v1l} condensed={condensed} onProviderClick={onProviderClick} />)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Full runway — the same card pattern down a timeline rail, filterable.
+function V1kFundingScheduleDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const [fProvider, setFProvider] = useState<"all" | "wise" | "paypal" | "bitwage">("all");
+  const [fStatus, setFStatus] = useState<"upcoming" | "unfunded">("upcoming");
+  useEffect(() => { if (!open) { setFProvider("all"); setFStatus("upcoming"); } }, [open]);
+  if (!open) return null;
+
+  const rows = v1gFundSchedule
+    .filter(e => fStatus === "unfunded" ? !e.funded : true)
+    .map(e => ({ ...e, providers: e.providers.filter(p => fProvider === "all" || p.id === fProvider) }))
+    .filter(e => e.providers.length > 0);
+  const anyEst = rows.some(e => e.providers.some(p => !v1gProviderMeta[p.id].balanceReadable));
+
+  return (
+    <>
+      <div className="fixed inset-0 z-40 bg-black/30" onClick={onClose} />
+      <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none p-4">
+        <div className="bg-white rounded-xl shadow-2xl w-[560px] max-w-full max-h-[82vh] flex flex-col pointer-events-auto">
+          <div className="px-6 pt-5 pb-3 border-b border-[#e8eaf0] flex-shrink-0">
+            <div className="flex items-start justify-between">
+              <div>
+                <h2 className="text-[15px] font-semibold text-[#1a1e35]">Funding schedule</h2>
+                <p className="text-[11px] text-[#8a8fa8] mt-0.5">When to fund each account · dates reflect payout delay</p>
+              </div>
+              <button onClick={onClose} className="p-1 rounded-md text-[#8a8fa8] hover:text-[#1a1e35] hover:bg-[#f0f1f5] transition-colors flex-shrink-0"><X size={16} /></button>
+            </div>
+            <div className="flex items-start gap-6 mt-3">
+              <div>
+                <span className="block text-[10px] font-semibold uppercase tracking-wide text-[#8a8fa8] mb-1">Account</span>
+                <div className="flex bg-[#f0f1f5] rounded-md p-0.5 w-fit">
+                  {([["all","All"],["wise","Wise"],["paypal","PayPal"],["bitwage","Bitwage"]] as const).map(([k,label]) => (
+                    <button key={k} onClick={() => setFProvider(k)} className={`px-2 py-0.5 rounded text-[11px] font-medium transition-all ${fProvider===k?"bg-white text-[#0168dd] shadow-sm":"text-[#8a8fa8] hover:text-[#1a1e35]"}`}>{label}</button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <span className="block text-[10px] font-semibold uppercase tracking-wide text-[#8a8fa8] mb-1">Status</span>
+                <div className="flex bg-[#f0f1f5] rounded-md p-0.5 w-fit">
+                  {([["upcoming","All upcoming"],["unfunded","Unfunded only"]] as const).map(([k,label]) => (
+                    <button key={k} onClick={() => setFStatus(k)} className={`px-2 py-0.5 rounded text-[11px] font-medium transition-all ${fStatus===k?"bg-white text-[#0168dd] shadow-sm":"text-[#8a8fa8] hover:text-[#1a1e35]"}`}>{label}</button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto px-6 py-4">
+            {rows.length === 0 ? (
+              <p className="text-center text-[12px] text-[#8a8fa8] py-10">No funding dates match these filters.</p>
+            ) : (
+              <div className="relative">
+                <div className="absolute left-[4px] top-3 bottom-3 w-px bg-[#e8eaf0]" />
+                <div className="space-y-4">
+                  {rows.map(e => {
+                    const dot = e.funded ? "bg-emerald-400" : e.tag === "next" ? "bg-[#0168dd]" : e.tag === "projected" ? "bg-[#c0c3d3]" : "bg-amber-400";
+                    return (
+                      <div key={e.date} className="relative pl-6">
+                        <div className={`absolute left-0 top-4 w-[9px] h-[9px] rounded-full ring-2 ring-white ${dot}`} />
+                        <V1kFundDateCard e={e} />
+                      </div>
+                    );
+                  })}
+                </div>
+                {anyEst && <p className="text-[10px] text-[#a0a4b8] leading-snug mt-4">PayPal balance is unavailable, so its figure is the payout routed to it, not a confirmed gap.</p>}
+              </div>
+            )}
+          </div>
+
+          <div className="px-6 py-3 border-t border-[#e8eaf0] flex items-center justify-between flex-shrink-0">
+            <span className="text-[11px] text-[#8a8fa8]">Showing June + next payday · follows your range</span>
+            <button className="flex items-center gap-1.5 text-xs font-semibold border border-[#e8eaf0] rounded-lg px-3 py-1.5 text-[#1a1e35] hover:bg-[#f5f6fa] transition-colors"><Download size={13} /> Export</button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// 1I — read-only "How we get there": baseline + adjustment rules → total, in a dialog.
+function V1iHowWeGetThereDialog({
+  open, onClose, base, memberPct, memberNote, seasonPct, adjPct, total, manualAdjustments,
+}: {
+  open: boolean;
+  onClose: () => void;
+  base: number;
+  memberPct: number; memberNote: string;
+  seasonPct: number;
+  adjPct: number; total: number;
+  manualAdjustments: ManualAdjustment[];
+}) {
+  if (!open) return null;
+  return (
+    <>
+      <div className="fixed inset-0 z-40 bg-black/30" onClick={onClose} />
+      <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none p-4">
+        <div className="bg-white rounded-xl shadow-2xl w-[440px] max-w-full pointer-events-auto">
+          <div className="flex items-start justify-between px-6 pt-5 pb-4 border-b border-[#e8eaf0]">
+            <div>
+              <h2 className="text-[15px] font-semibold text-[#1a1e35]">How we get there</h2>
+              <p className="text-[11px] text-[#8a8fa8] mt-0.5">How your June estimate is built from your payment history.</p>
+            </div>
+            <button onClick={onClose} className="p-1 rounded-md text-[#8a8fa8] hover:text-[#1a1e35] hover:bg-[#f0f1f5] transition-colors flex-shrink-0"><X size={16} /></button>
+          </div>
+
+          <div className="px-6 py-4 space-y-4">
+            {/* At-a-glance math: monthly average + adjustments = payout */}
+            <div className="flex items-stretch gap-1.5">
+              <div className="flex-1 rounded-lg border border-[#e8eaf0] bg-[#f9f9fc] px-2.5 py-2">
+                <p className="text-[9px] font-semibold uppercase tracking-wider text-[#8a8fa8] leading-tight">Monthly avg</p>
+                <p className="text-[15px] font-bold text-[#1a1e35] mt-1.5 leading-none tracking-tight">{fmt0(base)}</p>
+                <p className="text-[10px] text-[#a0a4b8] mt-1.5 leading-tight">Last 5 months</p>
+              </div>
+              <span className="flex items-center text-[#b0b3c5] font-semibold text-sm flex-shrink-0 px-0.5">+</span>
+              <div className="flex-1 rounded-lg border border-[#e8eaf0] bg-[#f9f9fc] px-2.5 py-2">
+                <p className="text-[9px] font-semibold uppercase tracking-wider text-[#8a8fa8] leading-tight">Adjustments</p>
+                <p className={`text-[15px] font-bold mt-1.5 leading-none tracking-tight ${adjPct >= 0 ? "text-emerald-600" : "text-red-500"}`}>{adjPct >= 0 ? "+" : ""}{adjPct}%</p>
+                <p className="text-[10px] text-[#a0a4b8] mt-1.5 leading-tight">Headcount + season</p>
+              </div>
+              <span className="flex items-center text-[#b0b3c5] font-semibold text-sm flex-shrink-0 px-0.5">=</span>
+              <div className="flex-1 rounded-lg border border-[#bcd4f2] bg-[#f0f6ff] px-2.5 py-2">
+                <p className="text-[9px] font-semibold uppercase tracking-wider text-[#0168dd] leading-tight">Est. payout</p>
+                <p className="text-[15px] font-bold text-[#1a1e35] mt-1.5 leading-none tracking-tight">{fmt0(total)}</p>
+                <p className="text-[10px] text-[#a0a4b8] mt-1.5 leading-tight">To fund in June</p>
+              </div>
+            </div>
+
+            {/* Adjustment detail */}
+            <div className="pt-4 border-t border-[#f0f1f5]">
+              <p className="text-[11px] text-[#8a8fa8] leading-snug">The <span className="font-semibold text-emerald-600">+{adjPct}%</span> comes from trends in your payment history:</p>
+              <div className="mt-2 space-y-1.5">
+                <div className="flex items-baseline gap-2 text-[12px]">
+                  <span className="font-semibold text-emerald-600 w-10 flex-shrink-0">+{memberPct}%</span>
+                  <span className="text-[#1a1e35] font-medium flex-shrink-0">Headcount change</span>
+                  <span className="text-[#8a8fa8] truncate">· {memberNote}</span>
+                </div>
+                {seasonPct !== 0 && (
+                  <div className="flex items-baseline gap-2 text-[12px]">
+                    <span className="font-semibold text-emerald-600 w-10 flex-shrink-0">+{seasonPct}%</span>
+                    <span className="text-[#1a1e35] font-medium flex-shrink-0">Seasonality</span>
+                    <span className="text-[#8a8fa8] truncate">· May is typically above average</span>
+                  </div>
+                )}
+                {manualAdjustments.map(adj => (
+                  <div key={adj.id} className="flex items-baseline gap-2 text-[12px]">
+                    <span className={`font-semibold w-10 flex-shrink-0 ${adj.type === "add" ? "text-emerald-600" : "text-red-500"}`}>{adj.type === "add" ? "+" : "−"}{adj.unit === "pct" ? `${adj.value}%` : `≈${Math.round(adj.pct)}%`}</span>
+                    <span className="text-[#1a1e35] font-medium truncate">{adj.label}</span>
+                  </div>
+                ))}
+              </div>
+              <p className="text-[11px] text-[#8a8fa8] mt-2 leading-snug">Applied on top of your {fmt0(base)} monthly average to reach <span className="font-semibold text-[#1a1e35]">{fmt0(total)}</span>.</p>
+            </div>
+
+            {/* Caveat */}
+            <p className="text-[11px] text-[#a0a4b8] leading-snug">{fmt0(total)} is an estimate from your payment history — not a guaranteed figure. Add a buffer, or <a href="#" onClick={e => e.preventDefault()} className="font-medium text-[#8a8fa8] underline decoration-dotted decoration-[#c0c3d3] underline-offset-2 hover:text-[#1a1e35] transition-colors">see how to improve accuracy</a>.</p>
+          </div>
+
+          <div className="flex items-center justify-end px-6 py-4 border-t border-[#e8eaf0]">
+            <button onClick={onClose} className="px-5 py-2 rounded-lg text-sm font-semibold bg-[#0168dd] text-white hover:bg-[#0057bb] transition-colors">Done</button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = false, v1i = false, v1j = false, v1k = false, v1l = false, condensed = false, onProviderClick }: { showStatusBreakdown: boolean; seasonalityOn: boolean; sideFund?: boolean; v1i?: boolean; v1j?: boolean; v1k?: boolean; v1l?: boolean; condensed?: boolean; onProviderClick?: (providerId: string) => void }) {
+  const [range, setRange]           = useState<V1eRange>("1M");
+  const [showYoY, setShowYoY]       = useState(false);
+  const [drillMonth, setDrillMonth] = useState<string | null>(null);
+  const [segTab, setSegTab]         = useState<V1eSeg>("source");
+  const [oneMonth, setOneMonth]     = useState<string>("Jun '26"); // selected month for the 1M view
+  const [monthPickerOpen, setMonthPickerOpen] = useState(false);
+  const [manualAdjustments, setManualAdjustments] = useState<ManualAdjustment[]>([]);
+  const [showManageDialog, setShowManageDialog] = useState(false); // adjustments management dialog
+  const [showScheduleDialog, setShowScheduleDialog] = useState(false); // funding schedule dialog
+  const [mathOpen, setMathOpen] = useState(false); // inline "+28% adjustments" detail popover
+  const [showMathDialog, setShowMathDialog] = useState(false); // 1I "How we get there" dialog
+  const [driversOpen, setDriversOpen] = useState(false); // 1J "+X% vs typical" drivers popover
+  const [showAddDialog, setShowAddDialog] = useState(false); // 1K single "Add adjustment" dialog (1F-style)
+  const [editingAdj, setEditingAdj] = useState<ManualAdjustment | null>(null);
+
+  const [loading, setLoading] = useState(false);
+
+  // Chart-only range: re-pulls the chart; the top summary stays fixed to the current month.
+  const applyRange = (r: V1eRange) => {
+    setRange(r); setDrillMonth(null); setMonthPickerOpen(false);
+    if (r === "1M") setShowYoY(false);
+    setLoading(true); setTimeout(() => setLoading(false), 550);
+  };
+
+  const cfg  = v1eRangeCfg[range];
+  const is1M = range === "1M";
+  const isWeekly = is1M || !!drillMonth;
+
+  // DECOUPLED: the top summary is ALWAYS the current month, independent of the chart's range.
+  const memberPct = v1eRangeCfg["1M"].memberPct;
+  const seasonPct = seasonalityOn ? v1eRangeCfg["1M"].seasonPct : 0;
+  const memberAmt = Math.round(v1AvgMonthly * memberPct / 100);
+  const seasonAmt = Math.round(v1AvgMonthly * seasonPct / 100);
+  const manualNet = manualAdjustments.reduce((s, a) => s + (a.type === "add" ? a.dollars : -a.dollars), 0);
+  const totalAboveBase = memberAmt + seasonAmt + manualNet;
+  const adjProj = Math.max(0, Math.round(v1AvgMonthly + totalAboveBase));
+  const adjPct = Math.round(totalAboveBase / v1AvgMonthly * 100);
+  // 1L — values for the on-screen "how the number is built" breakdown
+  const v1lAutoAmt = memberAmt + seasonAmt;
+  const v1lAutoPct = Math.round(v1lAutoAmt / v1AvgMonthly * 100);
+  const v1lEstimate = v1AvgMonthly + v1lAutoAmt;
+  const adjPctC = Math.round(v1cConfirmed / adjProj * 100);
+  const adjPctP = Math.round(v1cPlanned   / adjProj * 100);
+
+  const memberNote = `${v1CurrMembers} this cycle vs avg ${v1AvgMembers}`;
+
+  // Monthly rows — every month split by channel + earning; confidence fades on projections.
+  let futureStep = 0;
+  const monthlyRows = cfg.bars.map((b, i) => {
+    const total = b.actual + b.projected;
+    const isFut = b.actual === 0 && b.projected > 0;
+    const isCur = !!b.isCurrent;
+    let projOpacity = 1;
+    if (isCur || isFut) { projOpacity = [0.9, 0.75, 0.62, 0.52][Math.min(futureStep, 3)]; futureStep += 1; }
+    return {
+      ...b, total, yoy: cfg.yoy[i]?.yoy ?? 0,
+      isFut, isCur, projOpacity, barOpacity: isFut ? projOpacity : 1,
+      ...v1eSplit(total, v1eChannelSeg),
+      ...v1eSplit(total, v1eEarningSeg),
+    };
+  });
+
+  // Which month drives the weekly view: a drilled month, else the 1M picker selection.
+  const activeWeekLabel = drillMonth ?? (is1M ? oneMonth : null);
+  const weekMonthKey = activeWeekLabel ? activeWeekLabel.replace(/ '2[0-9]+$/, "") : "Jun";
+  const weekBar = activeWeekLabel
+    ? (cfg.bars.find(b => b.label === activeWeekLabel) ?? v1eMonthNav.find(b => b.label === activeWeekLabel))
+    : undefined;
+  const weekRows: V1eWeekRow[] = activeWeekLabel
+    ? v1eBuildWeeks(weekMonthKey, weekBar?.actual ?? 0, weekBar?.projected ?? 0)
+    : v1eJuneWeekRows;
+  const weekMonthIsCurrent = weekMonthKey === "Jun";
+
+  // 1M month stepper helpers (steps through the trailing-12-months list).
+  const oneMonthIdx = v1eMonthNav.findIndex(b => b.label === oneMonth);
+  const stepMonth = (dir: -1 | 1) => {
+    const next = oneMonthIdx + dir;
+    if (next >= 0 && next < v1eMonthNav.length) setOneMonth(v1eMonthNav[next].label);
+  };
+
+  type SegBar = { key: string; label: string; color: string };
+  const weekSegBars: SegBar[] =
+    segTab === "source"
+      ? (showStatusBreakdown
+          ? [
+              { key: "paid",      label: "Paid",      color: "#10b981" },
+              { key: "pending",   label: "Pending",   color: "#f59e0b" },
+              { key: "failed",    label: "Failed",    color: "#ef4444" },
+              { key: "tracked",   label: "Planned",   color: "#0168dd" },
+              { key: "projected", label: "Projected", color: "#85baf5" },
+            ]
+          : [
+              { key: "factual",   label: "Confirmed", color: "#10b981" },
+              { key: "tracked",   label: "Planned",   color: "#0168dd" },
+              { key: "projected", label: "Projected", color: "#85baf5" },
+            ])
+      : segTab === "channel"
+      ? [{ key: "chFactual", label: "Confirmed", color: "#10b981" }, ...v1eChannelSeg.map(s => ({ key: s.key, label: s.label, color: s.color }))]
+      : v1eEarningSeg.map(s => ({ key: s.key, label: s.label, color: s.color }));
+
+  const monthSegBars: SegBar[] =
+    segTab === "source"
+      ? [{ key: "actual", label: "Actuals", color: "#10b981" }, { key: "projected", label: "Projected", color: "#85baf5" }]
+      : segTab === "channel"
+      ? v1eChannelSeg.map(s => ({ key: s.key, label: s.label, color: s.color }))
+      : v1eEarningSeg.map(s => ({ key: s.key, label: s.label, color: s.color }));
+
+  const activeSegBars = isWeekly ? weekSegBars : monthSegBars;
+
+  const renderTip = (segBars: SegBar[]) => ({ active, payload, label }: any) => {
+    if (!active || !payload?.length) return null;
+    const d = payload[0]?.payload;
+    if (!d) return null;
+    const header = d.dateLabel ?? label;
+    const items = segBars.map(sb => ({ ...sb, value: (d[sb.key] ?? 0) as number })).filter(i => i.value > 0);
+    const total = items.reduce((s, i) => s + i.value, 0);
+    return (
+      <div className="bg-white border border-[#e8eaf0] rounded-lg shadow-lg p-3 text-xs min-w-[170px]">
+        <p className="font-semibold text-[#1a1e35] mb-1.5">{header}</p>
+        {items.map(i => (
+          <div key={i.key} className="flex justify-between gap-4 py-0.5">
+            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm inline-block flex-shrink-0" style={{ background: i.color }} /><span className="text-[#8a8fa8]">{i.label}</span></span>
+            <span className="font-medium text-[#1a1e35]">{fmt0(i.value)}</span>
+          </div>
+        ))}
+        {items.length > 1 && (
+          <div className="flex justify-between gap-4 py-0.5 mt-1 pt-1.5 border-t border-[#e8eaf0]">
+            <span className="text-[#8a8fa8]">Total</span>
+            <span className="font-semibold text-[#1a1e35]">{fmt0(total)}</span>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const chartCaption = isWeekly
+    ? (segTab === "source"  ? `${drillMonth ?? "June"} · actuals vs projected, week by week`
+     : segTab === "channel" ? `${drillMonth ?? "June"} · by payment provider, week by week`
+     :                        `${drillMonth ?? "June"} · by earning type, week by week`)
+    : (segTab === "source"  ? "Monthly actuals vs projected · click a bar for its weekly breakdown"
+     : segTab === "channel" ? "Monthly totals by payment provider · click a bar for its weekly breakdown"
+     :                        "Monthly totals by earning type · click a bar for its weekly breakdown");
+
+  const chevLeft  = <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>;
+  const chevRight = <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>;
+
+  return (
+    <>
+      {v1j ? (
+      /* ══ 1J TOP ROW — Estimated-to-fund as its own narrow card + brief card ══ */
+      <div className="grid grid-cols-12 gap-6 items-stretch">
+        {/* Left — Estimated to fund, sized like the old Fund-your-accounts card */}
+        <div className="col-span-3 bg-white rounded-lg border border-[#e8eaf0] flex flex-col">
+          <div className="px-4 h-[55px] flex items-center border-b border-[#e8eaf0] bg-white rounded-t-lg">
+            <p className="text-sm font-semibold text-[#1a1e35]">Estimated payout <span className="text-[#8a8fa8] font-normal">· June 2026</span></p>
+          </div>
+          <div className={`px-4 py-4 flex-1 ${v1l ? "flex flex-col" : ""}`}>
+            {/* non-1L keeps the explainer at the top; 1L moves it to the bottom */}
+            {!v1l && <p className="text-[11px] text-[#8a8fa8] leading-snug mb-2.5">Estimated from your payment history. Gets more accurate as the month fills with real data.</p>}
+            {/* number + trend chip — chip opens the drivers popover */}
+            <div className={`flex items-center min-w-0 ${v1l ? "gap-4" : "gap-2"}`}>
+              <p className="text-3xl font-bold text-[#1a1e35] tracking-tight leading-none">{fmt0(adjProj)}</p>
+              {v1l ? (
+                /* 1L — Adjust sits to the right of the number */
+                <button onClick={() => { setEditingAdj(null); setShowAddDialog(true); }} className="flex-shrink-0 flex items-center gap-1 text-[11px] font-medium text-[#0168dd] border border-[#0168dd]/40 rounded-md px-2.5 py-1 hover:bg-[#0168dd]/5 transition-colors select-none"><SlidersHorizontal size={12} /> Adjust</button>
+              ) : (
+                <div className="relative flex-shrink-0">
+                  <button onClick={() => setDriversOpen(o => !o)} title="See details"
+                    className="flex items-center gap-1 rounded-md px-1.5 py-1 hover:bg-[#f5f6fa] transition-colors select-none">
+                    <span className={`text-sm font-semibold ${adjPct >= 0 ? "text-emerald-600" : "text-red-500"}`}>{adjPct >= 0 ? "+" : ""}{adjPct}%</span>
+                    {adjPct >= 0 ? <TrendingUp size={14} className="text-emerald-500" /> : <TrendingDown size={14} className="text-red-500" />}
+                    <ChevronDown size={11} className={`text-[#8a8fa8] transition-transform duration-150 ${driversOpen ? "rotate-180" : ""}`} />
+                  </button>
+                  {driversOpen && (
+                    <>
+                      <div className="fixed inset-0 z-20" onClick={() => setDriversOpen(false)} />
+                      <div className="absolute top-8 left-0 z-30 bg-white rounded-lg border border-[#e8eaf0] shadow-xl w-72 p-3">
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8]">{adjPct >= 0 ? "+" : ""}{adjPct}% vs a typical month</p>
+                        {/* driver rows — live list, updates when adjustments are added/removed */}
+                        <div className="mt-1 divide-y divide-[#f0f1f5]">
+                          {([
+                            { label: "Headcount change", pct: memberPct, note: memberNote },
+                            { label: "Seasonality",   pct: seasonPct, note: "May is typically above avg." },
+                          ] as const).map(({ label, pct, note }) => {
+                            if (label === "Seasonality" && seasonPct === 0) return null;
+                            return (
+                              <div key={label} className="flex items-center gap-1.5 text-[11px] py-1.5 min-w-0">
+                                <span className="font-semibold flex-shrink-0 text-emerald-600">+{pct}%</span>
+                                <span className="text-[#1a1e35] font-medium flex-shrink-0">{label}</span>
+                                <span className="text-[#d0d3de] flex-shrink-0">—</span>
+                                <span className="text-[#8a8fa8] truncate">{note}</span>
+                              </div>
+                            );
+                          })}
+                          {manualAdjustments.map(adj => (
+                            <div key={adj.id} className="flex items-center gap-1.5 text-[11px] py-1.5 min-w-0">
+                              <span className={`font-semibold flex-shrink-0 ${adj.type === "add" ? "text-emerald-600" : "text-red-500"}`}>{adj.type === "add" ? "+" : "−"}{adj.unit === "pct" ? `${adj.value}%` : `≈${Math.round(adj.pct)}%`}</span>
+                              <span className="text-[#1a1e35] font-medium truncate">{adj.label}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+            <V1cBreakdownPopover dark align={v1l ? "left" : "right"} />
+            {!v1l && (
+            /* actions — side by side under View breakdown */
+            <div className="flex items-center gap-2 mt-4 flex-wrap">
+              <button onClick={() => { if (v1k) { setEditingAdj(null); setShowAddDialog(true); } else setShowManageDialog(true); }}
+                className="flex items-center gap-1 text-[11px] font-medium text-[#0168dd] border border-[#0168dd]/40 rounded-md px-2.5 py-1 hover:bg-[#0168dd]/5 transition-colors select-none">
+                <SlidersHorizontal size={12} /> Adjust
+              </button>
+              <button onClick={() => setShowMathDialog(true)}
+                className="flex items-center gap-1 text-[11px] font-medium text-[#5b607a] border border-[#e8eaf0] rounded-md px-2.5 py-1 hover:bg-[#f5f6fa] hover:text-[#1a1e35] transition-colors select-none">
+                <Info size={12} /> How we get there
+              </button>
+            </div>
+            )}
+            {v1l && !condensed && (
+              /* 1L — the math, on-screen: base → auto adjustments → estimate → manual → total */
+              <div className="mt-4 pt-3 border-t border-[#f0f1f5] space-y-1.5">
+                <div className="flex items-center justify-between gap-2 mb-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8]">How this adds up</p>
+                  <button onClick={() => setShowMathDialog(true)} className="inline-flex items-center gap-1 text-[10px] font-medium text-[#5b607a] hover:text-[#1a1e35] transition-colors select-none"><Info size={11} /> Details</button>
+                </div>
+                <div className="flex items-baseline gap-3 text-[12px]">
+                  <span className="w-16 flex-shrink-0 font-medium text-[#1a1e35] tabular-nums">{fmt0(v1AvgMonthly)}</span>
+                  <span className="text-[#8a8fa8]">Monthly average</span>
+                </div>
+                <div className="flex items-baseline gap-3 text-[12px]">
+                  <span className="w-16 flex-shrink-0 font-medium text-emerald-600 tabular-nums">+{v1lAutoPct}%</span>
+                  <span className="text-[#8a8fa8]">Automatic adjustments</span>
+                </div>
+                <div className="flex items-baseline gap-3 text-[12px] pt-1.5 border-t border-[#f0f1f5]">
+                  <span className="w-16 flex-shrink-0 font-semibold text-[#1a1e35] tabular-nums">{fmt0(v1lEstimate)}</span>
+                </div>
+                {manualAdjustments.map(adj => (
+                  <div key={adj.id} className="flex items-baseline gap-3 text-[12px]">
+                    <span className={`w-16 flex-shrink-0 font-medium tabular-nums ${adj.type === "add" ? "text-emerald-600" : "text-red-500"}`}>{adj.type === "add" ? "+" : "−"}{adj.unit === "pct" ? `${adj.value}%` : `≈${Math.round(adj.pct)}%`}</span>
+                    <span className="text-[#8a8fa8] truncate">{adj.label}</span>
+                  </div>
+                ))}
+                {manualAdjustments.length > 0 && (
+                  <div className="flex items-baseline gap-3 text-[13px] pt-1.5 border-t border-[#e8eaf0]">
+                    <span className="w-16 flex-shrink-0 font-bold text-[#1a1e35] tabular-nums">{fmt0(adjProj)}</span>
+                    <span className="font-bold text-[#1a1e35]">Total to fund</span>
+                  </div>
+                )}
+              </div>
+            )}
+            {v1l && (
+              <p className="mt-auto pt-3 border-t border-[#f0f1f5] text-[11px] text-[#8a8fa8] leading-snug">Estimated from your payment history. Gets more accurate as the month fills with real data.</p>
+            )}
+          </div>
+        </div>
+        {/* Right — Add to cover: date-card timeline + expandable provider detail */}
+        {v1k
+          ? <V1kNextPaymentsCard onViewSchedule={() => setShowScheduleDialog(true)} v1l={v1l} condensed={condensed} onProviderClick={onProviderClick} />
+          : <V1jAddToCoverCard onViewSchedule={() => setShowScheduleDialog(true)} />}
+      </div>
+      ) : (
+      <>
+      {/* ══ TOP ROW — summary card (9/12 + 3/12 fund card in the side-fund layout) ══ */}
+      <div className={sideFund ? "grid grid-cols-12 gap-6 items-stretch" : "contents"}>
+      {/* ══ SUMMARY CARD — fixed to the current month ══════════════════════ */}
+      <div className={`bg-white rounded-lg border border-[#e8eaf0] ${sideFund ? "col-span-9" : ""}`}>
+        <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-[#e8eaf0] bg-white rounded-t-lg">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold text-[#1a1e35]">Predictable Cash Flow</span>
+            <span className="text-xs text-[#8a8fa8]">· <span className="font-semibold text-[#0168dd]">{v1eFullMonthLabel("Jun '26")}</span> · this month</span>
+          </div>
+          <ExportDropdown />
+        </div>
+      <div className="grid grid-cols-2 divide-x divide-[#e8eaf0]">
+        {/* Left — HERO: recommended projection for this month */}
+        <div className="px-5 py-4">
+          {/* ZONE 1 — the number + composition bar */}
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-1 h-[21px] flex items-center">Estimated payout · June 2026</p>
+          {v1i ? (
+            <>
+              {/* 1I — number + View breakdown (black), then an action row of buttons */}
+              <div className="flex items-end gap-2.5 mt-4 min-w-0">
+                <p className="text-3xl font-bold text-[#1a1e35] tracking-tight leading-none">{fmt0(adjProj)}</p>
+                <V1cBreakdownPopover dark />
+              </div>
+              <div className="flex items-center gap-2 mt-6">
+                <button onClick={() => setShowManageDialog(true)}
+                  className="flex items-center gap-1 text-[11px] font-medium text-[#0168dd] border border-[#0168dd]/40 rounded-md px-2.5 py-1 hover:bg-[#0168dd]/5 transition-colors select-none">
+                  <SlidersHorizontal size={12} /> Adjust
+                </button>
+                <button onClick={() => setShowMathDialog(true)}
+                  className="flex items-center gap-1 text-[11px] font-medium text-[#5b607a] border border-[#e8eaf0] rounded-md px-2.5 py-1 hover:bg-[#f5f6fa] hover:text-[#1a1e35] transition-colors select-none">
+                  <Info size={12} /> How we get there
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+          <div className="flex items-center justify-between gap-2 mt-4">
+            <div className="flex items-end gap-2.5 min-w-0">
+              <p className="text-3xl font-bold text-[#0168dd] tracking-tight leading-none">{fmt0(adjProj)}</p>
+              <V1cBreakdownPopover />
+            </div>
+            <button onClick={() => setShowManageDialog(true)}
+              className="flex-shrink-0 flex items-center gap-1 text-[11px] font-medium text-[#0168dd] border border-[#0168dd]/40 rounded-md px-2.5 py-1 hover:bg-[#0168dd]/5 transition-colors select-none">
+              <SlidersHorizontal size={12} /> Adjust
+            </button>
+          </div>
+
+          {/* The math, inline — reads as an equation: = baseline + adjustments */}
+          <div className="relative mt-2 flex items-center gap-1 text-[11px] flex-wrap">
+            <span className="text-[#8a8fa8]">=</span>
+            <span className="font-semibold text-[#1a1e35]">{fmt0(v1AvgMonthly)}</span>
+            <span className="text-[#8a8fa8]">monthly avg</span>
+            <span className="text-[#8a8fa8]">{adjPct >= 0 ? "+" : "−"}</span>
+            <button onClick={() => setMathOpen(o => !o)}
+              className="inline-flex items-center gap-0.5 text-[11px] border-b border-dotted border-[#c0c3d3] hover:border-[#8a8fa8] transition-colors select-none">
+              <span className={`font-semibold ${adjPct >= 0 ? "text-emerald-600" : "text-red-500"}`}>{Math.abs(adjPct)}%</span>
+              {adjPct >= 0 ? <TrendingUp size={11} className="text-emerald-600" /> : <TrendingDown size={11} className="text-red-500" />}
+              <span className="text-[#8a8fa8]">adjustments</span>
+              <ChevronDown size={10} className={`text-[#8a8fa8] transition-transform ${mathOpen ? "rotate-180" : ""}`} />
+            </button>
+            {mathOpen && (
+              <>
+                <div className="fixed inset-0 z-20" onClick={() => setMathOpen(false)} />
+                <div className="absolute left-0 top-6 z-30 w-64 bg-white rounded-lg border border-[#e8eaf0] shadow-xl p-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-1.5">Adjustments · {adjPct >= 0 ? "+" : ""}{adjPct}%</p>
+                  <div className="divide-y divide-[#f0f1f5]">
+                    {([
+                      { label: "Headcount change", pct: memberPct, note: memberNote },
+                      { label: "Seasonality",   pct: seasonPct, note: "May is typically above avg." },
+                    ] as const).map(({ label, pct, note }) => {
+                      if (label === "Seasonality" && seasonPct === 0) return null;
+                      return (
+                        <div key={label} className="flex items-center gap-1.5 text-[11px] py-1.5 min-w-0">
+                          <span className="font-semibold flex-shrink-0 text-emerald-600">+{pct}%</span>
+                          <span className="text-[#1a1e35] font-medium flex-shrink-0">{label}</span>
+                          <span className="text-[#d0d3de] flex-shrink-0">—</span>
+                          <span className="text-[#8a8fa8] truncate">{note}</span>
+                        </div>
+                      );
+                    })}
+                    {manualAdjustments.map(adj => (
+                      <div key={adj.id} className="flex items-center gap-1.5 text-[11px] py-1.5 min-w-0">
+                        <span className={`font-semibold flex-shrink-0 ${adj.type === "add" ? "text-emerald-600" : "text-red-500"}`}>{adj.type === "add" ? "+" : "−"}{adj.unit === "pct" ? `${adj.value}%` : `≈${Math.round(adj.pct)}%`}</span>
+                        <span className="text-[#1a1e35] font-medium flex-shrink-0">{adj.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <button onClick={() => { setMathOpen(false); setShowManageDialog(true); }}
+                    className="mt-1.5 w-full text-center text-[11px] font-medium text-[#0168dd] hover:text-[#0057bb] transition-colors select-none py-1 border-t border-[#f0f1f5]">
+                    Manage adjustments
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="relative group mt-6 cursor-default">
+            <div className="h-2 rounded-full overflow-hidden">
+              <div className="h-full flex">
+                <div className="h-full bg-emerald-500" style={{ width: `${adjPctC}%` }} />
+                <div className="h-full bg-[#0168dd]" style={{ width: `${Math.max(adjPctP, 0.6)}%` }} />
+                <div className="h-full flex-1 bg-[#85baf5]" />
+              </div>
+            </div>
+            <div className="flex justify-between text-[10px] text-[#8a8fa8] mt-0.5">
+              <span>{fmt0(v1AvgMonthly)} avg</span>
+              <span>{fmt0(adjProj)} total</span>
+            </div>
+            <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block z-20 pointer-events-none">
+              <div className="bg-white border border-[#e8eaf0] rounded-lg shadow-lg p-3 w-48">
+                {v1cBarHoverRows.map(({ label, color, value, pct }) => {
+                  const k = value / 1000;
+                  const fmtK = `${k % 1 === 0 ? k.toFixed(0) : k.toFixed(1)}k`;
+                  return (
+                    <div key={label} className="flex items-center justify-between text-[11px] font-semibold mb-1 last:mb-0 text-[#8a8fa8]">
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-2 h-2 rounded-sm flex-shrink-0" style={{ background: color }} />
+                        <span>{label}</span>
+                      </div>
+                      <span>{fmtK} ({pct}%)</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* ZONE 3 — caveat */}
+          <p className="mt-4 pt-4 border-t border-[#f0f1f5] text-[10px] text-[#a0a4b8] leading-snug">{fmt0(adjProj)} is an estimate from your payment history — not a guaranteed figure. Add a buffer, or <a href="#" onClick={e => e.preventDefault()} className="font-medium text-[#8a8fa8] underline decoration-dotted decoration-[#c0c3d3] underline-offset-2 hover:text-[#1a1e35] transition-colors">see how to improve accuracy</a>.</p>
+            </>
+          )}
+        </div>
+
+        {/* Right — Add to cover for the next payday */}
+        <V1gAddToCoverColumn onViewSchedule={() => setShowScheduleDialog(true)} collapsible={v1i} />
+      </div>
+
+      </div>{/* ══ end SUMMARY CARD ══ */}
+      {sideFund && <div className="col-span-3"><V1hFundCard /></div>}
+      </div>{/* ══ end TOP ROW ══ */}
+      </>
+      )}
+
+      {/* ══ CHART CARD — separate explorer with its own range control ══════ */}
+      <div className="bg-white rounded-lg border border-[#e8eaf0] overflow-hidden">
+        <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-[#e8eaf0] bg-white flex-wrap">
+          <div>
+            <p className="text-sm font-semibold text-[#1a1e35]">Explore your payments over time</p>
+            <p className="text-[11px] text-[#8a8fa8]">Projected payouts ahead — browsing here doesn't change the numbers above.</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center bg-[#f0f1f5] rounded-md p-0.5">
+              {(["1M","3M","6M","12M"] as V1eRange[]).map(r => (
+                <button key={r} onClick={() => applyRange(r)}
+                  className={`px-2.5 py-0.5 rounded text-[11px] font-medium transition-all ${range === r ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>
+                  {r}
+                </button>
+              ))}
+            </div>
+            <div className="relative flex items-center gap-1 text-[11px]">
+              <button onClick={() => { if (is1M && !drillMonth) stepMonth(-1); }}
+                disabled={is1M && !drillMonth && oneMonthIdx <= 0}
+                className="p-0.5 rounded text-[#8a8fa8] hover:text-[#1a1e35] hover:bg-[#eef0f4] transition-colors disabled:opacity-30 disabled:hover:bg-transparent">{chevLeft}</button>
+              {drillMonth ? (
+                <span className="font-medium text-[#1a1e35] min-w-[130px] text-center">{drillMonth} — weekly</span>
+              ) : is1M ? (
+                <button onClick={() => setMonthPickerOpen(o => !o)}
+                  className="text-[11px] font-medium text-[#1a1e35] min-w-[130px] text-center hover:bg-[#eef0f4] rounded px-2 py-0.5 flex items-center justify-center gap-1 transition-colors">
+                  {v1eFullMonthLabel(oneMonth)}
+                  <ChevronDown size={11} className={`text-[#8a8fa8] transition-transform ${monthPickerOpen ? "rotate-180" : ""}`} />
+                </button>
+              ) : (
+                <span className="font-medium text-[#1a1e35] min-w-[130px] text-center">{cfg.periodLabel}</span>
+              )}
+              <button onClick={() => { if (is1M && !drillMonth) stepMonth(1); }}
+                disabled={is1M && !drillMonth && oneMonthIdx >= v1eMonthNav.length - 1}
+                className="p-0.5 rounded text-[#8a8fa8] hover:text-[#1a1e35] hover:bg-[#eef0f4] transition-colors disabled:opacity-30 disabled:hover:bg-transparent">{chevRight}</button>
+              {monthPickerOpen && is1M && !drillMonth && (
+                <>
+                  <div className="fixed inset-0 z-20" onClick={() => setMonthPickerOpen(false)} />
+                  <div className="absolute top-8 left-7 z-30 bg-white rounded-lg border border-[#e8eaf0] shadow-xl py-1 w-40 max-h-56 overflow-y-auto">
+                    {v1eMonthNav.map(b => (
+                      <button key={b.label} onClick={() => { setOneMonth(b.label); setMonthPickerOpen(false); setLoading(true); setTimeout(() => setLoading(false), 550); }}
+                        className={`w-full text-left px-3 py-1.5 text-[11px] transition-colors ${b.label === oneMonth ? "bg-[#eef3ff] text-[#0168dd] font-medium" : "text-[#1a1e35] hover:bg-[#f5f6fa]"}`}>
+                        {v1eFullMonthLabel(b.label)}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      {/* ── Chart controls ───────────────────────────────────────────────── */}
+      <div className="px-5 pt-4 pb-0">
+        {/* Row 1 — distribution title (left) + segmentation tabs (right, segmented-pill style) */}
+        <div className="flex items-start justify-between mb-3 gap-4">
+          <div>
+            <p className="text-[11px] text-[#8a8fa8]">{chartCaption}</p>
+          </div>
+          <div className="flex items-center bg-[#f0f1f5] rounded-md p-0.5 flex-shrink-0">
+            {([["source","By source of prediction"],["channel","By cash flow channel"],["type","By earning type"]] as const).map(([id, label]) => (
+              <button key={id} onClick={() => setSegTab(id)}
+                className={`px-2.5 py-1 rounded text-[10px] font-medium transition-all whitespace-nowrap ${segTab === id ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Chart-level control — YoY side-by-side comparison (month ranges only) */}
+        {!is1M && !drillMonth && (
+          <div className="flex items-center justify-end my-3">
+            <button onClick={() => setShowYoY(p => !p)} className="flex items-center gap-1.5 text-[10px] select-none cursor-pointer">
+              <span className={`relative w-7 h-4 rounded-full transition-colors flex-shrink-0 inline-flex ${showYoY ? "bg-[#0168dd]" : "bg-[#c8cad4]"}`}>
+                <span className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow-sm transition-transform ${showYoY ? "translate-x-3.5" : "translate-x-0.5"}`} />
+              </span>
+              <span className="text-[#8a8fa8]">vs last year</span>
+            </button>
+          </div>
+        )}
+
+        {/* Breadcrumb */}
+        {drillMonth && (
+          <button onClick={() => setDrillMonth(null)}
+            className="mt-2 flex items-center gap-1 text-[10px] text-[#0168dd] hover:underline">
+            {chevLeft} Back to {range} view
+          </button>
+        )}
+      </div>
+
+      {/* ── Alert banner — only when status breakdown is on ──────────────── */}
+      {showStatusBreakdown && (
+        <div className="px-5 pt-1">
+          <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5 text-[11px]">
+            <div className="flex items-center gap-2 text-amber-800">
+              <AlertTriangle size={12} className="text-amber-500 flex-shrink-0" />
+              3 payments pending · $3.6k from Weeks 1–2 still need processing
+            </div>
+            <button className="text-[11px] text-[#0168dd] font-semibold flex-shrink-0 hover:underline flex items-center gap-0.5">Review <ChevronRight size={11} /></button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Chart ────────────────────────────────────────────────────────── */}
+      <div className="px-5 pt-3 pb-4">
+        {loading ? (
+          <ChartSkeleton bars={isWeekly ? 4 : (cfg.bars.length || 12)} />
+        ) : isWeekly ? (
+          <ResponsiveContainer width="100%" height={150}>
+            <BarChart data={weekRows} barCategoryGap="30%" margin={{ top: 20, right: 4, left: 0, bottom: 4 }}>
+              <CartesianGrid vertical={false} stroke="#f0f1f5" />
+              <XAxis dataKey="dateLabel" tick={{ fontSize: 9, fill: "#8a8fa8" }} tickLine={false} axisLine={false} interval={0} />
+              <YAxis tick={{ fontSize: 10, fill: "#8a8fa8" }} tickFormatter={(v: number) => `$${Math.round(v/1000)}k`} axisLine={false} tickLine={false} width={36} />
+              <Tooltip content={renderTip(weekSegBars)} cursor={{ fill: "#f5f6fa" }} />
+              {weekSegBars.map((sb, idx) => (
+                <Bar key={sb.key} dataKey={sb.key} stackId="w" fill={sb.color} name={sb.label}
+                  radius={idx === weekSegBars.length - 1 ? [3, 3, 0, 0] : undefined}>
+                  {idx === weekSegBars.length - 1 && (
+                    <LabelList dataKey="total" position="top" offset={6}
+                      formatter={(v: number) => `$${Math.round(v / 1000)}k`}
+                      style={{ fontSize: 10, fontWeight: 600, fill: "#5b607a" }} />
+                  )}
+                </Bar>
+              ))}
+            </BarChart>
+          </ResponsiveContainer>
+        ) : (
+          <ResponsiveContainer width="100%" height={150}>
+            <ComposedChart data={monthlyRows} barCategoryGap="28%" margin={{ top: 20, right: 4, left: 0, bottom: 4 }}>
+              <CartesianGrid vertical={false} stroke="#f0f1f5" />
+              <XAxis dataKey="label" tick={{ fontSize: range === "12M" ? 9 : 10, fill: "#8a8fa8" }} tickLine={false} axisLine={false} interval={0} />
+              <YAxis tick={{ fontSize: 10, fill: "#8a8fa8" }} tickFormatter={(v: number) => `$${Math.round(v/1000)}k`} axisLine={false} tickLine={false} width={36} />
+              <Tooltip cursor={{ fill: "#f5f6fa" }} content={({ active, payload }: any) => {
+                if (!active || !payload?.length) return null;
+                const d = payload[0]?.payload;
+                if (!d) return null;
+                const items = monthSegBars.map(sb => ({ ...sb, value: (d[sb.key] ?? 0) as number })).filter(i => i.value > 0);
+                const total = items.reduce((s, i) => s + i.value, 0);
+                return (
+                  <div className="bg-white border border-[#e8eaf0] rounded-lg shadow-lg p-3 text-xs min-w-[180px]">
+                    <p className="font-semibold text-[#1a1e35] mb-1.5">{d.label}</p>
+                    {items.map(i => (
+                      <div key={i.key} className="flex justify-between gap-4 py-0.5">
+                        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm inline-block flex-shrink-0" style={{ background: i.color }} /><span className="text-[#8a8fa8]">{i.label}</span></span>
+                        <span className="font-medium text-[#1a1e35]">{fmt0(i.value)}</span>
+                      </div>
+                    ))}
+                    <div className="flex justify-between gap-4 py-0.5 mt-1 pt-1.5 border-t border-[#e8eaf0]">
+                      <span className="text-[#8a8fa8]">Total</span>
+                      <span className="font-semibold text-[#1a1e35]">{fmt0(total)}</span>
+                    </div>
+                    {showYoY && (d.yoy ?? 0) > 0 && (
+                      <div className="flex justify-between gap-4 py-0.5 mt-1 pt-1.5 border-t border-[#e8eaf0]">
+                        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm inline-block flex-shrink-0" style={{ background: "#c8cad4" }} /><span className="text-[#8a8fa8]">Last year · {v1ePrevYearLabel(d.label)}</span></span>
+                        <span className="font-medium text-[#1a1e35]">{fmt0(d.yoy)}</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              }} />
+              {monthSegBars.map((sb, idx) => (
+                <Bar key={sb.key} dataKey={sb.key} stackId="m" fill={sb.color} name={sb.label}
+                  radius={idx === monthSegBars.length - 1 ? [3, 3, 0, 0] : undefined}
+                  cursor="pointer" onClick={(d: any) => d?.label && setDrillMonth(d.label)}>
+                  {monthlyRows.map((row, ri) => (
+                    <Cell key={ri}
+                      fillOpacity={segTab === "source" ? (sb.key === "projected" ? row.projOpacity : 1) : row.barOpacity} />
+                  ))}
+                  {idx === monthSegBars.length - 1 && (
+                    <LabelList dataKey="total" position="top" offset={6}
+                      formatter={(v: number) => `$${Math.round(v / 1000)}k`}
+                      style={{ fontSize: 10, fontWeight: 600, fill: "#5b607a" }} />
+                  )}
+                </Bar>
+              ))}
+              {showYoY && (
+                <Bar dataKey="yoy" stackId="prev" fill="#c8cad4" name="Last year" radius={[3, 3, 0, 0]} isAnimationActive={false}>
+                  <LabelList dataKey="yoy" position="top" offset={6}
+                    formatter={(v: number) => v > 0 ? `$${Math.round(v / 1000)}k` : ""}
+                    style={{ fontSize: 9, fontWeight: 600, fill: "#a0a4b8" }} />
+                </Bar>
+              )}
+            </ComposedChart>
+          </ResponsiveContainer>
+        )}
+
+        {/* Legend */}
+        <div className="flex items-center gap-x-3 gap-y-1 mt-1.5 flex-wrap">
+          {activeSegBars.map(sb => (
+            <span key={sb.key} className="flex items-center gap-1 text-[10px] text-[#8a8fa8]">
+              <span className="w-2 h-2 rounded-sm flex-shrink-0" style={{ background: sb.color }} />
+              {sb.label}
+            </span>
+          ))}
+          {showYoY && !isWeekly && (
+            <span className="flex items-center gap-1 text-[10px] text-[#8a8fa8]">
+              <span className="w-2 h-2 rounded-sm flex-shrink-0" style={{ background: "#c8cad4" }} />
+              Last year (same month)
+            </span>
+          )}
+          {!isWeekly && (range === "6M" || range === "12M") && (
+            <span className="text-[9px] text-[#c0c3d3] italic ml-auto">Confidence fades on projected months</span>
+          )}
+        </div>
+      </div>
+      </div>{/* ══ end CHART CARD ══ */}
+
+      <V1gManageAdjustmentsDialog
+        open={showManageDialog}
+        onClose={() => setShowManageDialog(false)}
+        base={v1AvgMonthly}
+        memberPct={memberPct} memberAmt={memberAmt} memberNote={memberNote}
+        seasonPct={seasonPct} seasonAmt={seasonAmt}
+        manualAdjustments={manualAdjustments}
+        setManualAdjustments={setManualAdjustments}
+        finalTotal={adjProj}
+      />
+      {v1k
+        ? <V1kFundingScheduleDialog open={showScheduleDialog} onClose={() => setShowScheduleDialog(false)} />
+        : <V1gFundingScheduleDialog open={showScheduleDialog} onClose={() => setShowScheduleDialog(false)} />}
+      {v1k && (
+        <AddAdjustmentDialog
+          open={showAddDialog}
+          onClose={() => setShowAddDialog(false)}
+          onSave={adj => {
+            if (editingAdj) setManualAdjustments(prev => prev.map(a => a.id === adj.id ? adj : a));
+            else setManualAdjustments(prev => [...prev, adj]);
+          }}
+          base={v1AvgMonthly}
+          currentProjection={editingAdj ? adjProj - (editingAdj.type === "add" ? editingAdj.dollars : -editingAdj.dollars) : adjProj}
+          initial={editingAdj ?? undefined}
+        />
+      )}
+      <V1iHowWeGetThereDialog
+        open={showMathDialog}
+        onClose={() => setShowMathDialog(false)}
+        base={v1AvgMonthly}
+        memberPct={memberPct} memberNote={memberNote}
+        seasonPct={seasonPct}
+        adjPct={adjPct} total={adjProj}
+        manualAdjustments={manualAdjustments}
+      />
+    </>
+  );
+}
+
+// ── 1G funding model — per-payday, per-provider "add to cover" ──────────────
+// Balance readable (Wise) → true gap. Not readable (PayPal) → payout routed,
+// labelled "est." (fund for payout, not a confirmed gap).
+const v1gProviderMeta: Record<string, { name: string; balanceReadable: boolean }> = {
+  wise:    { name: "Wise",    balanceReadable: true },
+  paypal:  { name: "PayPal",  balanceReadable: false },
+  bitwage: { name: "Bitwage", balanceReadable: true },
+  deel:    { name: "Deel",    balanceReadable: true },
+  export:  { name: "Export",  balanceReadable: false },
+};
+// daysOut = days from today until the FUND-BY date (payout date minus transfer lag),
+// so windows are built on when you must fund, not when the payment lands.
+type V1gFundDate = { date: string; dow: string; daysOut: number; tag?: "next" | "projected"; funded?: boolean; fundBy?: string; paidOn?: string; providers: { id: string; amount: number }[] };
+const v1gFundSchedule: V1gFundDate[] = [
+  { date: "Jun 8",  dow: "Mon", daysOut: -12, funded: true,    fundBy: "Sun, Jun 7",  paidOn: "Jun 10", providers: [{ id: "wise", amount: 2600 }, { id: "paypal", amount: 1300 }] },
+  { date: "Jun 15", dow: "Mon", daysOut: -5, funded: true,     fundBy: "Sun, Jun 14", paidOn: "Jun 17", providers: [{ id: "wise", amount: 2900 }, { id: "paypal", amount: 1200 }] },
+  { date: "Jun 22", dow: "Mon", daysOut: 2,  tag: "next",       fundBy: "Sun, Jun 21", paidOn: "Jun 24", providers: [{ id: "wise", amount: 3700 }, { id: "paypal", amount: 2597 }, { id: "deel", amount: 1400 }, { id: "export", amount: 1800 }] },
+  { date: "Jun 24", dow: "Wed", daysOut: 4,                      fundBy: "Tue, Jun 23", paidOn: "Jun 26", providers: [{ id: "bitwage", amount: 1100 }] },
+  { date: "Jun 30", dow: "Tue", daysOut: 10,                     fundBy: "Mon, Jun 29", paidOn: "Jul 2",  providers: [{ id: "wise", amount: 5110 }, { id: "paypal", amount: 900 }] },
+  { date: "Jul 6",  dow: "Mon", daysOut: 16, tag: "projected",   fundBy: "Sun, Jul 5",  paidOn: "Jul 8",  providers: [{ id: "wise", amount: 3800 }, { id: "paypal", amount: 2350 }] },
+  { date: "Jul 13", dow: "Mon", daysOut: 23, tag: "projected",   fundBy: "Sun, Jul 12", paidOn: "Jul 15", providers: [{ id: "wise", amount: 4100 }, { id: "paypal", amount: 2100 }] },
+];
+const v1gSum = (d: V1gFundDate) => d.providers.reduce((s, p) => s + p.amount, 0);
+
+// Right half of the top strip: the next payday's gap, same rhythm as the hero
+// (big total → per-provider breakdown → link out).
+function V1gPill({ id, amount }: { id: string; amount: number }) {
+  const meta = v1gProviderMeta[id];
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-[#f9f9fc] border border-[#e8eaf0] pl-1 pr-2.5 py-1">
+      <ProviderLogo id={id} size={16} />
+      <span className="text-[11px] font-medium text-[#1a1e35]">{meta.name}</span>
+      {!meta.balanceReadable && <span title="Fund for payout · balance unavailable" className="text-[9px] text-[#8a8fa8] border-b border-dotted border-[#c0c3d3] cursor-help leading-none">est.</span>}
+      <span className="text-[11px] font-bold text-[#5b607a]">+{fmt0(amount)}</span>
+    </span>
+  );
+}
+
+function V1gAddToCoverColumn({ onViewSchedule, collapsible = false }: { onViewSchedule: () => void; collapsible?: boolean }) {
+  const windowDays = 7;
+  const [expanded, setExpanded] = useState<string[]>([]);
+  const toggle = (d: string) => setExpanded(prev => prev.includes(d) ? prev.filter(x => x !== d) : [...prev, d]);
+
+  const inWindow = v1gFundSchedule.filter(e => !e.funded && e.daysOut > 0 && e.daysOut <= windowDays);
+  const total = inWindow.reduce((s, e) => s + v1gSum(e), 0);
+  const nextUnfunded = v1gFundSchedule.find(e => !e.funded && e.daysOut > 0);
+
+  const scheduleButton = (
+    <button onClick={onViewSchedule} className="flex-shrink-0 text-[11px] font-medium text-[#0168dd] border border-[#0168dd]/40 rounded-md px-2.5 py-1 hover:bg-[#0168dd]/5 transition-colors select-none w-fit">
+      View full schedule
+    </button>
+  );
+
+  return (
+    <div className="px-5 py-4">
+      <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-1 h-[21px] flex items-center">Add to cover · next 7 days</p>
+
+      {inWindow.length === 0 ? (
+        <>
+          <div className="mt-4 flex items-center gap-2">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            <span className="text-base font-bold text-emerald-600">Nothing to fund this week ✓</span>
+          </div>
+          {nextUnfunded && <p className="text-[11px] text-[#8a8fa8] mt-1.5">Next payday is {nextUnfunded.dow}, {nextUnfunded.date} — {fmt0(v1gSum(nextUnfunded))} to add.</p>}
+          <div className="mt-4">{scheduleButton}</div>
+        </>
+      ) : (
+        <>
+          <div className="flex items-center justify-between gap-2 mt-4">
+            <div className="flex items-end gap-2 min-w-0">
+              <p className="text-3xl font-bold text-[#5b607a] tracking-tight leading-none">{fmt0(total)}</p>
+              <span className="text-[11px] text-[#8a8fa8] mb-0.5">this week</span>
+            </div>
+            {scheduleButton}
+          </div>
+          <div className="mt-4 relative">
+            <div className="absolute left-[3px] top-2 bottom-2 w-px bg-[#e8eaf0]" />
+            <div className="space-y-6">
+              {inWindow.map(e => {
+                const open = !collapsible || expanded.includes(e.date);
+                return (
+                <div key={e.date} className="relative pl-5">
+                  <div className="absolute left-0 top-[5px] w-2 h-2 rounded-full bg-[#c0c3d3] ring-2 ring-white" />
+                  {collapsible ? (
+                    <button onClick={() => toggle(e.date)} className="flex items-center gap-1.5 w-full text-left select-none">
+                      <span className="text-xs font-semibold text-[#1a1e35]">{e.dow}, {e.date}</span>
+                      <span className="text-xs text-[#d0d3de]">·</span>
+                      <span className="text-xs font-semibold text-[#5b607a]">{fmt0(v1gSum(e))}</span>
+                      <ChevronDown size={13} className={`ml-auto text-[#8a8fa8] transition-transform ${open ? "rotate-180" : ""}`} />
+                    </button>
+                  ) : (
+                    <div className="flex items-baseline gap-1.5">
+                      <span className="text-xs font-semibold text-[#1a1e35]">{e.dow}, {e.date}</span>
+                      <span className="text-xs text-[#d0d3de]">·</span>
+                      <span className="text-xs font-semibold text-[#5b607a]">{fmt0(v1gSum(e))}</span>
+                    </div>
+                  )}
+                  {open && (
+                    <div className="flex flex-wrap gap-1.5 mt-1.5">
+                      {e.providers.map(p => <V1gPill key={p.id} id={p.id} amount={p.amount} />)}
+                    </div>
+                  )}
+                </div>
+              );
+              })}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// Full per-date, per-provider funding runway. Scrollable, filterable by account
+// and status; projected dates are dimmed; export in the footer.
+function V1gFundingScheduleDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const [fProvider, setFProvider] = useState<"all" | "wise" | "paypal" | "bitwage">("all");
+  const [fStatus, setFStatus] = useState<"upcoming" | "unfunded">("upcoming");
+  useEffect(() => { if (!open) { setFProvider("all"); setFStatus("upcoming"); } }, [open]);
+  if (!open) return null;
+
+  const rows = v1gFundSchedule
+    .filter(e => fStatus === "unfunded" ? !e.funded : true)
+    .map(e => ({ ...e, providers: e.providers.filter(p => fProvider === "all" || p.id === fProvider) }))
+    .filter(e => e.providers.length > 0);
+  const anyEst = rows.some(e => e.providers.some(p => !v1gProviderMeta[p.id].balanceReadable));
+
+  const check = <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>;
+
+  return (
+    <>
+      <div className="fixed inset-0 z-40 bg-black/30" onClick={onClose} />
+      <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none p-4">
+        <div className="bg-white rounded-xl shadow-2xl w-[520px] max-w-full max-h-[82vh] flex flex-col pointer-events-auto">
+          {/* header + filters (sticky) */}
+          <div className="px-6 pt-5 pb-3 border-b border-[#e8eaf0] flex-shrink-0">
+            <div className="flex items-start justify-between">
+              <div>
+                <h2 className="text-[15px] font-semibold text-[#1a1e35]">Funding schedule</h2>
+                <p className="text-[11px] text-[#8a8fa8] mt-0.5">When to fund each account · dates reflect payout delay</p>
+              </div>
+              <button onClick={onClose} className="p-1 rounded-md text-[#8a8fa8] hover:text-[#1a1e35] hover:bg-[#f0f1f5] transition-colors flex-shrink-0"><X size={16} /></button>
+            </div>
+            <div className="flex items-start gap-6 mt-3">
+              <div>
+                <span className="block text-[10px] font-semibold uppercase tracking-wide text-[#8a8fa8] mb-1">Account</span>
+                <div className="flex bg-[#f0f1f5] rounded-md p-0.5 w-fit">
+                  {([["all", "All"], ["wise", "Wise"], ["paypal", "PayPal"], ["bitwage", "Bitwage"]] as const).map(([k, label]) => (
+                    <button key={k} onClick={() => setFProvider(k)} className={`px-2 py-0.5 rounded text-[11px] font-medium transition-all ${fProvider === k ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>{label}</button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <span className="block text-[10px] font-semibold uppercase tracking-wide text-[#8a8fa8] mb-1">Status</span>
+                <div className="flex bg-[#f0f1f5] rounded-md p-0.5 w-fit">
+                  {([["upcoming", "All upcoming"], ["unfunded", "Unfunded only"]] as const).map(([k, label]) => (
+                    <button key={k} onClick={() => setFStatus(k)} className={`px-2 py-0.5 rounded text-[11px] font-medium transition-all ${fStatus === k ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>{label}</button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            {/* Account context — ties the schedule to the Fund-your-accounts data */}
+            {fProvider !== "all" && (() => {
+              const acct = fundInitProviders.find(p => p.id === fProvider);
+              const meta = v1gProviderMeta[fProvider];
+              const shortfall = acct && acct.balance !== undefined && acct.needed !== undefined ? acct.needed - acct.balance : null;
+              return (
+                <div className="mt-3 flex items-center justify-between gap-3 bg-[#f9f9fc] border border-[#e8eaf0] rounded-lg px-3 py-2.5">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <ProviderLogo id={fProvider} size={22} />
+                    <div>
+                      <p className="text-xs font-semibold text-[#1a1e35]">{meta.name}</p>
+                      <p className="text-[10px] text-[#8a8fa8]">{acct?.balance !== undefined
+                        ? <>Balance <span className="font-semibold text-[#1a1e35]">{fmt0(acct.balance)}</span></>
+                        : "Balance unavailable"}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 flex-shrink-0">
+                    {acct?.status === "needs-funding" && shortfall !== null && shortfall > 0 && (
+                      <div className="text-right">
+                        <p className="text-[10px] text-[#8a8fa8]">Add to cover</p>
+                        <p className="text-xs font-bold text-amber-600">+{fmt0(shortfall)}</p>
+                      </div>
+                    )}
+                    {acct?.status === "funded" && (
+                      <span className="text-[11px] font-semibold text-emerald-600 flex items-center gap-1">{check} Funded</span>
+                    )}
+                    <a href="#" onClick={e => e.preventDefault()} className="px-2.5 py-1.5 rounded-md text-[10px] font-semibold text-[#0168dd] hover:bg-[#0168dd]/5 transition-colors whitespace-nowrap inline-flex items-center gap-1">
+                      Go to {meta.name}
+                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17 17 7"/><path d="M7 7h10v10"/></svg>
+                    </a>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+
+          {/* body — timeline (scrolls) */}
+          <div className="flex-1 overflow-y-auto px-6 py-4">
+            {rows.length === 0 ? (
+              <p className="text-center text-[12px] text-[#8a8fa8] py-10">No funding dates match these filters.</p>
+            ) : (
+              <div className="relative">
+                <div className="absolute left-[4px] top-3 bottom-3 w-px bg-[#e8eaf0]" />
+                <div className="space-y-6">
+                  {rows.map(e => {
+                    const total = v1gSum(e);
+                    const projected = e.tag === "projected";
+                    const dot = e.funded ? "bg-emerald-400" : e.tag === "next" ? "bg-[#0168dd]" : projected ? "bg-[#c0c3d3]" : "bg-amber-400";
+                    return (
+                      <div key={e.date} className="relative pl-6">
+                        <div className={`absolute left-0 top-[5px] w-[9px] h-[9px] rounded-full ring-2 ring-white ${dot}`} />
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <span className={`text-sm font-semibold ${projected ? "text-[#8a8fa8]" : "text-[#1a1e35]"}`}>{e.dow}, {e.date}</span>
+                            {e.tag === "next" && <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-[#e8f2fd] text-[#0168dd]">next payday</span>}
+                            {projected && <span className="text-[10px] text-[#c0c3d3]">· projected</span>}
+                            {e.funded && <span className="text-[10px] text-emerald-600 font-medium flex items-center gap-0.5">{check} funded</span>}
+                          </div>
+                          <span className={`text-sm font-bold ${e.funded ? "text-emerald-600" : projected ? "text-[#8a8fa8]" : "text-[#5b607a]"}`}>{fmt0(total)}</span>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {e.providers.map(p => {
+                            const meta = v1gProviderMeta[p.id];
+                            return (
+                              <span key={p.id} className={`inline-flex items-center gap-1.5 rounded-full border pl-1 pr-2.5 py-1 bg-[#f9f9fc] ${e.funded ? "border-[#eef0f4] opacity-70" : "border-[#e8eaf0]"}`}>
+                                <ProviderLogo id={p.id} size={16} />
+                                <span className="text-[11px] font-medium text-[#1a1e35]">{meta.name}</span>
+                                {!meta.balanceReadable && <span className="text-[9px] text-[#c0c3d3]">est.</span>}
+                                <span className="text-[11px] font-bold text-[#5b607a]">+{fmt0(p.amount)}</span>
+                              </span>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                {anyEst && (
+                  <p className="text-[10px] text-[#a0a4b8] leading-snug mt-4">· est. — PayPal balance is unavailable, so the figure is the payout routed to it, not a confirmed gap.</p>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* footer (sticky) */}
+          <div className="px-6 py-3 border-t border-[#e8eaf0] flex items-center justify-between flex-shrink-0">
+            <span className="text-[11px] text-[#8a8fa8]">Showing June + next payday · follows your range</span>
+            <button className="flex items-center gap-1.5 text-xs font-semibold border border-[#e8eaf0] rounded-lg px-3 py-1.5 text-[#1a1e35] hover:bg-[#f5f6fa] transition-colors"><Download size={13} /> Export</button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function Version1G({ showStatusBreakdown, seasonalityOn }: { showStatusBreakdown: boolean; seasonalityOn: boolean }) {
+  const [bottomTab, setBottomTab] = useState<"history"|"future">("history");
+  return (
+    <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+      <h1 className="text-xl font-semibold text-[#1a1e35]">Payments report</h1>
+      <V1gPredictivePanel showStatusBreakdown={showStatusBreakdown} seasonalityOn={seasonalityOn} />
+      <FundYourAccountsPanel showBars={false} />
+      <div>
+        <p className="text-base font-semibold text-[#1a1e35] mb-3">Payment Activity</p>
+        <div className="flex items-center gap-0 mb-3 border-b border-[#e8eaf0]">
+          {([["history","Payment History"],["future","Future Tracked So Far"]] as const).map(([id, label]) => (
+            <button key={id} onClick={() => setBottomTab(id)} className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${bottomTab === id ? "border-[#0168dd] text-[#0168dd]" : "border-transparent text-[#8a8fa8] hover:text-[#1a1e35]"}`}>{label}</button>
+          ))}
+        </div>
+        {bottomTab === "history" ? <V1PaymentHistory /> : <V1FutureTracked />}
+      </div>
+    </div>
+  );
+}
+
+function Version1H({ showStatusBreakdown, seasonalityOn }: { showStatusBreakdown: boolean; seasonalityOn: boolean }) {
+  const [bottomTab, setBottomTab] = useState<"history"|"future">("history");
+  return (
+    <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+      <h1 className="text-xl font-semibold text-[#1a1e35]">Payments report</h1>
+      <V1gPredictivePanel showStatusBreakdown={showStatusBreakdown} seasonalityOn={seasonalityOn} sideFund />
+      <div>
+        <p className="text-base font-semibold text-[#1a1e35] mb-3">Payment Activity</p>
+        <div className="flex items-center gap-0 mb-3 border-b border-[#e8eaf0]">
+          {([["history","Payment History"],["future","Future Tracked So Far"]] as const).map(([id, label]) => (
+            <button key={id} onClick={() => setBottomTab(id)} className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${bottomTab === id ? "border-[#0168dd] text-[#0168dd]" : "border-transparent text-[#8a8fa8] hover:text-[#1a1e35]"}`}>{label}</button>
+          ))}
+        </div>
+        {bottomTab === "history" ? <V1PaymentHistory /> : <V1FutureTracked />}
+      </div>
+    </div>
+  );
+}
+
+// ─── Version 1I — copy of Version 1H ─────────────────────────────────────────
+
+function Version1I({ showStatusBreakdown, seasonalityOn }: { showStatusBreakdown: boolean; seasonalityOn: boolean }) {
+  const [bottomTab, setBottomTab] = useState<"history"|"future">("history");
+  return (
+    <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+      <h1 className="text-xl font-semibold text-[#1a1e35]">Payments report</h1>
+      <V1gPredictivePanel showStatusBreakdown={showStatusBreakdown} seasonalityOn={seasonalityOn} sideFund v1i />
+      <div>
+        <p className="text-base font-semibold text-[#1a1e35] mb-3">Payment Activity</p>
+        <div className="flex items-center gap-0 mb-3 border-b border-[#e8eaf0]">
+          {([["history","Payment History"],["future","Future Tracked So Far"]] as const).map(([id, label]) => (
+            <button key={id} onClick={() => setBottomTab(id)} className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${bottomTab === id ? "border-[#0168dd] text-[#0168dd]" : "border-transparent text-[#8a8fa8] hover:text-[#1a1e35]"}`}>{label}</button>
+          ))}
+        </div>
+        {bottomTab === "history" ? <V1PaymentHistory /> : <V1FutureTracked />}
+      </div>
+    </div>
+  );
+}
+
+function Version1J({ showStatusBreakdown, seasonalityOn }: { showStatusBreakdown: boolean; seasonalityOn: boolean }) {
+  const [bottomTab, setBottomTab] = useState<"history"|"future">("history");
+  return (
+    <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+      <h1 className="text-xl font-semibold text-[#1a1e35]">Payments report</h1>
+      <V1gPredictivePanel showStatusBreakdown={showStatusBreakdown} seasonalityOn={seasonalityOn} v1i v1j />
+      <div>
+        <p className="text-base font-semibold text-[#1a1e35] mb-3">Payment Activity</p>
+        <div className="flex items-center gap-0 mb-3 border-b border-[#e8eaf0]">
+          {([["history","Payment History"],["future","Future Tracked So Far"]] as const).map(([id, label]) => (
+            <button key={id} onClick={() => setBottomTab(id)} className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${bottomTab === id ? "border-[#0168dd] text-[#0168dd]" : "border-transparent text-[#8a8fa8] hover:text-[#1a1e35]"}`}>{label}</button>
+          ))}
+        </div>
+        {bottomTab === "history" ? <V1PaymentHistory /> : <V1FutureTracked />}
+      </div>
+    </div>
+  );
+}
+
+function Version1K({ showStatusBreakdown, seasonalityOn }: { showStatusBreakdown: boolean; seasonalityOn: boolean }) {
+  const [bottomTab, setBottomTab] = useState<"history"|"future">("history");
+  return (
+    <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+      <h1 className="text-xl font-semibold text-[#1a1e35]">Payments report</h1>
+      <V1gPredictivePanel showStatusBreakdown={showStatusBreakdown} seasonalityOn={seasonalityOn} v1i v1j v1k />
+      <div>
+        <p className="text-base font-semibold text-[#1a1e35] mb-3">Payment Activity</p>
+        <div className="flex items-center gap-0 mb-3 border-b border-[#e8eaf0]">
+          {([["history","Payment History"],["future","Future Tracked So Far"]] as const).map(([id, label]) => (
+            <button key={id} onClick={() => setBottomTab(id)} className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${bottomTab === id ? "border-[#0168dd] text-[#0168dd]" : "border-transparent text-[#8a8fa8] hover:text-[#1a1e35]"}`}>{label}</button>
+          ))}
+        </div>
+        {bottomTab === "history" ? <V1PaymentHistory /> : <V1FutureTracked />}
+      </div>
+    </div>
+  );
+}
+
+// ─── Version 1L — copy of Version 1K (v1l flag reserved for divergence) ──────
+function Version1L({ showStatusBreakdown, seasonalityOn }: { showStatusBreakdown: boolean; seasonalityOn: boolean }) {
+  const [dense, setDense] = useState(false); // Detailed (default) vs Condensed view
+  const [detailProvider, setDetailProvider] = useState<string | null>(null); // secondary "future payment" page
+
+  // Clicking a provider on a fund card opens the in-1L future-payment detail (item E).
+  if (detailProvider) return <V1lFutureDetail providerId={detailProvider} onBack={() => setDetailProvider(null)} />;
+
+  return (
+    <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-xl font-semibold text-[#1a1e35]">Payments report</h1>
+        <div className="flex bg-[#f0f1f5] rounded-lg p-0.5">
+          {([["detailed","Detailed"],["condensed","Condensed"]] as const).map(([k, label]) => {
+            const active = (k === "condensed") === dense;
+            return (
+              <button key={k} onClick={() => setDense(k === "condensed")}
+                className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${active ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>{label}</button>
+            );
+          })}
+        </div>
+      </div>
+      <V1gPredictivePanel showStatusBreakdown={showStatusBreakdown} seasonalityOn={seasonalityOn} v1i v1j v1k v1l condensed={dense} onProviderClick={setDetailProvider} />
+      {/* "Future Tracked So Far" tab retired — its detail now lives in the future-payment page (item E) */}
+      <div>
+        <p className="text-base font-semibold text-[#1a1e35] mb-3">Payment Activity</p>
+        <V1PaymentHistory />
+      </div>
+    </div>
+  );
+}
+
+// item E — in-1L "team payment, in advance": how the provider's number was built + who's paid.
+function V1lFutureDetail({ providerId, onBack }: { providerId: string; onBack: () => void }) {
+  const [tab, setTab] = useState<"source" | "earning">("source");
+  const [openRows, setOpenRows] = useState<string[]>([]);
+  const [page, setPage] = useState(0);
+  const pageSize = 10;
+  const toggle = (k: string) => setOpenRows(p => p.includes(k) ? p.filter(x => x !== k) : [...p, k]);
+
+  const cycle = v2Cycles.find(c => c.id === v2CycleForProvider[providerId]) ?? v2Cycles[0];
+  const cb = cycle.confirmedBreak, pl = cycle.plannedBreak, pb = cycle.projectedBreak;
+  const total = cycle.total;
+  const confirmedPct = Math.round((cycle.confirmed / total) * 100);
+  const plannedPct   = Math.round((cycle.planned / total) * 100);
+  const projectedPct = 100 - confirmedPct - plannedPct;
+  const provColor = v2ProviderColors[cycle.provider] ?? "#8a8fa8";
+
+  type Cert = "Confirmed" | "Planned" | "Projected";
+  type ChildRow = { label: string; basis: string; status: Cert; amount: number; approx?: boolean };
+  // By earning type — derived from the cycle breakdown, so it reconciles to the total by construction.
+  const earningRows: { type: string; basis: string; tags: Cert[]; amount: number; children: ChildRow[] }[] = [];
+  if (cb.hourlyTracked + pb.hourly > 0) earningRows.push({
+    type: "Hourly pay", basis: "tracked + est. remaining",
+    tags: [...(cb.hourlyTracked > 0 ? ["Confirmed" as Cert] : []), ...(pb.hourly > 0 ? ["Projected" as Cert] : [])],
+    amount: cb.hourlyTracked + pb.hourly,
+    children: [
+      ...(cb.hourlyTracked > 0 ? [{ label: "Tracked hours", basis: `${cycle.pctTracked}% of the period tracked`, status: "Confirmed" as Cert, amount: cb.hourlyTracked }] : []),
+      ...(pb.hourly > 0 ? [{ label: "Estimated remaining", basis: `avg daily × ${cycle.daysLeft} days left`, status: "Projected" as Cert, amount: pb.hourly, approx: true }] : []),
+    ],
+  });
+  if (cb.overtime > 0) earningRows.push({ type: "Overtime", basis: "tracked", tags: ["Confirmed"], amount: cb.overtime, children: [{ label: "Tracked overtime", basis: "logged this period", status: "Confirmed", amount: cb.overtime }] });
+  if (cb.pastPTO + pl.futurePTO > 0) earningRows.push({
+    type: "PTO & holidays", basis: "scheduled this period",
+    tags: [...(cb.pastPTO > 0 ? ["Confirmed" as Cert] : []), ...(pl.futurePTO > 0 ? ["Planned" as Cert] : [])],
+    amount: cb.pastPTO + pl.futurePTO,
+    children: [
+      ...(cb.pastPTO > 0 ? [{ label: "Past PTO / holidays", basis: "already in the period", status: "Confirmed" as Cert, amount: cb.pastPTO }] : []),
+      ...(pl.futurePTO > 0 ? [{ label: "Upcoming PTO / holidays", basis: "hours × rate", status: "Planned" as Cert, amount: pl.futurePTO }] : []),
+    ],
+  });
+  if (pl.fixedPay > 0) earningRows.push({ type: "Fixed pay", basis: "full amount if worked ≥1 min", tags: ["Planned"], amount: pl.fixedPay, children: [{ label: "Fixed salaries", basis: "committed this period", status: "Planned", amount: pl.fixedPay }] });
+  if (pl.additions > 0) earningRows.push({ type: "Additions", basis: "policy this period", tags: ["Planned"], amount: pl.additions, children: [{ label: "Scheduled additions", basis: "policy applies this period", status: "Planned", amount: pl.additions }] });
+
+  const members = v1lWiseMembers.slice(0, cycle.members);
+  const pageCount = Math.ceil(members.length / pageSize);
+  const pageMembers = members.slice(page * pageSize, page * pageSize + pageSize);
+  const memberStatus = (items: { status: string }[]): Cert => items.some(i => i.status === "Projected") ? "Projected" : items.some(i => i.status === "Planned") ? "Planned" : "Confirmed";
+
+  const th = "text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8]";
+  const amtColor = (s: Cert) => s === "Projected" ? "text-[#85baf5]" : "text-[#1a1e35]";
+
+  return (
+    <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+      {/* Header — same pattern as Version 2 */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <button onClick={onBack} className="flex items-center gap-1.5 text-xs text-[#8a8fa8] hover:text-[#1a1e35] transition-colors"><ArrowLeft size={14} /> Back</button>
+          <div className="w-px h-4 bg-[#e8eaf0]" />
+          <ProviderLogo id={providerId} size={20} />
+          <span className="text-base font-semibold text-[#1a1e35]">{cycle.provider}</span>
+          <V2StatusBadge status="Projected" />
+        </div>
+        <div className="flex items-center gap-2">
+          <button className="flex items-center gap-1.5 text-xs border border-[#e8eaf0] rounded px-3 py-1.5 text-[#1a1e35] hover:bg-[#f5f6fa] transition-colors"><Download size={12} /> Export payment</button>
+          <button className="flex items-center gap-1.5 text-xs bg-[#0168dd] text-white rounded px-3 py-1.5 hover:bg-[#0057bb] transition-colors"><Send size={12} /> Schedule</button>
+        </div>
+      </div>
+      {/* Certainty summary — split card (Version 2 style) */}
+      <div className="bg-white rounded-lg border border-[#e8eaf0] px-5 py-4 flex items-center gap-5">
+        <div className="flex-shrink-0 min-w-[140px]">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8]">Total projected</p>
+          <p className="text-3xl font-bold text-[#1a1e35] tracking-tight mt-0.5">{fmt2(total)}</p>
+        </div>
+        <div className="flex-1">
+          <div className="flex justify-between text-[10px] mb-1.5">
+            <span className="text-emerald-600 font-semibold">Confirmed {fmt2(cycle.confirmed)} ({confirmedPct}%)</span>
+            <span className="text-[#0168dd] font-semibold">Planned {fmt2(cycle.planned)} ({plannedPct}%)</span>
+            <span className="text-[#85baf5]">~Projected {fmt2(cycle.projected)} ({projectedPct}%)</span>
+          </div>
+          <div className="h-2.5 rounded-full overflow-hidden flex">
+            <div className="h-full bg-emerald-500" style={{ width: `${confirmedPct}%` }} />
+            <div className="h-full bg-[#0168dd]" style={{ width: `${plannedPct}%` }} />
+            <div className="h-full flex-1" style={{ background: "repeating-linear-gradient(90deg,#85baf5 0px,#85baf5 5px,#bfdbfe 5px,#bfdbfe 9px)" }} />
+          </div>
+        </div>
+        <div className="flex-shrink-0 border-l border-[#e8eaf0] pl-5">
+          <p className="text-lg font-bold mb-1" style={{ color: provColor }}>{cycle.provider}</p>
+          <div className="space-y-0.5 text-[11px] text-[#8a8fa8]">
+            <div className="flex items-center gap-1"><CalendarDays size={11} />{cycle.dateRange}</div>
+            <div className="flex items-center gap-1"><Users size={11} />{cycle.members} members · {cycle.cycle}</div>
+          </div>
+        </div>
+      </div>
+      {/* Breakdown — title on the left, view toggle on the right */}
+      <div className="bg-white rounded-lg border border-[#e8eaf0] overflow-hidden">
+        <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-[#e8eaf0]">
+          <p className="text-sm font-semibold text-[#1a1e35]">Payment breakdown</p>
+          <div className="flex items-center gap-4">
+            <div className="flex bg-[#f0f1f5] rounded-lg p-0.5">
+              {([["source","By source"],["earning","By earning type"]] as const).map(([k, label]) => (
+                <button key={k} onClick={() => setTab(k)} className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${tab === k ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>{label}</button>
+              ))}
+            </div>
+            <div className="flex items-center gap-3">
+              <button className="flex items-center gap-1 text-[11px] text-[#0168dd] hover:opacity-80"><Filter size={12} /> Filters</button>
+              <button className="flex items-center gap-1 text-[11px] text-[#0168dd] hover:opacity-80"><Columns size={12} /> Columns</button>
+            </div>
+          </div>
+        </div>
+        {/* By source of prediction */}
+        {tab === "source" ? (
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b border-[#e8eaf0]">
+                <th className={`text-left py-2 px-5 w-[40%] ${th}`}>Member</th>
+                <th className={`text-left py-2 px-4 ${th}`}>Rate</th>
+                <th className={`text-left py-2 px-4 ${th}`}>Hours</th>
+                <th className={`text-left py-2 px-4 ${th}`}>Status</th>
+                <th className={`text-right py-2 px-5 ${th}`}>Amount</th>
+              </tr>
+            </thead>
+            {pageMembers.map(m => {
+              const isOpen = openRows.includes("m:" + m.name);
+              return (
+                <tbody key={m.name}>
+                  <tr onClick={() => toggle("m:" + m.name)} className="border-b border-[#e8eaf0] cursor-pointer hover:bg-[#f9f9fc] transition-colors">
+                    <td className="py-3 px-5">
+                      <div className="flex items-center gap-2">
+                        <ChevronRight size={14} className={`text-[#8a8fa8] transition-transform flex-shrink-0 ${isOpen ? "rotate-90" : ""}`} />
+                        <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0" style={{ background: m.color }}>{m.avatar}</div>
+                        <div className="min-w-0"><p className="font-semibold text-[#1a1e35] truncate">{m.name}</p><p className="text-[10px] text-[#8a8fa8] truncate">{m.email}</p></div>
+                      </div>
+                    </td>
+                    <td className="py-3 px-4 text-[#8a8fa8]">—</td>
+                    <td className="py-3 px-4 text-[#8a8fa8]">—</td>
+                    <td className="py-3 px-4"><ItemStatusBadge status={memberStatus(m.items)} /></td>
+                    <td className="py-3 px-5 text-right font-semibold text-[#1a1e35] tabular-nums">{fmt0(m.total)}</td>
+                  </tr>
+                  {isOpen && m.items.map((it, i) => (
+                    <tr key={i} className={`border-b border-[#f0f1f5] ${it.status === "Projected" ? "bg-[#f7fbff]" : ""}`}>
+                      <td className="py-2.5 px-5 pl-[52px]"><p className="font-medium text-[#1a1e35]">{it.label}</p><p className="text-[10px] text-[#8a8fa8]">{it.sub}</p></td>
+                      <td className="py-2.5 px-4 text-[#8a8fa8]">{it.rate}</td>
+                      <td className="py-2.5 px-4 text-[#8a8fa8]">{it.hours}</td>
+                      <td className="py-2.5 px-4"><ItemStatusBadge status={it.status} /></td>
+                      <td className={`py-2.5 px-5 text-right font-medium tabular-nums ${amtColor(it.status)}`}>{it.status === "Projected" ? "~" : ""}{fmt0(it.amount)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              );
+            })}
+            {pageCount > 1 && (
+              <tbody><tr className="bg-[#f9f9fc] border-t border-[#e8eaf0]"><td colSpan={5} className="py-2.5 px-5">
+                <div className="flex items-center justify-between text-[11px] text-[#8a8fa8]">
+                  <span>Showing {page * pageSize + 1}–{Math.min((page + 1) * pageSize, members.length)} of {members.length} members</span>
+                  <div className="flex items-center gap-1">
+                    <button disabled={page === 0} onClick={() => setPage(p => Math.max(0, p - 1))} className={`px-2 py-1 rounded-md border border-[#e8eaf0] transition-colors ${page === 0 ? "text-[#c8cad4] cursor-not-allowed" : "text-[#1a1e35] hover:bg-white"}`}>‹ Prev</button>
+                    {Array.from({ length: pageCount }, (_, i) => (
+                      <button key={i} onClick={() => setPage(i)} className={`w-6 h-6 rounded-md text-[11px] font-semibold transition-colors ${page === i ? "bg-[#0168dd] text-white" : "text-[#5b607a] hover:bg-white"}`}>{i + 1}</button>
+                    ))}
+                    <button disabled={page >= pageCount - 1} onClick={() => setPage(p => Math.min(pageCount - 1, p + 1))} className={`px-2 py-1 rounded-md border border-[#e8eaf0] transition-colors ${page >= pageCount - 1 ? "text-[#c8cad4] cursor-not-allowed" : "text-[#1a1e35] hover:bg-white"}`}>Next ›</button>
+                  </div>
+                </div>
+              </td></tr></tbody>
+            )}
+          </table>
+        ) : (
+          /* By earning type */
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b border-[#e8eaf0]">
+                <th className={`text-left py-2 px-5 w-[34%] ${th}`}>Earning type</th>
+                <th className={`text-left py-2 px-4 ${th}`}>Basis</th>
+                <th className={`text-left py-2 px-4 ${th}`}>Certainty</th>
+                <th className={`text-right py-2 px-5 ${th}`}>Amount</th>
+              </tr>
+            </thead>
+            {earningRows.map(row => {
+              const isOpen = openRows.includes("e:" + row.type);
+              return (
+                <tbody key={row.type}>
+                  <tr onClick={() => toggle("e:" + row.type)} className="border-b border-[#e8eaf0] cursor-pointer hover:bg-[#f9f9fc] transition-colors">
+                    <td className="py-3 px-5"><div className="flex items-center gap-2"><ChevronRight size={14} className={`text-[#8a8fa8] transition-transform ${isOpen ? "rotate-90" : ""}`} /><span className="font-semibold text-[#1a1e35]">{row.type}</span></div></td>
+                    <td className="py-3 px-4 text-[#8a8fa8]">{row.basis}</td>
+                    <td className="py-3 px-4"><div className="flex items-center gap-1">{row.tags.map(t => <ItemStatusBadge key={t} status={t} />)}</div></td>
+                    <td className="py-3 px-5 text-right font-semibold text-[#1a1e35] tabular-nums">{fmt0(row.amount)}</td>
+                  </tr>
+                  {isOpen && row.children.map((c, i) => (
+                    <tr key={i} className={`border-b border-[#f0f1f5] ${c.status === "Projected" ? "bg-[#f7fbff]" : ""}`}>
+                      <td className="py-2.5 px-5 pl-[40px] font-medium text-[#1a1e35]">{c.label}</td>
+                      <td className="py-2.5 px-4 text-[#8a8fa8]">{c.basis}</td>
+                      <td className="py-2.5 px-4"><ItemStatusBadge status={c.status} /></td>
+                      <td className={`py-2.5 px-5 text-right font-medium tabular-nums ${amtColor(c.status)}`}>{c.approx ? "~" : ""}{fmt0(c.amount)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              );
+            })}
+          </table>
+        )}
       </div>
     </div>
   );
@@ -3157,8 +5864,7 @@ function MembersTable({ cycle }: { cycle: typeof v2Cycles[0] }) {
             <th className="py-2.5 px-5 text-right font-semibold text-[#8a8fa8]">Total amount</th>
           </tr>
         </thead>
-        <tbody>
-          {v2WeeklyMembers.map((m) => {
+        {v2WeeklyMembers.map((m) => {
             const isOpen = expanded.includes(m.name);
             return (
               <tbody key={m.name}>
@@ -3198,7 +5904,6 @@ function MembersTable({ cycle }: { cycle: typeof v2Cycles[0] }) {
               </td>
             </tr>
           </tbody>
-        </tbody>
       </table>
     </div>
   );
@@ -3442,16 +6147,16 @@ function V2PaymentList({ rows, showPaidOn }: { rows: any[]; showPaidOn?: boolean
   );
 }
 
-function Version2() {
+function Version2({ initialDetailId = null, onExitDetail }: { initialDetailId?: string | null; onExitDetail?: () => void } = {}) {
   const [mainTab, setMainTab] = useState<"future"|"draft"|"history">("future");
-  const [detailId, setDetailId] = useState<string|null>(null);
+  const [detailId, setDetailId] = useState<string|null>(initialDetailId);
   const tabs = [
     { id: "future"  as const, label: "Future Payment",     count: v2Cycles.length },
     { id: "draft"   as const, label: "Currently in Draft", count: v2DraftPayments.length },
     { id: "history" as const, label: "Payment History",    count: null },
   ];
   return detailId ? (
-    <V2DetailView cycleId={detailId} onBack={() => setDetailId(null)} />
+    <V2DetailView cycleId={detailId} onBack={() => { if (detailId === initialDetailId && onExitDetail) onExitDetail(); else setDetailId(null); }} />
   ) : (
     <div className="flex-1 overflow-y-auto px-6 py-5">
       <div className="flex items-center justify-between mb-4">
@@ -3473,11 +6178,21 @@ function Version2() {
   );
 }
 
+// Which V2 future-payment cycle a fund-card provider deep-links into.
+const v2CycleForProvider: Record<string, string> = {
+  wise:     "FP-WISE-001",
+  deel:     "FP-DEEL-001",
+  payoneer: "FP-PAY-001",
+  paypal:   "FP-PAY-001",
+  bitwage:  "FP-WISE-001",
+  export:   "FP-WISE-001",
+};
+
 // ─── Root ──────────────────────────────────────────────────────────────────────
 
 export default function App() {
-  const [version, setVersion] = useState<"v1"|"v1c"|"v1d"|"v1e"|"v2">("v1c");
-  const [showStatusBreakdown, setShowStatusBreakdown] = useState(true);
+  const [version, setVersion] = useState<"v1"|"v1c"|"v1d"|"v1e"|"v1f"|"v1g"|"v1h"|"v1i"|"v1j"|"v1k"|"v1l"|"v2">("v1c");
+  const [showStatusBreakdown, setShowStatusBreakdown] = useState(false);
   const [seasonalityOn, setSeasonalityOn] = useState(true);
 
   return (
@@ -3486,14 +6201,14 @@ export default function App() {
       <div className="flex-1 flex flex-col overflow-hidden bg-[#f5f6fa]">
         <div className="flex items-center justify-between px-6 py-2.5 bg-white border-b border-[#e8eaf0] flex-shrink-0">
           <div className="flex items-center gap-1 text-xs text-[#8a8fa8]">
-            {(version === "v1" || version === "v1c" || version === "v1d" || version === "v1e") ? (
+            {(version === "v1" || version === "v1c" || version === "v1d" || version === "v1e" || version === "v1f" || version === "v1g" || version === "v1h" || version === "v1i" || version === "v1j" || version === "v1k" || version === "v1l") ? (
               <><span className="hover:text-[#0168dd] cursor-pointer">Reports</span><ChevronRight size={12} /><span className="text-[#1a1e35] font-medium">Payments report</span></>
             ) : (
               <><span className="hover:text-[#0168dd] cursor-pointer">Financials</span><ChevronRight size={12} /><span className="text-[#1a1e35] font-medium">Team Payments</span></>
             )}
           </div>
           <div className="flex items-center gap-3">
-            {(version === "v1c" || version === "v1d" || version === "v1e") && (
+            {(version === "v1c" || version === "v1d" || version === "v1e" || version === "v1f" || version === "v1g" || version === "v1h" || version === "v1i" || version === "v1j" || version === "v1k" || version === "v1l") && (
               <div className="flex items-center gap-4 border-r border-[#e8eaf0] pr-4">
                 {[
                   { label: "Status breakdown", val: showStatusBreakdown, set: setShowStatusBreakdown },
@@ -3509,11 +6224,18 @@ export default function App() {
               </div>
             )}
             <div className="flex items-center bg-[#f0f1f5] rounded-lg p-0.5">
-              <button onClick={() => setVersion("v1")}  className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${version === "v1"  ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>Version 1</button>
-              <button onClick={() => setVersion("v1c")} className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${version === "v1c" ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>Version 1C</button>
-              <button onClick={() => setVersion("v1d")} className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${version === "v1d" ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>Version 1D</button>
-              <button onClick={() => setVersion("v1e")} className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${version === "v1e" ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>Version 1E</button>
-              <button onClick={() => setVersion("v2")}  className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${version === "v2"  ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>Version 2</button>
+              <button onClick={() => setVersion("v1")}  className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${version === "v1"  ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>1</button>
+              <button onClick={() => setVersion("v1c")} className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${version === "v1c" ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>1C</button>
+              <button onClick={() => setVersion("v1d")} className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${version === "v1d" ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>1D</button>
+              <button onClick={() => setVersion("v1e")} className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${version === "v1e" ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>1E</button>
+              <button onClick={() => setVersion("v1f")} className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${version === "v1f" ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>1F</button>
+              <button onClick={() => setVersion("v1g")} className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${version === "v1g" ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>1G</button>
+              <button onClick={() => setVersion("v1h")} className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${version === "v1h" ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>1H</button>
+              <button onClick={() => setVersion("v1i")} className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${version === "v1i" ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>1I</button>
+              <button onClick={() => setVersion("v1j")} className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${version === "v1j" ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>1J</button>
+              <button onClick={() => setVersion("v1k")} className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${version === "v1k" ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>1K</button>
+              <button onClick={() => setVersion("v1l")} className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${version === "v1l" ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>1L</button>
+              <button onClick={() => setVersion("v2")}  className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${version === "v2"  ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>2</button>
             </div>
             <div className="flex items-center gap-2 text-xs text-[#8a8fa8]"><Clock size={13} /><span>0:00:00</span></div>
           </div>
@@ -3522,7 +6244,14 @@ export default function App() {
         {version === "v1c" && <Version1C showStatusBreakdown={showStatusBreakdown} seasonalityOn={seasonalityOn} />}
         {version === "v1d" && <Version1D showStatusBreakdown={showStatusBreakdown} seasonalityOn={seasonalityOn} />}
         {version === "v1e" && <Version1E showStatusBreakdown={showStatusBreakdown} seasonalityOn={seasonalityOn} />}
-        {version === "v2"  && <Version2  />}
+        {version === "v1f" && <Version1F showStatusBreakdown={showStatusBreakdown} seasonalityOn={seasonalityOn} />}
+        {version === "v1g" && <Version1G showStatusBreakdown={showStatusBreakdown} seasonalityOn={seasonalityOn} />}
+        {version === "v1h" && <Version1H showStatusBreakdown={showStatusBreakdown} seasonalityOn={seasonalityOn} />}
+        {version === "v1i" && <Version1I showStatusBreakdown={showStatusBreakdown} seasonalityOn={seasonalityOn} />}
+        {version === "v1j" && <Version1J showStatusBreakdown={showStatusBreakdown} seasonalityOn={seasonalityOn} />}
+        {version === "v1k" && <Version1K showStatusBreakdown={showStatusBreakdown} seasonalityOn={seasonalityOn} />}
+        {version === "v1l" && <Version1L showStatusBreakdown={showStatusBreakdown} seasonalityOn={seasonalityOn} />}
+        {version === "v2"  && <Version2 />}
       </div>
     </div>
   );
