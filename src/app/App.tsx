@@ -1,4 +1,4 @@
-import { useState, useEffect, Fragment } from "react";
+import { useState, useEffect, useRef, Fragment } from "react";
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
@@ -11,7 +11,7 @@ import {
   Settings, Wallet, MonitorSmartphone, Plus, TrendingUp,
   TrendingDown, MoreHorizontal, Columns, X,
   Banknote, Gift, Umbrella, Minus, AlertTriangle, SlidersHorizontal, Info,
-  FileSpreadsheet, Filter,
+  FileSpreadsheet, Filter, ExternalLink,
 } from "lucide-react";
 
 const fmt0 = (n: number) =>
@@ -19,12 +19,14 @@ const fmt0 = (n: number) =>
 const fmt2 = (n: number) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2 }).format(n);
 
+// Avg = 117,187 → hero (× 1.28 with 18% headcount + 10% seasonality) = $150,000,
+// matching the June fund schedule and the Future "All providers" total.
 const v1MonthlyHistory = [
-  { month: "Jan", total: 52400, members: 42 },
-  { month: "Feb", total: 54100, members: 43 },
-  { month: "Mar", total: 49800, members: 44 },
-  { month: "Apr", total: 56200, members: 45 },
-  { month: "May", total: 53700, members: 47 },
+  { month: "Jan", total: 116000, members: 42 },
+  { month: "Feb", total: 119000, members: 43 },
+  { month: "Mar", total: 115000, members: 44 },
+  { month: "Apr", total: 121000, members: 45 },
+  { month: "May", total: 114935, members: 47 },
 ];
 const v1AvgMonthly   = Math.round(v1MonthlyHistory.reduce((s, m) => s + m.total, 0) / v1MonthlyHistory.length);
 const v1AvgMembers   = Math.round(v1MonthlyHistory.reduce((s, m) => s + m.members, 0) / v1MonthlyHistory.length);
@@ -130,12 +132,12 @@ const v1CycleBadge: Record<string, [string,string]> = {
 
 const v2Cycles = [
   {
-    id: "FP-WISE-001",  provider: "Wise",     cycle: "Weekly",    cycleColor: "#0168dd",
-    dateRange: "Jun 23–29, 2026", daysLeft: 2, pctTracked: 60, members: 15,
-    confirmed: 5200, planned: 600,  projected: 4800, total: 10600,
-    confirmedBreak: { hourlyTracked: 4800, overtime: 400, pastPTO: 0 },
-    plannedBreak:   { fixedPay: 0, futurePTO: 200, additions: 400, deductions: 0 },
-    projectedBreak: { hourly: 4800 },
+    id: "FP-WISE-001",  provider: "Wise",     cycle: "Monthly",   cycleColor: "#0168dd",
+    dateRange: "Jun 1–30, 2026", daysLeft: 8, pctTracked: 77, members: 15,
+    confirmed: 12870, planned: 43130, projected: 0, total: 56000,
+    confirmedBreak: { hourlyTracked: 12210, overtime: 660, pastPTO: 0 },
+    plannedBreak:   { fixedPay: 39700, futurePTO: 1940, additions: 1490, deductions: 0 },
+    projectedBreak: { hourly: 0 },
   },
   {
     id: "FP-PAY-001",   provider: "Payoneer", cycle: "Monthly",   cycleColor: "#85baf5",
@@ -260,6 +262,113 @@ const v1lWiseMembers = [
   }),
 ];
 
+// ── 1L future-payment matrix (earning types × certainty) ────────────────────────
+// Columns mirror the Payment History earning types. Confirmed = tracked hours
+// (final). Planned = scheduled (fixed pay, PTO/holiday, adjustments, deductions).
+// Deductions are subtracted from a member's known total. Projected is
+// aggregate-only — never per member. Totals reconcile to the FP-WISE-001 cycle:
+// Confirmed 5,200 · Planned 600 (200 + 160 + 320 − 80).
+const V1L_ETS = ["Hourly", "Overtime", "Fixed pay", "PTO / Holiday", "Additions", "Deductions"] as const;
+type V1lEt = typeof V1L_ETS[number];
+type V1lRow = Partial<Record<V1lEt, number>>;
+
+// Monthly Wise payment demo. Confirmed = tracked hours (Hourly + Overtime).
+// Planned = scheduled (Fixed pay, PTO/Holiday, Additions, Deductions). A person is
+// hourly OR salaried, plus scheduled extras. Sums to the authoritative col totals.
+const v1lMatrixMembers: { name: string; avatar: string; color: string; confirmed: V1lRow; planned: V1lRow; rate?: number; hours?: number }[] = [
+  // Salaried — fixed pay dominant, plus scheduled extras.
+  { name: "Marcus Chen",      avatar: "MC", color: "#0ea5a0", confirmed: {},                              planned: { "Fixed pay": 8500, Deductions: 300 } },
+  { name: "Aurora Arjomilla", avatar: "AA", color: "#10b981", confirmed: {},                              planned: { "Fixed pay": 6800, "PTO / Holiday": 600, Additions: 400 } },
+  { name: "Liam O'Brien",     avatar: "LO", color: "#0ea5a0", confirmed: {},                              planned: { "Fixed pay": 7000, Additions: 600 } },
+  { name: "Priya Nair",       avatar: "PN", color: "#e5764e", confirmed: {},                              planned: { "Fixed pay": 6200, "PTO / Holiday": 500 } },
+  { name: "Emma Novak",       avatar: "EN", color: "#10b981", confirmed: {},                              planned: { "Fixed pay": 5800, Additions: 500 } },
+  { name: "Diego Santos",     avatar: "DS", color: "#f59e0b", confirmed: {},                              planned: { "Fixed pay": 5400 } },
+  // Hourly — tracked hours (rate × hours), plus overtime / scheduled extras.
+  { name: "Alex Yarotsky",    avatar: "AY", color: "#f59e0b", confirmed: { Hourly: 1600, Overtime: 180 }, planned: { "PTO / Holiday": 320 }, rate: 40, hours: 40 },
+  { name: "Jordan Blake",     avatar: "JB", color: "#8b5cf6", confirmed: { Hourly: 1760, Overtime: 220 }, planned: {},                       rate: 40, hours: 44 },
+  { name: "Noah Kim",         avatar: "NK", color: "#0168dd", confirmed: { Hourly: 1534 },                planned: { "PTO / Holiday": 280 }, rate: 59, hours: 26 },
+  { name: "Full Tseg",        avatar: "FT", color: "#0168dd", confirmed: { Hourly: 1440 },                planned: { Additions: 260 },       rate: 45, hours: 32 },
+  { name: "Zara Ali",         avatar: "ZA", color: "#8b5cf6", confirmed: { Hourly: 1326 },                planned: { "PTO / Holiday": 240 }, rate: 51, hours: 26 },
+  { name: "Sofia Rossi",      avatar: "SR", color: "#e5764e", confirmed: { Hourly: 1248 },                planned: { Deductions: 150 },      rate: 48, hours: 26 },
+  { name: "Omar Haddad",      avatar: "OH", color: "#0ea5a0", confirmed: { Hourly: 1170, Overtime: 120 },  planned: {},                      rate: 45, hours: 26 },
+  { name: "Chloe Dubois",     avatar: "CD", color: "#e5764e", confirmed: { Hourly: 1144, Overtime: 140 },  planned: {},                      rate: 44, hours: 26 },
+  { name: "Yuki Tanaka",      avatar: "YT", color: "#3d8ae8", confirmed: { Hourly: 988 },                 planned: { Additions: 180 },       rate: 38, hours: 26 },
+];
+
+// Authoritative column totals across all 15 members — reconcile to 5,000 / 2,400.
+// (1L splits Planned as Additions 500 / Deductions −100; the shared cycle carries
+// the same 2,400 as Additions 400 / no deduction, so V2 stays untouched.)
+const v1lWiseColTotals: { confirmed: Record<V1lEt, number>; planned: Record<V1lEt, number> } = {
+  confirmed: { Hourly: 12210, Overtime: 660, "Fixed pay": 0,     "PTO / Holiday": 0,    Additions: 0,    Deductions: 0   },
+  planned:   { Hourly: 0,     Overtime: 0,   "Fixed pay": 39700, "PTO / Holiday": 1940, Additions: 1940, Deductions: 450 },
+};
+
+// Column display labels — keys stay stable; "Hourly" reads as pay, not a rate.
+const v1lEtLabel: Record<V1lEt, string> = {
+  Hourly: "Hourly pay", Overtime: "Overtime", "Fixed pay": "Fixed pay",
+  "PTO / Holiday": "PTO / Holiday", Additions: "Additions", Deductions: "Deductions",
+};
+
+// ── 1M "Future Tracked So Far" — all providers in one filterable view ────────────
+// Each member is tagged with its provider. Totals are summed from the members, so any
+// filter (All or one provider) reconciles by construction. Per-provider sums match the
+// June fund schedule: Wise 56k + PayPal 44k + Deel 20k + Export 12k + Bitwage 10k = 142k.
+type V1mMember = { name: string; avatar: string; color: string; provider: string; confirmed: V1lRow; planned: V1lRow; rate?: number; hours?: number };
+const v1mFutureProviderList = [
+  { id: "all",     name: "All providers" },
+  { id: "wise",    name: "Wise" },
+  { id: "paypal",  name: "PayPal" },
+  { id: "deel",    name: "Deel" },
+  { id: "export",  name: "Export" },
+  { id: "bitwage", name: "Bitwage" },
+  { id: "gusto",   name: "Gusto" },
+] as const;
+// Each provider runs its own pay cycle; period weights (in $k) match the June fund
+// schedule and sum to the provider's month total, so a period's frac scales the roster.
+const v1mProviderCycles: Record<string, { cycle: string; periods: { label: string; weight: number }[] }> = {
+  all:     { cycle: "Monthly",   periods: [{ label: "June 2026", weight: 1 }] },
+  wise:    { cycle: "Weekly",    periods: [{ label: "Jun 2–8", weight: 12 }, { label: "Jun 9–15", weight: 13 }, { label: "Jun 16–22", weight: 15 }, { label: "Jun 23–29", weight: 16 }] },
+  paypal:  { cycle: "Weekly",    periods: [{ label: "Jun 2–8", weight: 9 },  { label: "Jun 9–15", weight: 11 }, { label: "Jun 16–22", weight: 13 }, { label: "Jun 23–29", weight: 11 }] },
+  deel:    { cycle: "Monthly",   periods: [{ label: "June 2026", weight: 1 }] },
+  export:  { cycle: "Monthly",   periods: [{ label: "June 2026", weight: 1 }] },
+  bitwage: { cycle: "Monthly",   periods: [{ label: "June 2026", weight: 1 }] },
+  gusto:   { cycle: "Monthly",   periods: [{ label: "June 2026", weight: 1 }] },
+};
+// The pay period a "Next dates to fund" card lands on: current in-progress cycle.
+const v1mCurrentPeriod = (providerId: string) => {
+  const c = v1mProviderCycles[providerId] ?? v1mProviderCycles.all;
+  return c.cycle === "Weekly" ? "Jun 16–22" : c.periods[c.periods.length - 1].label;
+};
+const v1mFutureMembers: V1mMember[] = [
+  ...v1lMatrixMembers.map(m => ({ ...m, provider: "wise" })),
+  // PayPal — $44,000
+  { name: "Sofia Ramos",  avatar: "SR", color: "#0ea5a0", provider: "paypal", confirmed: {},                              planned: { "Fixed pay": 9500 } },
+  { name: "Tom Wells",    avatar: "TW", color: "#0168dd", provider: "paypal", confirmed: {},                              planned: { "Fixed pay": 7800, Deductions: 300 } },
+  { name: "Lena Marsh",   avatar: "LM", color: "#8b5cf6", provider: "paypal", confirmed: {},                              planned: { "Fixed pay": 8000, "PTO / Holiday": 600 } },
+  { name: "Raj Patel",    avatar: "RP", color: "#f59e0b", provider: "paypal", confirmed: { Hourly: 4800, Overtime: 500 }, planned: {}, rate: 60, hours: 80 },
+  { name: "Ivy Chen",     avatar: "IC", color: "#10b981", provider: "paypal", confirmed: { Hourly: 5000 },                planned: {}, rate: 50, hours: 100 },
+  { name: "Ben Ortiz",    avatar: "BO", color: "#e5764e", provider: "paypal", confirmed: {},                              planned: { "Fixed pay": 6800, Additions: 1300 } },
+  // Deel — $20,000
+  { name: "Ana Lopez",    avatar: "AL", color: "#0ea5a0", provider: "deel", confirmed: {},                               planned: { "Fixed pay": 5000 } },
+  { name: "Kofi Mensah",  avatar: "KM", color: "#0168dd", provider: "deel", confirmed: {},                               planned: { "Fixed pay": 4500, "PTO / Holiday": 500 } },
+  { name: "Yara Haddad",  avatar: "YH", color: "#8b5cf6", provider: "deel", confirmed: { Hourly: 3600, Overtime: 400 },  planned: {}, rate: 45, hours: 80 },
+  { name: "Sven Berg",    avatar: "SB", color: "#f59e0b", provider: "deel", confirmed: { Hourly: 3200 },                 planned: {}, rate: 40, hours: 80 },
+  { name: "Nina Kaur",    avatar: "NK", color: "#10b981", provider: "deel", confirmed: {},                               planned: { "Fixed pay": 3000, Additions: 200, Deductions: 400 } },
+  // Export — $12,000
+  { name: "Hiro Sato",    avatar: "HS", color: "#0ea5a0", provider: "export", confirmed: {},                             planned: { "Fixed pay": 4000 } },
+  { name: "Mara Vidal",   avatar: "MV", color: "#0168dd", provider: "export", confirmed: {},                             planned: { "Fixed pay": 3500, "PTO / Holiday": 300 } },
+  { name: "Owen Reid",    avatar: "OR", color: "#8b5cf6", provider: "export", confirmed: { Hourly: 2400, Overtime: 200 }, planned: {}, rate: 40, hours: 60 },
+  { name: "Tess Frost",   avatar: "TF", color: "#f59e0b", provider: "export", confirmed: {},                             planned: { "Fixed pay": 1800, Additions: 100, Deductions: 300 } },
+  // Bitwage — $10,000
+  { name: "Dario Costa",  avatar: "DC", color: "#0ea5a0", provider: "bitwage", confirmed: {},                            planned: { "Fixed pay": 5000 } },
+  { name: "Priya Rao",    avatar: "PR", color: "#0168dd", provider: "bitwage", confirmed: { Hourly: 3000 },               planned: {}, rate: 50, hours: 60 },
+  { name: "Luca Bianchi", avatar: "LB", color: "#8b5cf6", provider: "bitwage", confirmed: {},                            planned: { "Fixed pay": 2200, "PTO / Holiday": 200, Deductions: 400 } },
+  // Gusto — $8,000
+  { name: "Grace Miller", avatar: "GM", color: "#0ea5a0", provider: "gusto", confirmed: {},                             planned: { "Fixed pay": 3500 } },
+  { name: "Theo Blanc",   avatar: "TB", color: "#0168dd", provider: "gusto", confirmed: {},                             planned: { "Fixed pay": 2800, "PTO / Holiday": 200 } },
+  { name: "Ines Moreau",  avatar: "IM", color: "#8b5cf6", provider: "gusto", confirmed: { Hourly: 1500 },               planned: {}, rate: 50, hours: 30 },
+];
+
 // ─── Shared helpers ────────────────────────────────────────────────────────────
 
 function ChartTip({ active, payload, label }: any) {
@@ -309,7 +418,7 @@ function ChevronLeft({ size = 16, className = "" }: { size?: number; className?:
   return <ChevronRight size={size} className={`rotate-180 ${className}`} />;
 }
 
-function Sidebar({ active }: { active: "v1" | "v1c" | "v1d" | "v1e" | "v1f" | "v1g" | "v1h" | "v1i" | "v1j" | "v1k" | "v1l" | "v2" }) {
+function Sidebar({ active }: { active: "v1" | "v1c" | "v1d" | "v1e" | "v1f" | "v1g" | "v1h" | "v1i" | "v1j" | "v1k" | "v1l" | "v1m" | "v1n" | "v2" }) {
   const topNav = [
     { icon: LayoutDashboard, label: "Dashboard" },
     { icon: ClipboardList,   label: "Timesheets" },
@@ -561,7 +670,7 @@ function V1PaymentHistory() {
                       <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-semibold" style={{ background: v1AvatarColors[member.avatar] }}>{member.avatar}</div>
                       <span className="font-semibold text-[#1a1e35]">{member.name}</span>
                       <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full" style={{ background: bgC, color: textC }}>{member.cycle}</span>
-                      <span className="text-[10px] text-[#8a8fa8]">via {member.provider}</span>
+                      <span className="inline-flex items-center gap-1 text-[10px] text-[#8a8fa8]">via <ProviderLogo id={member.provider.toLowerCase()} size={12} /> {member.provider}</span>
                     </div>
                   </td>
                   <td className="py-2.5 px-3 text-right font-semibold text-[#1a1e35]">{fmt2(member.total)}</td>
@@ -2175,6 +2284,12 @@ function ProviderLogo({ id, size = 32 }: { id: string; size?: number }) {
     </svg>
   );
   if (id === "export") return <FileSpreadsheet size={size} className="text-[#1a1e35]" style={{ flexShrink: 0 }} />;
+  if (id === "gusto") return (
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" style={{ flexShrink: 0 }}>
+      <rect width="32" height="32" rx="8" fill="#F45D48"/>
+      <text x="16" y="22" textAnchor="middle" fontSize="17" fontWeight="700" fill="white" fontFamily="Inter, sans-serif">G</text>
+    </svg>
+  );
   // Payoneer: pending correct Zone asset (node 9293:73 exported a rainbow ring, not the Payoneer mark).
   if (id === "payoneer") return (
     <svg width={size} height={size} viewBox="0 0 32 32" fill="none" style={{ flexShrink: 0 }}>
@@ -2543,67 +2658,67 @@ type V1eBar = { label: string; actual: number; projected: number; isCurrent?: bo
 
 // Forward-looking: current month (split actual+projected) + N months ahead (fully projected).
 const v1e3mBars: V1eBar[] = [
-  { label: "Jun", actual: 32000, projected: v1AvgMonthly - 32000, isCurrent: true },
-  { label: "Jul", actual: 0,     projected: 58000 },
-  { label: "Aug", actual: 0,     projected: 56500 },
+  { label: "Jun", actual: 66600, projected: v1AvgMonthly - 66600, isCurrent: true },
+  { label: "Jul", actual: 0,     projected: 121000 },
+  { label: "Aug", actual: 0,     projected: 117800 },
 ];
 const v1e6mBars: V1eBar[] = [
-  { label: "Jun", actual: 32000, projected: v1AvgMonthly - 32000, isCurrent: true },
-  { label: "Jul", actual: 0, projected: 58000 },
-  { label: "Aug", actual: 0, projected: 56500 },
-  { label: "Sep", actual: 0, projected: 59000 },
-  { label: "Oct", actual: 0, projected: 57500 },
-  { label: "Nov", actual: 0, projected: 60000 },
+  { label: "Jun", actual: 66600, projected: v1AvgMonthly - 66600, isCurrent: true },
+  { label: "Jul", actual: 0, projected: 121000 },
+  { label: "Aug", actual: 0, projected: 117800 },
+  { label: "Sep", actual: 0, projected: 123000 },
+  { label: "Oct", actual: 0, projected: 120000 },
+  { label: "Nov", actual: 0, projected: 125000 },
 ];
 const v1e12mBars: V1eBar[] = [
-  { label: "Jun '26", actual: 32000, projected: v1AvgMonthly - 32000, isCurrent: true },
-  { label: "Jul '26", actual: 0, projected: 58000 },
-  { label: "Aug '26", actual: 0, projected: 56500 },
-  { label: "Sep '26", actual: 0, projected: 59000 },
-  { label: "Oct '26", actual: 0, projected: 57500 },
-  { label: "Nov '26", actual: 0, projected: 60000 },
-  { label: "Dec '26", actual: 0, projected: 62000 },
-  { label: "Jan '27", actual: 0, projected: 58500 },
-  { label: "Feb '27", actual: 0, projected: 59500 },
-  { label: "Mar '27", actual: 0, projected: 61000 },
-  { label: "Apr '27", actual: 0, projected: 60500 },
-  { label: "May '27", actual: 0, projected: 62500 },
+  { label: "Jun '26", actual: 66600, projected: v1AvgMonthly - 66600, isCurrent: true },
+  { label: "Jul '26", actual: 0, projected: 121000 },
+  { label: "Aug '26", actual: 0, projected: 117800 },
+  { label: "Sep '26", actual: 0, projected: 123000 },
+  { label: "Oct '26", actual: 0, projected: 120000 },
+  { label: "Nov '26", actual: 0, projected: 125000 },
+  { label: "Dec '26", actual: 0, projected: 129300 },
+  { label: "Jan '27", actual: 0, projected: 122000 },
+  { label: "Feb '27", actual: 0, projected: 124100 },
+  { label: "Mar '27", actual: 0, projected: 127200 },
+  { label: "Apr '27", actual: 0, projected: 126200 },
+  { label: "May '27", actual: 0, projected: 130300 },
 ];
 
 // Same month last year (for the 12M YoY side-by-side comparison).
-const v1e3mYoY  = [{ label:"Jun", yoy:46800 }, { label:"Jul", yoy:48100 }, { label:"Aug", yoy:47000 }];
+const v1e3mYoY  = [{ label:"Jun", yoy:97600 }, { label:"Jul", yoy:100300 }, { label:"Aug", yoy:98000 }];
 const v1e6mYoY  = [
-  { label:"Jun", yoy:46800 }, { label:"Jul", yoy:48100 }, { label:"Aug", yoy:47000 },
-  { label:"Sep", yoy:49000 }, { label:"Oct", yoy:48200 }, { label:"Nov", yoy:50000 },
+  { label:"Jun", yoy:97600 }, { label:"Jul", yoy:100300 }, { label:"Aug", yoy:98000 },
+  { label:"Sep", yoy:102200 }, { label:"Oct", yoy:100500 }, { label:"Nov", yoy:104300 },
 ];
 const v1e12mYoY = [
-  { label:"Jun '26", yoy:46800 }, { label:"Jul '26", yoy:48100 }, { label:"Aug '26", yoy:47000 },
-  { label:"Sep '26", yoy:49000 }, { label:"Oct '26", yoy:48200 }, { label:"Nov '26", yoy:50000 },
-  { label:"Dec '26", yoy:51500 }, { label:"Jan '27", yoy:49200 }, { label:"Feb '27", yoy:50100 },
-  { label:"Mar '27", yoy:51000 }, { label:"Apr '27", yoy:50500 }, { label:"May '27", yoy:52000 },
+  { label:"Jun '26", yoy:97600 }, { label:"Jul '26", yoy:100300 }, { label:"Aug '26", yoy:98000 },
+  { label:"Sep '26", yoy:102200 }, { label:"Oct '26", yoy:100500 }, { label:"Nov '26", yoy:104300 },
+  { label:"Dec '26", yoy:107400 }, { label:"Jan '27", yoy:102600 }, { label:"Feb '27", yoy:104500 },
+  { label:"Mar '27", yoy:106300 }, { label:"Apr '27", yoy:105300 }, { label:"May '27", yoy:108400 },
 ];
 
 // Full month navigation for the single-month picker — PAST (settled), current (split), and near future.
 // Lets users select any specific month and look back into history.
 const v1eMonthNav: V1eBar[] = [
-  { label: "Jul '25", actual: 48300, projected: 0 },
-  { label: "Aug '25", actual: 51200, projected: 0 },
-  { label: "Sep '25", actual: 49800, projected: 0 },
-  { label: "Oct '25", actual: 52100, projected: 0 },
-  { label: "Nov '25", actual: 50900, projected: 0 },
-  { label: "Dec '25", actual: 55600, projected: 0 },
-  { label: "Jan '26", actual: 52400, projected: 0 },
-  { label: "Feb '26", actual: 54100, projected: 0 },
-  { label: "Mar '26", actual: 49800, projected: 0 },
-  { label: "Apr '26", actual: 56200, projected: 0 },
-  { label: "May '26", actual: 53700, projected: 0 },
-  { label: "Jun '26", actual: 32000, projected: v1AvgMonthly - 32000, isCurrent: true },
-  { label: "Jul '26", actual: 0, projected: 58000 },
-  { label: "Aug '26", actual: 0, projected: 56500 },
-  { label: "Sep '26", actual: 0, projected: 59000 },
-  { label: "Oct '26", actual: 0, projected: 57500 },
-  { label: "Nov '26", actual: 0, projected: 60000 },
-  { label: "Dec '26", actual: 0, projected: 62000 },
+  { label: "Jul '25", actual: 100700, projected: 0 },
+  { label: "Aug '25", actual: 106800, projected: 0 },
+  { label: "Sep '25", actual: 103800, projected: 0 },
+  { label: "Oct '25", actual: 108600, projected: 0 },
+  { label: "Nov '25", actual: 106100, projected: 0 },
+  { label: "Dec '25", actual: 115900, projected: 0 },
+  { label: "Jan '26", actual: 109000, projected: 0 },
+  { label: "Feb '26", actual: 113000, projected: 0 },
+  { label: "Mar '26", actual: 104000, projected: 0 },
+  { label: "Apr '26", actual: 117000, projected: 0 },
+  { label: "May '26", actual: 112000, projected: 0 },
+  { label: "Jun '26", actual: 66600, projected: v1AvgMonthly - 66600, isCurrent: true },
+  { label: "Jul '26", actual: 0, projected: 121000 },
+  { label: "Aug '26", actual: 0, projected: 117800 },
+  { label: "Sep '26", actual: 0, projected: 123000 },
+  { label: "Oct '26", actual: 0, projected: 120000 },
+  { label: "Nov '26", actual: 0, projected: 125000 },
+  { label: "Dec '26", actual: 0, projected: 129300 },
 ];
 
 // Segment definitions — the same three lenses V1c offers, reused across ranges.
@@ -2730,10 +2845,10 @@ const v1eRangeCfg: Record<V1eRange, {
 }> = {
   // baseline = trailing-window monthly average (longer lookback pulls in older, lower months as the team grows)
   // seasonality shrinks as the window widens toward a full year, where it nets out to ~0
-  "1M":  { memberPct: 18, seasonPct: 10, baseline: 53240, lookback: "5 months",  periodLabel: "June 2026",           todayBar: "",        bars: [], yoy: [] },
-  "3M":  { memberPct: 14, seasonPct: 5,  baseline: 52600, lookback: "6 months",  periodLabel: "Jun – Aug 2026",      todayBar: "Jun",     bars: v1e3mBars, yoy: v1e3mYoY  },
-  "6M":  { memberPct: 12, seasonPct: 3,  baseline: 51700, lookback: "9 months",  periodLabel: "Jun – Nov 2026",      todayBar: "Jun",     bars: v1e6mBars, yoy: v1e6mYoY  },
-  "12M": { memberPct:  9, seasonPct: 0,  baseline: 50800, lookback: "12 months", periodLabel: "Jun 2026 – May 2027", todayBar: "Jun '26", bars: v1e12mBars, yoy: v1e12mYoY },
+  "1M":  { memberPct: 18, seasonPct: 10, baseline: 111000, lookback: "5 months",  periodLabel: "June 2026",           todayBar: "",        bars: [], yoy: [] },
+  "3M":  { memberPct: 14, seasonPct: 5,  baseline: 109700, lookback: "6 months",  periodLabel: "Jun – Aug 2026",      todayBar: "Jun",     bars: v1e3mBars, yoy: v1e3mYoY  },
+  "6M":  { memberPct: 12, seasonPct: 3,  baseline: 107800, lookback: "9 months",  periodLabel: "Jun – Nov 2026",      todayBar: "Jun",     bars: v1e6mBars, yoy: v1e6mYoY  },
+  "12M": { memberPct:  9, seasonPct: 0,  baseline: 105900, lookback: "12 months", periodLabel: "Jun 2026 – May 2027", todayBar: "Jun '26", bars: v1e12mBars, yoy: v1e12mYoY },
 };
 
 // Skeleton shown while a range change "re-queries" (data pull is heavy / not instant).
@@ -3066,7 +3181,7 @@ function V1ePredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
             <p className="text-[11px] text-[#8a8fa8]">{chartCaption}</p>
           </div>
           <div className="flex items-center bg-[#f0f1f5] rounded-md p-0.5 flex-shrink-0">
-            {([["source","By source of prediction"],["channel","By cash flow channel"],["type","By earning type"]] as const).map(([id, label]) => (
+            {([["source","Confirmed vs. projected"],["channel","Payout method"],["type","Payroll breakdown"]] as const).map(([id, label]) => (
               <button key={id} onClick={() => setSegTab(id)}
                 className={`px-2.5 py-1 rounded text-[10px] font-medium transition-all whitespace-nowrap ${segTab === id ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>
                 {label}
@@ -3102,7 +3217,7 @@ function V1ePredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
           <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5 text-[11px]">
             <div className="flex items-center gap-2 text-amber-800">
               <AlertTriangle size={12} className="text-amber-500 flex-shrink-0" />
-              3 payments pending · $3.6k from Weeks 1–2 still need processing
+3 pending ($3.6k) · 1 failed ($1.2k) from Weeks 1–2 need attention
             </div>
             <button className="text-[11px] text-[#0168dd] font-semibold flex-shrink-0 hover:underline flex items-center gap-0.5">Review <ChevronRight size={11} /></button>
           </div>
@@ -3178,7 +3293,7 @@ function V1ePredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
                   cursor="pointer" onClick={(d: any) => d?.label && setDrillMonth(d.label)}>
                   {monthlyRows.map((row, ri) => (
                     <Cell key={ri}
-                      fillOpacity={segTab === "source" ? (sb.key === "projected" ? row.projOpacity : 1) : row.barOpacity} />
+                      fillOpacity={segTab === "source" ? (row.isFut ? row.projOpacity : ((sb.key === "projected" || sb.key === "projRemain") ? row.projOpacity : 1)) : row.barOpacity} />
                   ))}
                   {idx === monthSegBars.length - 1 && (
                     <LabelList dataKey="total" position="top" offset={6}
@@ -3200,6 +3315,7 @@ function V1ePredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
             <span key={sb.key} className="flex items-center gap-1 text-[10px] text-[#8a8fa8]">
               <span className="w-2 h-2 rounded-sm flex-shrink-0" style={{ background: sb.color }} />
               {sb.label}
+              {v1SegLegendInfo[sb.label] && <InfoTip text={v1SegLegendInfo[sb.label]} />}
             </span>
           ))}
           {showYoY && !isWeekly && range === "12M" && (
@@ -3577,7 +3693,7 @@ function V1fPredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
             <p className="text-[11px] text-[#8a8fa8]">{chartCaption}</p>
           </div>
           <div className="flex items-center bg-[#f0f1f5] rounded-md p-0.5 flex-shrink-0">
-            {([["source","By source of prediction"],["channel","By cash flow channel"],["type","By earning type"]] as const).map(([id, label]) => (
+            {([["source","Confirmed vs. projected"],["channel","Payout method"],["type","Payroll breakdown"]] as const).map(([id, label]) => (
               <button key={id} onClick={() => setSegTab(id)}
                 className={`px-2.5 py-1 rounded text-[10px] font-medium transition-all whitespace-nowrap ${segTab === id ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>
                 {label}
@@ -3613,7 +3729,7 @@ function V1fPredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
           <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5 text-[11px]">
             <div className="flex items-center gap-2 text-amber-800">
               <AlertTriangle size={12} className="text-amber-500 flex-shrink-0" />
-              3 payments pending · $3.6k from Weeks 1–2 still need processing
+3 pending ($3.6k) · 1 failed ($1.2k) from Weeks 1–2 need attention
             </div>
             <button className="text-[11px] text-[#0168dd] font-semibold flex-shrink-0 hover:underline flex items-center gap-0.5">Review <ChevronRight size={11} /></button>
           </div>
@@ -3689,7 +3805,7 @@ function V1fPredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
                   cursor="pointer" onClick={(d: any) => d?.label && setDrillMonth(d.label)}>
                   {monthlyRows.map((row, ri) => (
                     <Cell key={ri}
-                      fillOpacity={segTab === "source" ? (sb.key === "projected" ? row.projOpacity : 1) : row.barOpacity} />
+                      fillOpacity={segTab === "source" ? (row.isFut ? row.projOpacity : ((sb.key === "projected" || sb.key === "projRemain") ? row.projOpacity : 1)) : row.barOpacity} />
                   ))}
                   {idx === monthSegBars.length - 1 && (
                     <LabelList dataKey="total" position="top" offset={6}
@@ -3711,6 +3827,7 @@ function V1fPredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
             <span key={sb.key} className="flex items-center gap-1 text-[10px] text-[#8a8fa8]">
               <span className="w-2 h-2 rounded-sm flex-shrink-0" style={{ background: sb.color }} />
               {sb.label}
+              {v1SegLegendInfo[sb.label] && <InfoTip text={v1SegLegendInfo[sb.label]} />}
             </span>
           ))}
           {showYoY && !isWeekly && range === "12M" && (
@@ -4017,12 +4134,13 @@ function V1hFundCard() {
 // balance — a true gap only where the balance is readable (Wise, Bitwage);
 // otherwise "fund X" with no fabricated balance (Payoneer, PayPal).
 const v1jBalances: Record<string, number | undefined> = {
-  wise: 2000,
-  bitwage: 400,
+  wise: 8000,
+  bitwage: 4000,
   payoneer: undefined,
   paypal: undefined,
-  deel: 900,
+  deel: 6000,
   export: undefined,
+  gusto: 3000,
 };
 type V1jAdd = { kind: "covered" | "add" | "fund"; amount: number };
 const v1jAddFor = (id: string, due: number): V1jAdd => {
@@ -4146,6 +4264,28 @@ function V1jAddToCoverCard({ onViewSchedule }: { onViewSchedule: () => void }) {
 // Shared by the 1K summary card and its full-schedule dialog so they stay identical.
 const v1kDowFull: Record<string, string> = { Sun: "Sunday", Mon: "Monday", Tue: "Tuesday", Wed: "Wednesday", Thu: "Thursday", Fri: "Friday", Sat: "Saturday" };
 
+// Small hover tooltip on an info icon — explains a figure or label in place.
+function InfoTip({ text, width = 200 }: { text: string; width?: number }) {
+  return (
+    <span className="group relative inline-flex align-middle leading-none">
+      <Info size={11} className="text-[#b0b4c4] hover:text-[#5b607a] transition-colors cursor-help" />
+      <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1.5 hidden group-hover:block z-30 pointer-events-none" style={{ width }}>
+        <span className="block bg-[#1a1e35] text-white text-[11px] font-normal normal-case tracking-normal whitespace-normal leading-snug text-left rounded-md px-2.5 py-1.5 shadow-lg">{text}</span>
+      </span>
+    </span>
+  );
+}
+const v1InfoText = {
+  unknown:   "Hubstaff can't read this account's balance automatically. Check it manually in your provider account to confirm you can cover the amount due.",
+  actuals:   "Payroll already paid out this period, from completed runs.",
+  projected: "Our estimate of payouts still ahead, based on your payment history.",
+  confirmed: "Locked in — tracked hours and overtime already recorded. Won't change.",
+  planned:   "Amounts already scheduled: fixed pay, PTO / holiday, and payroll adjustments.",
+  projAgg:   "An estimate of the hours and bonuses still to come — shown in aggregate, not per person.",
+};
+const v1SegLegendInfo: Record<string, string> = { Actuals: v1InfoText.actuals, Confirmed: v1InfoText.actuals, Projected: v1InfoText.projected };
+const v1SourceLegendInfo: Record<string, string> = { Confirmed: v1InfoText.confirmed, Planned: v1InfoText.planned, "~Projected": v1InfoText.projAgg };
+
 function V1kFundDateCard({ e, v1l = false, condensed = false, onProviderClick }: { e: V1gFundDate; v1l?: boolean; condensed?: boolean; onProviderClick?: (providerId: string) => void }) {
   const isNext = e.tag === "next";
   const projected = e.tag === "projected";
@@ -4153,7 +4293,8 @@ function V1kFundDateCard({ e, v1l = false, condensed = false, onProviderClick }:
   const fundTotal = e.providers.reduce((s, p) => s + v1jAddFor(p.id, p.amount).amount, 0);
   const dueTotal = e.providers.reduce((s, p) => s + p.amount, 0);
   const monthDay = (e.fundBy ?? "").split(", ")[1] ?? e.fundBy;
-  const weekday = v1kDowFull[(e.fundBy ?? "").split(", ")[0]] ?? "";
+  const shortDay = (e.fundBy ?? "").split(", ")[0];
+  const weekday = v1kDowFull[shortDay] ?? "";
   const showTable = !condensed;
   const [showDialog, setShowDialog] = useState(false);
 
@@ -4161,7 +4302,7 @@ function V1kFundDateCard({ e, v1l = false, condensed = false, onProviderClick }:
     <table className="w-full">
       <thead>
         <tr className="text-[9px] font-semibold uppercase tracking-wide text-[#8a8fa8]">
-          <th className="text-left font-semibold pb-1.5 border-b border-[#e8eaf0]">Provider</th>
+          <th className="text-left font-semibold pb-1.5 border-b border-[#e8eaf0]">Payout method</th>
           <th className="text-right font-semibold pb-1.5 pl-4 border-b border-[#e8eaf0]">Balance</th>
           <th className="text-right font-semibold pb-1.5 pl-4 border-b border-[#e8eaf0]">Due</th>
           <th className="text-right font-semibold pb-1.5 pl-4 border-b border-[#e8eaf0]">{e.funded ? "Status" : "Fund"}</th>
@@ -4172,23 +4313,24 @@ function V1kFundDateCard({ e, v1l = false, condensed = false, onProviderClick }:
           const meta = v1gProviderMeta[p.id];
           const bal = v1jBalances[p.id];
           const res = v1jAddFor(p.id, p.amount);
+          const cadence = v1mProviderCycles[p.id]?.cycle ?? "Monthly";
           return (
             <tr key={p.id} className="border-b border-[#f0f1f5] last:border-0">
-              <td className="py-2">
+              <td className="py-2 pr-2">
                 <div className="flex items-center gap-1.5 min-w-0">
                   <ProviderLogo id={p.id} size={16} />
                   {p.id === "export" ? (
                     <span className="text-xs font-medium text-[#1a1e35] truncate">{meta.name}</span>
                   ) : (
-                    <a href="#" onClick={ev => { ev.preventDefault(); onProviderClick?.(p.id); }} className="text-xs font-medium text-[#1a1e35] underline decoration-[#c0c3d3] underline-offset-2 hover:decoration-[#1a1e35] truncate inline-flex items-center gap-1 min-w-0">
-                      <span className="truncate">{meta.name}</span>
-                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#8a8fa8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0"><path d="M7 17 17 7"/><path d="M7 7h10v10"/></svg>
+                    <a href="#" onClick={ev => { ev.preventDefault(); onProviderClick?.(p.id); }} className="text-xs font-medium text-[#1a1e35] underline decoration-[#9aa0b4] decoration-[1.5px] underline-offset-2 hover:decoration-[#1a1e35] truncate min-w-0">
+                      {meta.name}
                     </a>
                   )}
+                  {v1l && <span className="text-[11px] text-[#8a8fa8] whitespace-nowrap flex-shrink-0"><span className="text-[#c8cad4] mx-1">·</span>{cadence}</span>}
                 </div>
               </td>
-              <td className={`py-2 pl-4 text-right whitespace-nowrap tabular-nums ${v1l ? "text-[12px] text-[#8a8fa8]" : "text-[11px] font-semibold text-[#5b607a]"}`}>{bal !== undefined ? fmt0(bal) : (v1l ? "Unknown" : "—")}</td>
-              <td className={`py-2 pl-4 text-right whitespace-nowrap tabular-nums ${v1l ? "text-[12px] text-[#8a8fa8]" : "text-[11px] font-semibold text-[#5b607a]"}`}>{fmt0(p.amount)}</td>
+              <td className={`py-2 pl-4 text-right whitespace-nowrap tabular-nums ${v1l ? "text-[12px] text-[#5b607a]" : "text-[11px] font-semibold text-[#5b607a]"}`}>{bal !== undefined ? fmt0(bal) : (v1l ? <span className="inline-flex items-center gap-1 justify-end text-[#a8adbf]">Unknown <InfoTip text={v1InfoText.unknown} /></span> : "—")}</td>
+              <td className={`py-2 pl-4 text-right whitespace-nowrap tabular-nums ${v1l ? "text-[12px] text-[#5b607a]" : "text-[11px] font-semibold text-[#5b607a]"}`}>{fmt0(p.amount)}</td>
               <td className="py-2 pl-4 text-right whitespace-nowrap">
                 {e.funded ? (
                   <span className="text-[11px] font-semibold text-emerald-600 inline-flex items-center gap-1 justify-end">{check} paid</span>
@@ -4209,8 +4351,9 @@ function V1kFundDateCard({ e, v1l = false, condensed = false, onProviderClick }:
     <div className={`rounded-lg border bg-white px-4 py-3 flex flex-col h-full ${isNext ? "border-[#c0c3d3]" : "border-[#e8eaf0]"}`}>
       <div className="flex items-start justify-between gap-2">
         <p className={condensed ? "whitespace-nowrap min-w-0" : "min-w-0"}>
+          {v1l && <span className="text-sm text-[#8a8fa8] whitespace-nowrap">Fund by </span>}
           <span className={`text-sm font-bold whitespace-nowrap ${projected ? "text-[#8a8fa8]" : "text-[#1a1e35]"}`}>{monthDay}</span>
-          <span className="text-sm text-[#8a8fa8] whitespace-nowrap">, {weekday}</span>
+          <span className="text-sm text-[#8a8fa8] whitespace-nowrap">{v1l ? ` · ${shortDay}` : `, ${weekday}`}</span>
           {condensed && isNext && <>{" "}<span className="inline-flex items-center gap-1 align-middle text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#e8f2fd] text-[#0168dd]"><CalendarDays size={10} /> next</span></>}
           {condensed && projected && <>{" "}<span className="align-middle text-[10px] text-[#c0c3d3]">projected</span></>}
           {!v1l && <>{" "}<span className="whitespace-nowrap"><span className="text-[#c8cad4] mr-1.5">·</span><span className={`text-[11px] ${e.funded ? "text-emerald-600 font-medium" : "text-[#8a8fa8]"}`}>{e.funded ? "Paid" : "Fund deadline"}</span></span></>}
@@ -4382,12 +4525,12 @@ function V1kNextPaymentsCard({ onViewSchedule, v1l = false, condensed = false, o
       {v1l ? (
         /* 1L — Learn more sits next to the title; no full-schedule link */
         <div className="px-4 h-[55px] flex items-center gap-3 border-b border-[#e8eaf0] bg-white rounded-t-lg">
-          <p className="text-sm font-semibold text-[#1a1e35]">Next dates to fund</p>
+          <p className="text-sm font-semibold text-[#1a1e35]">Funding schedule</p>
           {learnMoreBtn}
         </div>
       ) : (
         <div className="px-4 h-[55px] flex items-center justify-between gap-3 border-b border-[#e8eaf0] bg-white rounded-t-lg">
-          <p className="text-sm font-semibold text-[#1a1e35]">Next dates to fund</p>
+          <p className="text-sm font-semibold text-[#1a1e35]">Funding schedule</p>
           <div className="flex items-center gap-2">
             {learnMoreBtn}
             <button onClick={onViewSchedule} className="text-[11px] font-medium text-[#0168dd] border border-[#0168dd]/40 rounded-md px-2.5 py-1 hover:bg-[#0168dd]/5 transition-colors select-none">View full schedule</button>
@@ -4569,8 +4712,8 @@ function V1iHowWeGetThereDialog({
   );
 }
 
-function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = false, v1i = false, v1j = false, v1k = false, v1l = false, condensed = false, onProviderClick }: { showStatusBreakdown: boolean; seasonalityOn: boolean; sideFund?: boolean; v1i?: boolean; v1j?: boolean; v1k?: boolean; v1l?: boolean; condensed?: boolean; onProviderClick?: (providerId: string) => void }) {
-  const [range, setRange]           = useState<V1eRange>("1M");
+function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = false, v1i = false, v1j = false, v1k = false, v1l = false, v1m = false, condensed = false, onProviderClick }: { showStatusBreakdown: boolean; seasonalityOn: boolean; sideFund?: boolean; v1i?: boolean; v1j?: boolean; v1k?: boolean; v1l?: boolean; v1m?: boolean; condensed?: boolean; onProviderClick?: (providerId: string) => void }) {
+  const [range, setRange]           = useState<V1eRange>(v1l || v1m ? "3M" : "1M"); // 1L/1M drop the 1M view
   const [showYoY, setShowYoY]       = useState(false);
   const [drillMonth, setDrillMonth] = useState<string | null>(null);
   const [segTab, setSegTab]         = useState<V1eSeg>("source");
@@ -4580,6 +4723,7 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
   const [showManageDialog, setShowManageDialog] = useState(false); // adjustments management dialog
   const [showScheduleDialog, setShowScheduleDialog] = useState(false); // funding schedule dialog
   const [mathOpen, setMathOpen] = useState(false); // inline "+28% adjustments" detail popover
+  const [showAutoPop, setShowAutoPop] = useState(false); // 1L auto-adjustments "Details" popover
   const [showMathDialog, setShowMathDialog] = useState(false); // 1I "How we get there" dialog
   const [driversOpen, setDriversOpen] = useState(false); // 1J "+X% vs typical" drivers popover
   const [showAddDialog, setShowAddDialog] = useState(false); // 1K single "Add adjustment" dialog (1F-style)
@@ -4619,13 +4763,25 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
   // Monthly rows — every month split by channel + earning; confidence fades on projections.
   let futureStep = 0;
   const monthlyRows = cfg.bars.map((b, i) => {
-    const total = b.actual + b.projected;
-    const isFut = b.actual === 0 && b.projected > 0;
+    // Current month's bar total must equal the hero estimate (adjProj) so the chart
+    // and the "Estimated payout" number agree; keep actuals-paid, flex the remainder.
+    const actual = b.actual;
+    const projected = b.isCurrent ? Math.max(0, adjProj - actual) : b.projected;
+    const total = actual + projected;
+    const isFut = actual === 0 && projected > 0;
     const isCur = !!b.isCurrent;
     let projOpacity = 1;
     if (isCur || isFut) { projOpacity = [0.9, 0.75, 0.62, 0.52][Math.min(futureStep, 3)]; futureStep += 1; }
+    // Status split (rendered only in 1M's by-source status view): the paid-out
+    // portion breaks into paid/pending/failed; the remainder into planned/projected.
+    const pending = isCur ? 3600 : 0;
+    const failed  = isCur ? 1200 : 0;
+    const paid    = Math.max(0, actual - pending - failed);
+    const planned = Math.round(projected * 0.6);
+    const projRemain = projected - planned;
     return {
-      ...b, total, yoy: cfg.yoy[i]?.yoy ?? 0,
+      ...b, actual, projected, total, yoy: cfg.yoy[i]?.yoy ?? 0,
+      paid, pending, failed, planned, projRemain,
       isFut, isCur, projOpacity, barOpacity: isFut ? projOpacity : 1,
       ...v1eSplit(total, v1eChannelSeg),
       ...v1eSplit(total, v1eEarningSeg),
@@ -4651,16 +4807,17 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
   };
 
   type SegBar = { key: string; label: string; color: string };
+  const statusSourceSegs: SegBar[] = [
+    { key: "paid",       label: "Paid",      color: "#10b981" },
+    { key: "pending",    label: "Pending",   color: "#f59e0b" },
+    { key: "failed",     label: "Failed",    color: "#ef4444" },
+    { key: "tracked",    label: "Planned",   color: "#0168dd" },
+    { key: "projected",  label: "Projected", color: "#85baf5" },
+  ];
   const weekSegBars: SegBar[] =
     segTab === "source"
       ? (showStatusBreakdown
-          ? [
-              { key: "paid",      label: "Paid",      color: "#10b981" },
-              { key: "pending",   label: "Pending",   color: "#f59e0b" },
-              { key: "failed",    label: "Failed",    color: "#ef4444" },
-              { key: "tracked",   label: "Planned",   color: "#0168dd" },
-              { key: "projected", label: "Projected", color: "#85baf5" },
-            ]
+          ? statusSourceSegs
           : [
               { key: "factual",   label: "Confirmed", color: "#10b981" },
               { key: "tracked",   label: "Planned",   color: "#0168dd" },
@@ -4672,7 +4829,15 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
 
   const monthSegBars: SegBar[] =
     segTab === "source"
-      ? [{ key: "actual", label: "Actuals", color: "#10b981" }, { key: "projected", label: "Projected", color: "#85baf5" }]
+      ? (v1m && showStatusBreakdown
+          ? [
+              { key: "paid",       label: "Paid",      color: "#10b981" },
+              { key: "pending",    label: "Pending",   color: "#f59e0b" },
+              { key: "failed",     label: "Failed",    color: "#ef4444" },
+              { key: "planned",    label: "Planned",   color: "#0168dd" },
+              { key: "projRemain", label: "Projected", color: "#85baf5" },
+            ]
+          : [{ key: "actual", label: "Confirmed", color: "#10b981" }, { key: "projected", label: "Projected", color: "#85baf5" }])
       : segTab === "channel"
       ? v1eChannelSeg.map(s => ({ key: s.key, label: s.label, color: s.color }))
       : v1eEarningSeg.map(s => ({ key: s.key, label: s.label, color: s.color }));
@@ -4777,7 +4942,7 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
                 </div>
               )}
             </div>
-            <V1cBreakdownPopover dark align={v1l ? "left" : "right"} />
+            {!v1l && <V1cBreakdownPopover dark align="right" />}
             {!v1l && (
             /* actions — side by side under View breakdown */
             <div className="flex items-center gap-2 mt-4 flex-wrap">
@@ -4804,7 +4969,22 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
                 </div>
                 <div className="flex items-baseline gap-3 text-[12px]">
                   <span className="w-16 flex-shrink-0 font-medium text-emerald-600 tabular-nums">+{v1lAutoPct}%</span>
-                  <span className="text-[#8a8fa8]">Automatic adjustments</span>
+                  <span className="flex items-baseline gap-2">
+                    <span className="text-[#8a8fa8]">Auto adjustments</span>
+                    <span className="relative inline-flex self-center">
+                      <button onClick={() => setShowAutoPop(o => !o)} className="text-[12px] font-medium text-[#8a8fa8] underline underline-offset-2 hover:text-[#1a1e35] transition-colors select-none">Details</button>
+                      {showAutoPop && (<>
+                        <div className="fixed inset-0 z-20" onClick={() => setShowAutoPop(false)} />
+                        <div className="absolute top-6 left-0 z-30 bg-white rounded-lg border border-[#e8eaf0] shadow-xl w-64 p-3">
+                          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8]">+{v1lAutoPct}% vs a typical month</p>
+                          <div className="mt-1 divide-y divide-[#f0f1f5]">
+                            <div className="flex items-center gap-1.5 text-[11px] py-1.5 min-w-0"><span className="font-semibold flex-shrink-0 text-emerald-600">+{memberPct}%</span><span className="text-[#1a1e35] font-medium flex-shrink-0">Headcount change</span><span className="text-[#d0d3de] flex-shrink-0">—</span><span className="text-[#8a8fa8] truncate">{memberNote}</span></div>
+                            {seasonPct > 0 && <div className="flex items-center gap-1.5 text-[11px] py-1.5 min-w-0"><span className="font-semibold flex-shrink-0 text-emerald-600">+{seasonPct}%</span><span className="text-[#1a1e35] font-medium flex-shrink-0">Seasonality</span><span className="text-[#d0d3de] flex-shrink-0">—</span><span className="text-[#8a8fa8] truncate">May is typically above avg.</span></div>}
+                          </div>
+                        </div>
+                      </>)}
+                    </span>
+                  </span>
                 </div>
                 <div className="flex items-baseline gap-3 text-[12px] pt-1.5 border-t border-[#f0f1f5]">
                   <span className="w-16 flex-shrink-0 font-semibold text-[#1a1e35] tabular-nums">{fmt0(v1lEstimate)}</span>
@@ -4987,7 +5167,7 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
           </div>
           <div className="flex items-center gap-3">
             <div className="flex items-center bg-[#f0f1f5] rounded-md p-0.5">
-              {(["1M","3M","6M","12M"] as V1eRange[]).map(r => (
+              {((v1l || v1m ? ["3M","6M","12M"] : ["1M","3M","6M","12M"]) as V1eRange[]).map(r => (
                 <button key={r} onClick={() => applyRange(r)}
                   className={`px-2.5 py-0.5 rounded text-[11px] font-medium transition-all ${range === r ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>
                   {r}
@@ -5036,7 +5216,7 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
             <p className="text-[11px] text-[#8a8fa8]">{chartCaption}</p>
           </div>
           <div className="flex items-center bg-[#f0f1f5] rounded-md p-0.5 flex-shrink-0">
-            {([["source","By source of prediction"],["channel","By cash flow channel"],["type","By earning type"]] as const).map(([id, label]) => (
+            {([["source","Confirmed vs. projected"],["channel","Payout method"],["type","Payroll breakdown"]] as const).map(([id, label]) => (
               <button key={id} onClick={() => setSegTab(id)}
                 className={`px-2.5 py-1 rounded text-[10px] font-medium transition-all whitespace-nowrap ${segTab === id ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>
                 {label}
@@ -5072,7 +5252,7 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
           <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5 text-[11px]">
             <div className="flex items-center gap-2 text-amber-800">
               <AlertTriangle size={12} className="text-amber-500 flex-shrink-0" />
-              3 payments pending · $3.6k from Weeks 1–2 still need processing
+3 pending ($3.6k) · 1 failed ($1.2k) from Weeks 1–2 need attention
             </div>
             <button className="text-[11px] text-[#0168dd] font-semibold flex-shrink-0 hover:underline flex items-center gap-0.5">Review <ChevronRight size={11} /></button>
           </div>
@@ -5142,7 +5322,7 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
                   cursor="pointer" onClick={(d: any) => d?.label && setDrillMonth(d.label)}>
                   {monthlyRows.map((row, ri) => (
                     <Cell key={ri}
-                      fillOpacity={segTab === "source" ? (sb.key === "projected" ? row.projOpacity : 1) : row.barOpacity} />
+                      fillOpacity={segTab === "source" ? (row.isFut ? row.projOpacity : ((sb.key === "projected" || sb.key === "projRemain") ? row.projOpacity : 1)) : row.barOpacity} />
                   ))}
                   {idx === monthSegBars.length - 1 && (
                     <LabelList dataKey="total" position="top" offset={6}
@@ -5168,6 +5348,7 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
             <span key={sb.key} className="flex items-center gap-1 text-[10px] text-[#8a8fa8]">
               <span className="w-2 h-2 rounded-sm flex-shrink-0" style={{ background: sb.color }} />
               {sb.label}
+              {v1SegLegendInfo[sb.label] && <InfoTip text={v1SegLegendInfo[sb.label]} />}
             </span>
           ))}
           {showYoY && !isWeekly && (
@@ -5231,18 +5412,19 @@ const v1gProviderMeta: Record<string, { name: string; balanceReadable: boolean }
   bitwage: { name: "Bitwage", balanceReadable: true },
   deel:    { name: "Deel",    balanceReadable: true },
   export:  { name: "Export",  balanceReadable: false },
+  gusto:   { name: "Gusto",   balanceReadable: true },
 };
 // daysOut = days from today until the FUND-BY date (payout date minus transfer lag),
 // so windows are built on when you must fund, not when the payment lands.
 type V1gFundDate = { date: string; dow: string; daysOut: number; tag?: "next" | "projected"; funded?: boolean; fundBy?: string; paidOn?: string; providers: { id: string; amount: number }[] };
 const v1gFundSchedule: V1gFundDate[] = [
-  { date: "Jun 8",  dow: "Mon", daysOut: -12, funded: true,    fundBy: "Sun, Jun 7",  paidOn: "Jun 10", providers: [{ id: "wise", amount: 2600 }, { id: "paypal", amount: 1300 }] },
-  { date: "Jun 15", dow: "Mon", daysOut: -5, funded: true,     fundBy: "Sun, Jun 14", paidOn: "Jun 17", providers: [{ id: "wise", amount: 2900 }, { id: "paypal", amount: 1200 }] },
-  { date: "Jun 22", dow: "Mon", daysOut: 2,  tag: "next",       fundBy: "Sun, Jun 21", paidOn: "Jun 24", providers: [{ id: "wise", amount: 3700 }, { id: "paypal", amount: 2597 }, { id: "deel", amount: 1400 }, { id: "export", amount: 1800 }] },
-  { date: "Jun 24", dow: "Wed", daysOut: 4,                      fundBy: "Tue, Jun 23", paidOn: "Jun 26", providers: [{ id: "bitwage", amount: 1100 }] },
-  { date: "Jun 30", dow: "Tue", daysOut: 10,                     fundBy: "Mon, Jun 29", paidOn: "Jul 2",  providers: [{ id: "wise", amount: 5110 }, { id: "paypal", amount: 900 }] },
-  { date: "Jul 6",  dow: "Mon", daysOut: 16, tag: "projected",   fundBy: "Sun, Jul 5",  paidOn: "Jul 8",  providers: [{ id: "wise", amount: 3800 }, { id: "paypal", amount: 2350 }] },
-  { date: "Jul 13", dow: "Mon", daysOut: 23, tag: "projected",   fundBy: "Sun, Jul 12", paidOn: "Jul 15", providers: [{ id: "wise", amount: 4100 }, { id: "paypal", amount: 2100 }] },
+  { date: "Jun 8",  dow: "Mon", daysOut: -12, funded: true,    fundBy: "Sun, Jun 7",  paidOn: "Jun 10", providers: [{ id: "wise", amount: 12000 }, { id: "paypal", amount: 9000 }] },
+  { date: "Jun 15", dow: "Mon", daysOut: -5, funded: true,     fundBy: "Sun, Jun 14", paidOn: "Jun 17", providers: [{ id: "wise", amount: 13000 }, { id: "paypal", amount: 11000 }] },
+  { date: "Jun 22", dow: "Mon", daysOut: 2,  tag: "next",       fundBy: "Sun, Jun 21", paidOn: "Jun 24", providers: [{ id: "wise", amount: 15000 }, { id: "paypal", amount: 13000 }, { id: "deel", amount: 20000 }, { id: "export", amount: 12000 }] },
+  { date: "Jun 24", dow: "Wed", daysOut: 4,                      fundBy: "Tue, Jun 23", paidOn: "Jun 26", providers: [{ id: "bitwage", amount: 10000 }, { id: "gusto", amount: 8000 }] },
+  { date: "Jun 30", dow: "Tue", daysOut: 10,                     fundBy: "Mon, Jun 29", paidOn: "Jul 2",  providers: [{ id: "wise", amount: 16000 }, { id: "paypal", amount: 11000 }] },
+  { date: "Jul 6",  dow: "Mon", daysOut: 16, tag: "projected",   fundBy: "Sun, Jul 5",  paidOn: "Jul 8",  providers: [{ id: "wise", amount: 14500 }, { id: "paypal", amount: 9500 }] },
+  { date: "Jul 13", dow: "Mon", daysOut: 23, tag: "projected",   fundBy: "Sun, Jul 12", paidOn: "Jul 15", providers: [{ id: "wise", amount: 15500 }, { id: "paypal", amount: 10000 }] },
 ];
 const v1gSum = (d: V1gFundDate) => d.providers.reduce((s, p) => s + p.amount, 0);
 
@@ -5601,8 +5783,75 @@ function Version1L({ showStatusBreakdown, seasonalityOn }: { showStatusBreakdown
       <V1gPredictivePanel showStatusBreakdown={showStatusBreakdown} seasonalityOn={seasonalityOn} v1i v1j v1k v1l condensed={dense} onProviderClick={setDetailProvider} />
       {/* "Future Tracked So Far" tab retired — its detail now lives in the future-payment page (item E) */}
       <div>
-        <p className="text-base font-semibold text-[#1a1e35] mb-3">Payment Activity</p>
+        <p className="text-base font-semibold text-[#1a1e35] mb-3">Payment History</p>
         <V1PaymentHistory />
+      </div>
+    </div>
+  );
+}
+
+// ─── Version 1M — copy of 1L; future detail moves inline into a filterable tab ──
+function Version1M({ showStatusBreakdown, seasonalityOn }: { showStatusBreakdown: boolean; seasonalityOn: boolean }) {
+  const dense = false; // 1M stays Detailed (toggle hidden; condensed code kept for 1L)
+  const [bottomTab, setBottomTab] = useState<"history"|"future">("history"); // Payment History / Future Tracked So Far
+  const [futureProvider, setFutureProvider] = useState<string>("all"); // provider filter for the Future tab
+  const [futurePeriod, setFuturePeriod] = useState<string>("June 2026"); // pay period for the Future tab
+  const activityRef = useRef<HTMLDivElement>(null);
+
+  // Clicking a provider on a fund card anchors to the Future Tracked tab, filtered to
+  // that provider + the pay period that card funds (a week for weekly providers).
+  const openFuture = (providerId: string) => {
+    setFutureProvider(providerId);
+    setFuturePeriod(v1mCurrentPeriod(providerId));
+    setBottomTab("future");
+    setTimeout(() => activityRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 0);
+  };
+
+  return (
+    <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+      <h1 className="text-xl font-semibold text-[#1a1e35]">Payments report</h1>
+      {/* Detailed/Condensed toggle hidden in 1M (still available in 1L); 1M stays Detailed */}
+      <V1gPredictivePanel showStatusBreakdown={showStatusBreakdown} seasonalityOn={seasonalityOn} v1i v1j v1k v1l v1m condensed={dense} onProviderClick={openFuture} />
+      <div ref={activityRef}>
+        <p className="text-base font-semibold text-[#1a1e35] mb-3">Payment Activity</p>
+        <div className="flex items-center gap-0 mb-6 border-b border-[#e8eaf0]">
+          {([["history","Payment History"],["future","Future Tracked So Far"]] as const).map(([id, label]) => (
+            <button key={id} onClick={() => setBottomTab(id)} className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${bottomTab === id ? "border-[#0168dd] text-[#0168dd]" : "border-transparent text-[#8a8fa8] hover:text-[#1a1e35]"}`}>{label}</button>
+          ))}
+        </div>
+        {bottomTab === "history" ? <V1PaymentHistory /> : <V1mFutureTracked provider={futureProvider} period={futurePeriod} onProviderChange={setFutureProvider} onPeriodChange={setFuturePeriod} />}
+      </div>
+    </div>
+  );
+}
+
+// 1N — an exact copy of 1M (independent wrapper so it can diverge later).
+function Version1N({ showStatusBreakdown, seasonalityOn }: { showStatusBreakdown: boolean; seasonalityOn: boolean }) {
+  const dense = false; // 1N stays Detailed, same as 1M
+  const [bottomTab, setBottomTab] = useState<"history"|"future">("history"); // Payment History / Future Tracked So Far
+  const [futureProvider, setFutureProvider] = useState<string>("all"); // provider filter for the Future tab
+  const [futurePeriod, setFuturePeriod] = useState<string>("June 2026"); // pay period for the Future tab
+  const activityRef = useRef<HTMLDivElement>(null);
+
+  const openFuture = (providerId: string) => {
+    setFutureProvider(providerId);
+    setFuturePeriod(v1mCurrentPeriod(providerId));
+    setBottomTab("future");
+    setTimeout(() => activityRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 0);
+  };
+
+  return (
+    <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+      <h1 className="text-xl font-semibold text-[#1a1e35]">Payments report</h1>
+      <V1gPredictivePanel showStatusBreakdown={showStatusBreakdown} seasonalityOn={seasonalityOn} v1i v1j v1k v1l v1m condensed={dense} onProviderClick={openFuture} />
+      <div ref={activityRef}>
+        <p className="text-base font-semibold text-[#1a1e35] mb-3">Payment Activity</p>
+        <div className="flex items-center gap-0 mb-6 border-b border-[#e8eaf0]">
+          {([["history","Payment History"],["future","Future Tracked So Far"]] as const).map(([id, label]) => (
+            <button key={id} onClick={() => setBottomTab(id)} className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${bottomTab === id ? "border-[#0168dd] text-[#0168dd]" : "border-transparent text-[#8a8fa8] hover:text-[#1a1e35]"}`}>{label}</button>
+          ))}
+        </div>
+        {bottomTab === "history" ? <V1PaymentHistory /> : <V1mFutureTracked provider={futureProvider} period={futurePeriod} onProviderChange={setFutureProvider} onPeriodChange={setFuturePeriod} grouped />}
       </div>
     </div>
   );
@@ -5610,11 +5859,10 @@ function Version1L({ showStatusBreakdown, seasonalityOn }: { showStatusBreakdown
 
 // item E — in-1L "team payment, in advance": how the provider's number was built + who's paid.
 function V1lFutureDetail({ providerId, onBack }: { providerId: string; onBack: () => void }) {
-  const [tab, setTab] = useState<"source" | "earning">("source");
-  const [openRows, setOpenRows] = useState<string[]>([]);
+  const [showHow, setShowHow] = useState(false);
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(0);
-  const pageSize = 10;
-  const toggle = (k: string) => setOpenRows(p => p.includes(k) ? p.filter(x => x !== k) : [...p, k]);
+  const toggle = (name: string) => setCollapsed(prev => { const n = new Set(prev); n.has(name) ? n.delete(name) : n.add(name); return n; });
 
   const cycle = v2Cycles.find(c => c.id === v2CycleForProvider[providerId]) ?? v2Cycles[0];
   const cb = cycle.confirmedBreak, pl = cycle.plannedBreak, pb = cycle.projectedBreak;
@@ -5624,39 +5872,46 @@ function V1lFutureDetail({ providerId, onBack }: { providerId: string; onBack: (
   const projectedPct = 100 - confirmedPct - plannedPct;
   const provColor = v2ProviderColors[cycle.provider] ?? "#8a8fa8";
 
-  type Cert = "Confirmed" | "Planned" | "Projected";
-  type ChildRow = { label: string; basis: string; status: Cert; amount: number; approx?: boolean };
-  // By earning type — derived from the cycle breakdown, so it reconciles to the total by construction.
-  const earningRows: { type: string; basis: string; tags: Cert[]; amount: number; children: ChildRow[] }[] = [];
-  if (cb.hourlyTracked + pb.hourly > 0) earningRows.push({
-    type: "Hourly pay", basis: "tracked + est. remaining",
-    tags: [...(cb.hourlyTracked > 0 ? ["Confirmed" as Cert] : []), ...(pb.hourly > 0 ? ["Projected" as Cert] : [])],
-    amount: cb.hourlyTracked + pb.hourly,
-    children: [
-      ...(cb.hourlyTracked > 0 ? [{ label: "Tracked hours", basis: `${cycle.pctTracked}% of the period tracked`, status: "Confirmed" as Cert, amount: cb.hourlyTracked }] : []),
-      ...(pb.hourly > 0 ? [{ label: "Estimated remaining", basis: `avg daily × ${cycle.daysLeft} days left`, status: "Projected" as Cert, amount: pb.hourly, approx: true }] : []),
-    ],
-  });
-  if (cb.overtime > 0) earningRows.push({ type: "Overtime", basis: "tracked", tags: ["Confirmed"], amount: cb.overtime, children: [{ label: "Tracked overtime", basis: "logged this period", status: "Confirmed", amount: cb.overtime }] });
-  if (cb.pastPTO + pl.futurePTO > 0) earningRows.push({
-    type: "PTO & holidays", basis: "scheduled this period",
-    tags: [...(cb.pastPTO > 0 ? ["Confirmed" as Cert] : []), ...(pl.futurePTO > 0 ? ["Planned" as Cert] : [])],
-    amount: cb.pastPTO + pl.futurePTO,
-    children: [
-      ...(cb.pastPTO > 0 ? [{ label: "Past PTO / holidays", basis: "already in the period", status: "Confirmed" as Cert, amount: cb.pastPTO }] : []),
-      ...(pl.futurePTO > 0 ? [{ label: "Upcoming PTO / holidays", basis: "hours × rate", status: "Planned" as Cert, amount: pl.futurePTO }] : []),
-    ],
-  });
-  if (pl.fixedPay > 0) earningRows.push({ type: "Fixed pay", basis: "full amount if worked ≥1 min", tags: ["Planned"], amount: pl.fixedPay, children: [{ label: "Fixed salaries", basis: "committed this period", status: "Planned", amount: pl.fixedPay }] });
-  if (pl.additions > 0) earningRows.push({ type: "Additions", basis: "policy this period", tags: ["Planned"], amount: pl.additions, children: [{ label: "Scheduled additions", basis: "policy applies this period", status: "Planned", amount: pl.additions }] });
+  // "How we get there" figures for this pay period.
+  const typical = Math.round(total / 1.28 / 100) * 100; // ~$8,300
+  const adjPct = 28, hcPct = 18, seasonPct = 10, avgMembers = 12;
 
-  const members = v1lWiseMembers.slice(0, cycle.members);
-  const pageCount = Math.ceil(members.length / pageSize);
-  const pageMembers = members.slice(page * pageSize, page * pageSize + pageSize);
-  const memberStatus = (items: { status: string }[]): Cert => items.some(i => i.status === "Projected") ? "Projected" : items.some(i => i.status === "Planned") ? "Planned" : "Confirmed";
+  // Matrix — earning types × certainty. Deductions subtract; projected is
+  // aggregate-only (never per member).
+  const ETS = V1L_ETS;
+  const isWise = providerId === "wise" || cycle.provider === "Wise";
+  const sumRow = (r: V1lRow) => ETS.reduce((s, e) => s + (e === "Deductions" ? -(r[e] ?? 0) : (r[e] ?? 0)), 0);
+  const matrixMembers = v1lMatrixMembers.map(m => {
+    const cTotal = sumRow(m.confirmed), pTotal = sumRow(m.planned);
+    return { ...m, cTotal, pTotal, known: cTotal + pTotal };
+  });
+  const anyExpanded = matrixMembers.some(m => !collapsed.has(m.name));
+  // Authoritative certainty × earning-type totals (shown in the top card, not the table).
+  const confirmedCols: Record<V1lEt, number> = isWise ? v1lWiseColTotals.confirmed
+    : { Hourly: cb.hourlyTracked, Overtime: cb.overtime, "Fixed pay": 0, "PTO / Holiday": cb.pastPTO, Additions: 0, Deductions: 0 };
+  const plannedCols: Record<V1lEt, number> = isWise ? v1lWiseColTotals.planned
+    : { Hourly: 0, Overtime: 0, "Fixed pay": pl.fixedPay, "PTO / Holiday": pl.futurePTO, Additions: pl.additions, Deductions: pl.deductions };
+  // Earning-type totals across all certainty (projected folds into hourly). Sums to the total.
+  const etTotals: Record<V1lEt, number> = {
+    Hourly: confirmedCols.Hourly + cycle.projected,
+    Overtime: confirmedCols.Overtime + plannedCols.Overtime,
+    "Fixed pay": confirmedCols["Fixed pay"] + plannedCols["Fixed pay"],
+    "PTO / Holiday": confirmedCols["PTO / Holiday"] + plannedCols["PTO / Holiday"],
+    Additions: confirmedCols.Additions + plannedCols.Additions,
+    Deductions: confirmedCols.Deductions + plannedCols.Deductions,
+  };
+  // Pagination — max 10 members per page.
+  const PAGE_SIZE = 10;
+  const pageCount = Math.max(1, Math.ceil(matrixMembers.length / PAGE_SIZE));
+  const safePage = Math.min(page, pageCount - 1);
+  const pagedMembers = matrixMembers.slice(safePage * PAGE_SIZE, safePage * PAGE_SIZE + PAGE_SIZE);
+  const rangeFrom = matrixMembers.length ? safePage * PAGE_SIZE + 1 : 0;
+  const rangeTo = safePage * PAGE_SIZE + pagedMembers.length;
 
   const th = "text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8]";
-  const amtColor = (s: Cert) => s === "Projected" ? "text-[#85baf5]" : "text-[#1a1e35]";
+  const cell = (v: number | undefined, deduction = false) =>
+    !v ? <span className="text-[#d0d3de]">—</span>
+       : deduction ? <span className="text-[#c0392b]">−{fmt0(v)}</span> : fmt0(v);
 
   return (
     <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
@@ -5667,146 +5922,594 @@ function V1lFutureDetail({ providerId, onBack }: { providerId: string; onBack: (
           <div className="w-px h-4 bg-[#e8eaf0]" />
           <ProviderLogo id={providerId} size={20} />
           <span className="text-base font-semibold text-[#1a1e35]">{cycle.provider}</span>
-          <V2StatusBadge status="Projected" />
         </div>
         <div className="flex items-center gap-2">
           <button className="flex items-center gap-1.5 text-xs border border-[#e8eaf0] rounded px-3 py-1.5 text-[#1a1e35] hover:bg-[#f5f6fa] transition-colors"><Download size={12} /> Export payment</button>
-          <button className="flex items-center gap-1.5 text-xs bg-[#0168dd] text-white rounded px-3 py-1.5 hover:bg-[#0057bb] transition-colors"><Send size={12} /> Schedule</button>
+          <button className="flex items-center gap-1.5 text-xs bg-[#0168dd] text-white rounded px-3 py-1.5 hover:bg-[#0057bb] transition-colors"><ExternalLink size={12} /> Go to {cycle.provider}</button>
         </div>
       </div>
-      {/* Certainty summary — split card (Version 2 style) */}
-      <div className="bg-white rounded-lg border border-[#e8eaf0] px-5 py-4 flex items-center gap-5">
-        <div className="flex-shrink-0 min-w-[140px]">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8]">Total projected</p>
-          <p className="text-3xl font-bold text-[#1a1e35] tracking-tight mt-0.5">{fmt2(total)}</p>
-        </div>
-        <div className="flex-1">
-          <div className="flex justify-between text-[10px] mb-1.5">
-            <span className="text-emerald-600 font-semibold">Confirmed {fmt2(cycle.confirmed)} ({confirmedPct}%)</span>
-            <span className="text-[#0168dd] font-semibold">Planned {fmt2(cycle.planned)} ({plannedPct}%)</span>
-            <span className="text-[#85baf5]">~Projected {fmt2(cycle.projected)} ({projectedPct}%)</span>
+      {/* Summary card — the total, broken down by certainty and by earning type */}
+      <div className="bg-white rounded-lg border border-[#e8eaf0] px-5 py-4">
+        <div className="flex items-center gap-8">
+          <div className="flex-shrink-0 min-w-[150px]">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8]">Total projected</p>
+            <p className="text-3xl font-bold text-[#1a1e35] tracking-tight mt-0.5">{fmt2(total)}</p>
+            <button onClick={() => setShowHow(true)} className="inline-flex items-center gap-1 text-[11px] font-medium text-[#0168dd] hover:text-[#0057bb] transition-colors mt-1"><Info size={11} /> How we get there</button>
           </div>
-          <div className="h-2.5 rounded-full overflow-hidden flex">
-            <div className="h-full bg-emerald-500" style={{ width: `${confirmedPct}%` }} />
-            <div className="h-full bg-[#0168dd]" style={{ width: `${plannedPct}%` }} />
-            <div className="h-full flex-1" style={{ background: "repeating-linear-gradient(90deg,#85baf5 0px,#85baf5 5px,#bfdbfe 5px,#bfdbfe 9px)" }} />
+          <div className="flex-1">
+            <div className="flex gap-5 text-[10px] mb-1.5">
+              <span className="text-emerald-600 font-semibold">Confirmed {fmt2(cycle.confirmed)} ({confirmedPct}%)</span>
+              <span className="text-[#0168dd] font-semibold">Planned {fmt2(cycle.planned)} ({plannedPct}%)</span>
+            </div>
+            <div className="h-2.5 rounded-full overflow-hidden flex bg-[#eef0f5]">
+              <div className="h-full bg-emerald-500" style={{ width: `${confirmedPct}%` }} />
+              <div className="h-full bg-[#0168dd]" style={{ width: `${plannedPct}%` }} />
+            </div>
+          </div>
+          <div className="flex-shrink-0 border-l border-[#e8eaf0] pl-5">
+            <div className="space-y-1 text-[11px] text-[#8a8fa8]">
+              <div className="flex items-center gap-1"><CalendarDays size={11} />{cycle.dateRange}</div>
+              <div className="flex items-center gap-1"><Users size={11} />{cycle.members} members · {cycle.cycle}</div>
+            </div>
           </div>
         </div>
-        <div className="flex-shrink-0 border-l border-[#e8eaf0] pl-5">
-          <p className="text-lg font-bold mb-1" style={{ color: provColor }}>{cycle.provider}</p>
-          <div className="space-y-0.5 text-[11px] text-[#8a8fa8]">
-            <div className="flex items-center gap-1"><CalendarDays size={11} />{cycle.dateRange}</div>
-            <div className="flex items-center gap-1"><Users size={11} />{cycle.members} members · {cycle.cycle}</div>
+        <div className="mt-4 pt-4 border-t border-[#f0f1f5]">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-3">By earning type</p>
+          <div className="flex flex-wrap gap-x-10 gap-y-4">
+            {ETS.map(e => (
+              <div key={e} className="flex flex-col">
+                <span className="text-[10px] font-medium uppercase tracking-wide text-[#8a8fa8]">{v1lEtLabel[e]}</span>
+                <span className="text-[15px] font-bold tabular-nums text-[#1a1e35] mt-1 leading-none">
+                  {etTotals[e] ? (e === "Deductions" ? <span className="text-[#c0392b]">−{fmt0(etTotals[e])}</span> : fmt0(etTotals[e])) : <span className="text-[#d0d3de]">—</span>}
+                </span>
+              </div>
+            ))}
           </div>
         </div>
       </div>
-      {/* Breakdown — title on the left, view toggle on the right */}
+      {/* Breakdown — matrix: earning types × Confirmed/Planned per member; projected aggregate-only */}
       <div className="bg-white rounded-lg border border-[#e8eaf0] overflow-hidden">
         <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-[#e8eaf0]">
-          <p className="text-sm font-semibold text-[#1a1e35]">Payment breakdown</p>
-          <div className="flex items-center gap-4">
-            <div className="flex bg-[#f0f1f5] rounded-lg p-0.5">
-              {([["source","By source"],["earning","By earning type"]] as const).map(([k, label]) => (
-                <button key={k} onClick={() => setTab(k)} className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${tab === k ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>{label}</button>
-              ))}
+          <p className="text-sm font-semibold text-[#1a1e35]">By member <span className="text-[#8a8fa8] font-normal">— confirmed &amp; planned pay, by earning type</span></p>
+          <div className="flex items-center gap-3">
+            <button onClick={() => setCollapsed(anyExpanded ? new Set(matrixMembers.map(m => m.name)) : new Set())} className="flex items-center gap-1 text-[11px] text-[#0168dd] hover:opacity-80">{anyExpanded ? "Collapse all" : "Expand all"}</button>
+            <span className="w-px h-3.5 bg-[#e8eaf0]" />
+            <button className="flex items-center gap-1 text-[11px] text-[#0168dd] hover:opacity-80"><Filter size={12} /> Filters</button>
+            <button className="flex items-center gap-1 text-[11px] text-[#0168dd] hover:opacity-80"><Columns size={12} /> Columns</button>
+            <button className="flex items-center gap-1 text-[11px] text-[#0168dd] hover:opacity-80"><Download size={12} /> Export</button>
+          </div>
+        </div>
+        <div className="overflow-x-auto">
+        <table className="w-full text-xs min-w-[860px]">
+          <thead>
+            <tr className="border-b border-[#e8eaf0]">
+              <th className={`text-left py-2.5 px-5 ${th}`}>Member</th>
+              {ETS.map(e => <th key={e} className={`text-right py-2.5 px-3 whitespace-nowrap ${th}`}>{v1lEtLabel[e]}</th>)}
+              <th className={`text-right py-2.5 px-5 whitespace-nowrap ${th}`}>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {pagedMembers.map(m => {
+              const open = !collapsed.has(m.name);
+              return (
+              <Fragment key={m.name}>
+                <tr className="border-t border-[#e8eaf0] hover:bg-[#fafbfd] cursor-pointer" onClick={() => toggle(m.name)}>
+                  <td className={`${open ? "pt-3 pb-1" : "py-3"} px-5`}>
+                    <div className="flex items-center gap-2">
+                      <ChevronRight size={13} className={`text-[#b0b3c5] transition-transform flex-shrink-0 ${open ? "rotate-90" : ""}`} />
+                      <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0" style={{ background: m.color }}>{m.avatar}</div>
+                      <span className="font-semibold text-[#1a1e35]">{m.name}</span>
+                    </div>
+                  </td>
+                  {ETS.map(e => <td key={e} className={`${open ? "pt-3 pb-1" : "py-3"} px-3`} />)}
+                  <td className={`${open ? "pt-3 pb-1" : "py-3"} px-5 text-right font-bold text-[#1a1e35] tabular-nums`}>{fmt0(m.known)}</td>
+                </tr>
+                {open && (
+                <>
+                <tr>
+                  <td className="py-1 px-5 pl-[46px]"><CertaintyLabel status="Confirmed" /></td>
+                  {ETS.map(e => (
+                    <td key={e} className="py-1 px-3 text-right tabular-nums text-[#5b607a]">
+                      {cell(m.confirmed[e], e === "Deductions")}
+                      {e === "Hourly" && m.confirmed.Hourly && m.rate && (
+                        <div className="text-[10px] text-[#a0a4b8] font-normal tabular-nums">${m.rate}/hr · {m.hours}h</div>
+                      )}
+                    </td>
+                  ))}
+                  <td className="py-1 px-5 text-right tabular-nums font-medium text-[#1a1e35]">{cell(m.cTotal)}</td>
+                </tr>
+                <tr>
+                  <td className="py-1 pb-3 px-5 pl-[46px]"><CertaintyLabel status="Planned" /></td>
+                  {ETS.map(e => <td key={e} className="py-1 pb-3 px-3 text-right tabular-nums text-[#5b607a]">{cell(m.planned[e], e === "Deductions")}</td>)}
+                  <td className="py-1 pb-3 px-5 text-right tabular-nums font-medium text-[#1a1e35]">{cell(m.pTotal)}</td>
+                </tr>
+                </>
+                )}
+              </Fragment>
+              );
+            })}
+          </tbody>
+        </table>
+        </div>
+        {/* Pagination — max 10 members per page */}
+        <div className="flex items-center justify-between gap-3 px-5 py-3 border-t border-[#e8eaf0]">
+          <span className="text-[11px] text-[#8a8fa8]">Showing <span className="font-medium text-[#5b607a]">{rangeFrom}–{rangeTo}</span> of {matrixMembers.length} members</span>
+          <div className="flex items-center gap-1">
+            <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={safePage === 0} className="flex items-center justify-center w-7 h-7 rounded border border-[#e8eaf0] text-[#5b607a] hover:bg-[#f5f6fa] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"><ChevronLeft size={14} /></button>
+            {Array.from({ length: pageCount }, (_, i) => (
+              <button key={i} onClick={() => setPage(i)} className={`w-7 h-7 rounded text-[11px] font-medium transition-colors ${i === safePage ? "bg-[#0168dd] text-white" : "text-[#5b607a] hover:bg-[#f5f6fa] border border-[#e8eaf0]"}`}>{i + 1}</button>
+            ))}
+            <button onClick={() => setPage(p => Math.min(pageCount - 1, p + 1))} disabled={safePage >= pageCount - 1} className="flex items-center justify-center w-7 h-7 rounded border border-[#e8eaf0] text-[#5b607a] hover:bg-[#f5f6fa] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"><ChevronRight size={14} /></button>
+          </div>
+        </div>
+      </div>
+
+      {/* "How we get there" — for this pay period */}
+      {showHow && (
+        <>
+          <div className="fixed inset-0 z-40 bg-black/30" onClick={() => setShowHow(false)} />
+          <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none p-4">
+            <div className="bg-white rounded-xl shadow-2xl w-[480px] max-w-full max-h-[85vh] flex flex-col pointer-events-auto">
+              <div className="flex items-start justify-between px-6 pt-5 pb-4 border-b border-[#e8eaf0] flex-shrink-0">
+                <div>
+                  <h2 className="text-[15px] font-semibold text-[#1a1e35]">How we get there</h2>
+                  <p className="text-[11px] text-[#8a8fa8] mt-0.5">How your {cycle.dateRange.replace(", 2026", "")} {cycle.provider} payment is built.</p>
+                </div>
+                <button onClick={() => setShowHow(false)} className="p-1 rounded-md text-[#8a8fa8] hover:text-[#1a1e35] hover:bg-[#f0f1f5] transition-colors flex-shrink-0"><X size={16} /></button>
+              </div>
+              <div className="px-6 py-4 overflow-y-auto space-y-4">
+                {/* the math */}
+                <div className="flex items-stretch gap-1.5">
+                  <div className="flex-1 rounded-lg border border-[#e8eaf0] bg-[#f9f9fc] px-2.5 py-2">
+                    <p className="text-[9px] font-semibold uppercase tracking-wider text-[#8a8fa8] leading-tight">Typical pay period</p>
+                    <p className="text-[15px] font-bold text-[#1a1e35] mt-1.5 leading-none tracking-tight">{fmt0(typical)}</p>
+                    <p className="text-[10px] text-[#a0a4b8] mt-1.5 leading-tight">recent monthly avg</p>
+                  </div>
+                  <span className="flex items-center text-[#b0b3c5] font-semibold text-sm flex-shrink-0 px-0.5">+</span>
+                  <div className="flex-1 rounded-lg border border-[#e8eaf0] bg-[#f9f9fc] px-2.5 py-2">
+                    <p className="text-[9px] font-semibold uppercase tracking-wider text-[#8a8fa8] leading-tight">Adjustments</p>
+                    <p className="text-[15px] font-bold text-emerald-600 mt-1.5 leading-none tracking-tight">+{adjPct}%</p>
+                    <p className="text-[10px] text-[#a0a4b8] mt-1.5 leading-tight">headcount + season</p>
+                  </div>
+                  <span className="flex items-center text-[#b0b3c5] font-semibold text-sm flex-shrink-0 px-0.5">=</span>
+                  <div className="flex-1 rounded-lg border border-[#bcd4f2] bg-[#f0f6ff] px-2.5 py-2">
+                    <p className="text-[9px] font-semibold uppercase tracking-wider text-[#0168dd] leading-tight">Projected</p>
+                    <p className="text-[15px] font-bold text-[#1a1e35] mt-1.5 leading-none tracking-tight">{fmt0(total)}</p>
+                    <p className="text-[10px] text-[#a0a4b8] mt-1.5 leading-tight">this pay period</p>
+                  </div>
+                </div>
+                <div className="pt-4 border-t border-[#f0f1f5]">
+                  <p className="text-[11px] text-[#8a8fa8] leading-snug">The <span className="font-semibold text-emerald-600">+{adjPct}%</span> comes from trends in your history:</p>
+                  <div className="mt-2 space-y-1.5">
+                    <div className="flex items-baseline gap-2 text-[12px]"><span className="font-semibold text-emerald-600 w-10 flex-shrink-0">+{hcPct}%</span><span className="text-[#1a1e35] font-medium flex-shrink-0">Headcount change</span><span className="text-[#8a8fa8] truncate">· {cycle.members} this cycle vs avg {avgMembers}</span></div>
+                    <div className="flex items-baseline gap-2 text-[12px]"><span className="font-semibold text-emerald-600 w-10 flex-shrink-0">+{seasonPct}%</span><span className="text-[#1a1e35] font-medium flex-shrink-0">Seasonality</span><span className="text-[#8a8fa8] truncate">· June is typically above average</span></div>
+                  </div>
+                  <p className="text-[11px] text-[#8a8fa8] mt-2 leading-snug">Applied on top of your {fmt0(typical)} typical pay period to reach <span className="font-semibold text-[#1a1e35]">{fmt0(total)}</span>.</p>
+                </div>
+                {/* certainty terminology */}
+                <div className="pt-4 border-t border-[#f0f1f5]">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-2">What makes up the {fmt0(total)}</p>
+                  <ul className="space-y-2 text-[11px] leading-snug">
+                    <li className="flex gap-2"><span className="w-2.5 h-2.5 rounded-sm bg-emerald-500 mt-0.5 flex-shrink-0" /><span className="text-[#8a8fa8]"><span className="font-semibold text-[#1a1e35]">Confirmed {fmt0(cycle.confirmed)}</span> — hours already tracked. Final.</span></li>
+                    <li className="flex gap-2"><span className="w-2.5 h-2.5 rounded-sm bg-[#0168dd] mt-0.5 flex-shrink-0" /><span className="text-[#8a8fa8]"><span className="font-semibold text-[#1a1e35]">Planned {fmt0(cycle.planned)}</span> — scheduled (PTO/holidays, adjustments, fixed pay). Committed unless cancelled.</span></li>
+                  </ul>
+                </div>
+                <p className="text-[11px] text-[#a0a4b8] leading-snug">{fmt0(total)} is an estimate from your history — not a guaranteed figure. Add a buffer, or <a href="#" onClick={e => e.preventDefault()} className="font-medium text-[#8a8fa8] underline decoration-dotted decoration-[#c0c3d3] underline-offset-2 hover:text-[#1a1e35] transition-colors">see how to improve accuracy</a>.</p>
+              </div>
+              <div className="flex items-center justify-end px-6 py-4 border-t border-[#e8eaf0] flex-shrink-0">
+                <button onClick={() => setShowHow(false)} className="px-5 py-2 rounded-lg text-sm font-semibold bg-[#0168dd] text-white hover:bg-[#0057bb] transition-colors">Done</button>
+              </div>
             </div>
-            <div className="flex items-center gap-3">
-              <button className="flex items-center gap-1 text-[11px] text-[#0168dd] hover:opacity-80"><Filter size={12} /> Filters</button>
-              <button className="flex items-center gap-1 text-[11px] text-[#0168dd] hover:opacity-80"><Columns size={12} /> Columns</button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// item E for 1M — "Future Tracked So Far": all providers in one filterable view.
+function V1mFutureTracked({ provider, period, onProviderChange, onPeriodChange, grouped = false }: { provider: string; period: string; onProviderChange: (id: string) => void; onPeriodChange: (label: string) => void; grouped?: boolean }) {
+  const [showHow, setShowHow] = useState(false);
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const [page, setPage] = useState(0);
+  const [provOpen, setProvOpen] = useState(false);
+  const [periodOpen, setPeriodOpen] = useState(false);
+  const [loading, setLoading] = useState(true); // brief skeleton so a filter change reads as an action
+  const [segLens, setSegLens] = useState<"source" | "type">("source"); // breakdown bar lens
+  const [showBreakdownInfo, setShowBreakdownInfo] = useState(false); // full breakdown explanation popover
+  const toggle = (name: string) => setCollapsed(prev => { const n = new Set(prev); n.has(name) ? n.delete(name) : n.add(name); return n; });
+  // Re-load whenever the provider or pay period changes (incl. anchoring from a fund card).
+  useEffect(() => { setLoading(true); const t = setTimeout(() => setLoading(false), 550); return () => clearTimeout(t); }, [provider, period]);
+
+  const ETS = V1L_ETS;
+  const isAll = provider === "all";
+  // Pay period selection drives a scale fraction over the provider's monthly roster.
+  const cycleInfo = v1mProviderCycles[provider] ?? v1mProviderCycles.all;
+  const periods = cycleInfo.periods;
+  const activePeriod = periods.find(p => p.label === period) ?? periods.find(p => p.label === v1mCurrentPeriod(provider)) ?? periods[periods.length - 1];
+  const weightSum = periods.reduce((s, p) => s + p.weight, 0);
+  const frac = isAll ? 1 : activePeriod.weight / weightSum;
+  const scaleRow = (r: V1lRow): V1lRow => { const o: V1lRow = {}; ETS.forEach(e => { const v = r[e]; if (v) o[e] = Math.round(v * frac); }); return o; };
+
+  const baseMembers = isAll ? v1mFutureMembers : v1mFutureMembers.filter(m => m.provider === provider);
+  const scaled = baseMembers.map(m => frac === 1 ? m : ({ ...m, confirmed: scaleRow(m.confirmed), planned: scaleRow(m.planned), hours: m.hours != null ? Math.round(m.hours * frac) : m.hours }));
+  // Tracked-so-far: only part of each member's hourly is logged yet; the rest becomes the
+  // aggregate Projected slice (remaining hours). Total = Confirmed + Planned + Projected.
+  const PCT_TRACKED = 0.62;
+  let projected = 0;
+  const members = scaled.map(m => {
+    const fullH = m.confirmed.Hourly ?? 0;
+    if (!fullH) return m;
+    const tracked = Math.round(fullH * PCT_TRACKED);
+    projected += fullH - tracked;
+    return { ...m, confirmed: { ...m.confirmed, Hourly: tracked }, hours: m.hours != null ? Math.round(m.hours * PCT_TRACKED) : m.hours };
+  });
+  const sumRow = (r: V1lRow) => ETS.reduce((s, e) => s + (e === "Deductions" ? -(r[e] ?? 0) : (r[e] ?? 0)), 0);
+  const rows = members.map(m => { const cTotal = sumRow(m.confirmed), pTotal = sumRow(m.planned); return { ...m, cTotal, pTotal, known: cTotal + pTotal }; });
+  const confirmedCols = {} as Record<V1lEt, number>;
+  const plannedCols = {} as Record<V1lEt, number>;
+  ETS.forEach(e => { confirmedCols[e] = members.reduce((s, m) => s + (m.confirmed[e] ?? 0), 0); plannedCols[e] = members.reduce((s, m) => s + (m.planned[e] ?? 0), 0); });
+  const confirmed = ETS.reduce((s, e) => s + (e === "Deductions" ? -confirmedCols[e] : confirmedCols[e]), 0);
+  const planned = ETS.reduce((s, e) => s + (e === "Deductions" ? -plannedCols[e] : plannedCols[e]), 0);
+  const total = confirmed + planned + projected; // forecast = tracked + scheduled + remaining
+  const confirmedPct = total ? Math.round(confirmed / total * 100) : 0;
+  const plannedPct = total ? Math.round(planned / total * 100) : 0;
+  const projectedPct = Math.max(0, 100 - confirmedPct - plannedPct);
+  // "By earning type" is the forecast by type, so Hourly carries the projected (remaining) hours.
+  const etTotals = {} as Record<V1lEt, number>;
+  ETS.forEach(e => { etTotals[e] = confirmedCols[e] + plannedCols[e] + (e === "Hourly" ? projected : 0); });
+  const anyExpanded = rows.some(m => !collapsed.has(m.name));
+
+  // Breakdown-bar lenses (this period's total, not a time series)
+  const sourceSegs = [
+    { label: "Confirmed",   value: confirmed, color: "#10b981" },
+    { label: "Planned",     value: planned,   color: "#0168dd" },
+    { label: "~Projected",  value: projected, color: "#85baf5", striped: true },
+  ].filter(s => s.value > 0);
+  const etSegColor: Record<string, string> = { "Fixed pay": "#6366f1", Hourly: "#0168dd", "PTO / Holiday": "#38bdf8", Additions: "#10b981", Overtime: "#f59e0b" };
+  const typeOrder = ["Fixed pay", "Hourly", "PTO / Holiday", "Additions", "Overtime"] as const;
+  const typePositives = typeOrder.map(k => ({ label: v1lEtLabel[k], value: etTotals[k] ?? 0, color: etSegColor[k] })).filter(s => s.value > 0);
+  const typeGross = typePositives.reduce((s, x) => s + x.value, 0);
+  const typeDeductions = etTotals["Deductions"] ?? 0;
+  const typeTrack = typeGross + typeDeductions;
+
+  const typical = Math.round(total / 1.28 / 100) * 100;
+  const adjPct = 28, hcPct = 18, seasonPct = 10;
+  const provName = v1mFutureProviderList.find(p => p.id === provider)?.name ?? "All providers";
+
+  const PAGE = 10;
+  const pageCount = Math.max(1, Math.ceil(rows.length / PAGE));
+  const safePage = Math.min(page, pageCount - 1);
+  const paged = rows.slice(safePage * PAGE, safePage * PAGE + PAGE);
+  const rangeFrom = rows.length ? safePage * PAGE + 1 : 0;
+  const rangeTo = safePage * PAGE + paged.length;
+
+  const th = "text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8]";
+  const cell = (v: number | undefined, deduction = false) => !v ? <span className="text-[#d0d3de]">—</span> : deduction ? <span className="text-[#c0392b]">−{fmt0(v)}</span> : fmt0(v);
+  const selectProvider = (id: string) => { onProviderChange(id); onPeriodChange(v1mCurrentPeriod(id)); setProvOpen(false); setPage(0); };
+
+  return (
+    <div className="space-y-4">
+      {/* Controls — labelled pay-period + payment-method selectors */}
+      <div className="flex items-end justify-between gap-3">
+        <div className="flex items-end gap-4">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-1.5">Period</p>
+            <div className="relative">
+              <button onClick={() => { setPeriodOpen(o => !o); setProvOpen(false); }} className="flex items-center justify-between gap-2 text-sm border border-[#e8eaf0] rounded-md px-3.5 py-2 bg-white text-[#1a1e35] hover:bg-[#f5f6fa] transition-colors min-w-[190px]"><span className="flex items-center gap-2"><CalendarDays size={14} className="text-[#8a8fa8]" /> {activePeriod.label}</span> <ChevronDown size={14} className="text-[#8a8fa8]" /></button>
+              {periodOpen && (<>
+                <div className="fixed inset-0 z-20" onClick={() => setPeriodOpen(false)} />
+                <div className="absolute left-0 mt-1 z-30 bg-white border border-[#e8eaf0] rounded-lg shadow-lg py-1 min-w-[210px]">
+                  <p className="px-3 pt-1 pb-1.5 text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8]">{cycleInfo.cycle} pay periods</p>
+                  {periods.map(p => <button key={p.label} onClick={() => { onPeriodChange(p.label); setPeriodOpen(false); setPage(0); }} className={`w-full text-left px-3 py-1.5 text-sm hover:bg-[#f5f6fa] ${p.label === activePeriod.label ? "text-[#0168dd] font-medium" : "text-[#1a1e35]"}`}>{p.label}</button>)}
+                </div>
+              </>)}
+            </div>
+          </div>
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-1.5">Payment method</p>
+            <div className="relative">
+              <button onClick={() => { setProvOpen(o => !o); setPeriodOpen(false); }} className="flex items-center justify-between gap-2 text-sm border border-[#e8eaf0] rounded-md px-3.5 py-2 bg-white text-[#1a1e35] hover:bg-[#f5f6fa] transition-colors min-w-[190px]"><span className="flex items-center gap-2">{!isAll && <ProviderLogo id={provider} size={16} />} {provName}</span> <ChevronDown size={14} className="text-[#8a8fa8]" /></button>
+              {provOpen && (<>
+                <div className="fixed inset-0 z-20" onClick={() => setProvOpen(false)} />
+                <div className="absolute left-0 mt-1 z-30 bg-white border border-[#e8eaf0] rounded-lg shadow-lg py-1 min-w-[210px]">
+                  {v1mFutureProviderList.map(p => <button key={p.id} onClick={() => selectProvider(p.id)} className={`w-full flex items-center gap-2 text-left px-3 py-1.5 text-sm hover:bg-[#f5f6fa] ${p.id === provider ? "text-[#0168dd] font-medium" : "text-[#1a1e35]"}`}>{p.id !== "all" ? <ProviderLogo id={p.id} size={14} /> : <span className="w-3.5 h-3.5 rounded-full flex-shrink-0" style={{ background: "linear-gradient(135deg,#0168dd,#85baf5)" }} />}{p.name}</button>)}
+                </div>
+              </>)}
             </div>
           </div>
         </div>
-        {/* By source of prediction */}
-        {tab === "source" ? (
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="border-b border-[#e8eaf0]">
-                <th className={`text-left py-2 px-5 w-[40%] ${th}`}>Member</th>
-                <th className={`text-left py-2 px-4 ${th}`}>Rate</th>
-                <th className={`text-left py-2 px-4 ${th}`}>Hours</th>
-                <th className={`text-left py-2 px-4 ${th}`}>Status</th>
-                <th className={`text-right py-2 px-5 ${th}`}>Amount</th>
-              </tr>
-            </thead>
-            {pageMembers.map(m => {
-              const isOpen = openRows.includes("m:" + m.name);
-              return (
-                <tbody key={m.name}>
-                  <tr onClick={() => toggle("m:" + m.name)} className="border-b border-[#e8eaf0] cursor-pointer hover:bg-[#f9f9fc] transition-colors">
-                    <td className="py-3 px-5">
-                      <div className="flex items-center gap-2">
-                        <ChevronRight size={14} className={`text-[#8a8fa8] transition-transform flex-shrink-0 ${isOpen ? "rotate-90" : ""}`} />
-                        <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0" style={{ background: m.color }}>{m.avatar}</div>
-                        <div className="min-w-0"><p className="font-semibold text-[#1a1e35] truncate">{m.name}</p><p className="text-[10px] text-[#8a8fa8] truncate">{m.email}</p></div>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4 text-[#8a8fa8]">—</td>
-                    <td className="py-3 px-4 text-[#8a8fa8]">—</td>
-                    <td className="py-3 px-4"><ItemStatusBadge status={memberStatus(m.items)} /></td>
-                    <td className="py-3 px-5 text-right font-semibold text-[#1a1e35] tabular-nums">{fmt0(m.total)}</td>
-                  </tr>
-                  {isOpen && m.items.map((it, i) => (
-                    <tr key={i} className={`border-b border-[#f0f1f5] ${it.status === "Projected" ? "bg-[#f7fbff]" : ""}`}>
-                      <td className="py-2.5 px-5 pl-[52px]"><p className="font-medium text-[#1a1e35]">{it.label}</p><p className="text-[10px] text-[#8a8fa8]">{it.sub}</p></td>
-                      <td className="py-2.5 px-4 text-[#8a8fa8]">{it.rate}</td>
-                      <td className="py-2.5 px-4 text-[#8a8fa8]">{it.hours}</td>
-                      <td className="py-2.5 px-4"><ItemStatusBadge status={it.status} /></td>
-                      <td className={`py-2.5 px-5 text-right font-medium tabular-nums ${amtColor(it.status)}`}>{it.status === "Projected" ? "~" : ""}{fmt0(it.amount)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              );
-            })}
-            {pageCount > 1 && (
-              <tbody><tr className="bg-[#f9f9fc] border-t border-[#e8eaf0]"><td colSpan={5} className="py-2.5 px-5">
-                <div className="flex items-center justify-between text-[11px] text-[#8a8fa8]">
-                  <span>Showing {page * pageSize + 1}–{Math.min((page + 1) * pageSize, members.length)} of {members.length} members</span>
-                  <div className="flex items-center gap-1">
-                    <button disabled={page === 0} onClick={() => setPage(p => Math.max(0, p - 1))} className={`px-2 py-1 rounded-md border border-[#e8eaf0] transition-colors ${page === 0 ? "text-[#c8cad4] cursor-not-allowed" : "text-[#1a1e35] hover:bg-white"}`}>‹ Prev</button>
-                    {Array.from({ length: pageCount }, (_, i) => (
-                      <button key={i} onClick={() => setPage(i)} className={`w-6 h-6 rounded-md text-[11px] font-semibold transition-colors ${page === i ? "bg-[#0168dd] text-white" : "text-[#5b607a] hover:bg-white"}`}>{i + 1}</button>
-                    ))}
-                    <button disabled={page >= pageCount - 1} onClick={() => setPage(p => Math.min(pageCount - 1, p + 1))} className={`px-2 py-1 rounded-md border border-[#e8eaf0] transition-colors ${page >= pageCount - 1 ? "text-[#c8cad4] cursor-not-allowed" : "text-[#1a1e35] hover:bg-white"}`}>Next ›</button>
-                  </div>
-                </div>
-              </td></tr></tbody>
-            )}
-          </table>
-        ) : (
-          /* By earning type */
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="border-b border-[#e8eaf0]">
-                <th className={`text-left py-2 px-5 w-[34%] ${th}`}>Earning type</th>
-                <th className={`text-left py-2 px-4 ${th}`}>Basis</th>
-                <th className={`text-left py-2 px-4 ${th}`}>Certainty</th>
-                <th className={`text-right py-2 px-5 ${th}`}>Amount</th>
-              </tr>
-            </thead>
-            {earningRows.map(row => {
-              const isOpen = openRows.includes("e:" + row.type);
-              return (
-                <tbody key={row.type}>
-                  <tr onClick={() => toggle("e:" + row.type)} className="border-b border-[#e8eaf0] cursor-pointer hover:bg-[#f9f9fc] transition-colors">
-                    <td className="py-3 px-5"><div className="flex items-center gap-2"><ChevronRight size={14} className={`text-[#8a8fa8] transition-transform ${isOpen ? "rotate-90" : ""}`} /><span className="font-semibold text-[#1a1e35]">{row.type}</span></div></td>
-                    <td className="py-3 px-4 text-[#8a8fa8]">{row.basis}</td>
-                    <td className="py-3 px-4"><div className="flex items-center gap-1">{row.tags.map(t => <ItemStatusBadge key={t} status={t} />)}</div></td>
-                    <td className="py-3 px-5 text-right font-semibold text-[#1a1e35] tabular-nums">{fmt0(row.amount)}</td>
-                  </tr>
-                  {isOpen && row.children.map((c, i) => (
-                    <tr key={i} className={`border-b border-[#f0f1f5] ${c.status === "Projected" ? "bg-[#f7fbff]" : ""}`}>
-                      <td className="py-2.5 px-5 pl-[40px] font-medium text-[#1a1e35]">{c.label}</td>
-                      <td className="py-2.5 px-4 text-[#8a8fa8]">{c.basis}</td>
-                      <td className="py-2.5 px-4"><ItemStatusBadge status={c.status} /></td>
-                      <td className={`py-2.5 px-5 text-right font-medium tabular-nums ${amtColor(c.status)}`}>{c.approx ? "~" : ""}{fmt0(c.amount)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              );
-            })}
-          </table>
-        )}
+        <div className="flex items-center gap-2">
+          <button className="flex items-center gap-1.5 text-xs border border-[#e8eaf0] rounded px-3 py-2 text-[#1a1e35] hover:bg-[#f5f6fa] transition-colors"><Download size={12} /> Export</button>
+          {!isAll && <button className="flex items-center gap-1.5 text-xs bg-[#0168dd] text-white rounded px-3 py-2 hover:bg-[#0057bb] transition-colors"><ExternalLink size={12} /> Go to {provName}</button>}
+        </div>
       </div>
+
+      {loading ? (
+        <div className="space-y-4 animate-pulse">
+          <div className="bg-white rounded-lg border border-[#e8eaf0] px-5 py-4">
+            <div className="flex items-center gap-8">
+              <div className="flex-shrink-0 min-w-[150px] space-y-2"><div className="h-2.5 w-24 rounded bg-[#eef0f5]" /><div className="h-8 w-40 rounded bg-[#e8eaf0]" /><div className="h-2.5 w-28 rounded bg-[#eef0f5]" /></div>
+              <div className="flex-1"><div className="h-2.5 rounded-full bg-[#eef0f5]" /></div>
+              <div className="flex-shrink-0 border-l border-[#e8eaf0] pl-5 space-y-2"><div className="h-2.5 w-20 rounded bg-[#eef0f5]" /><div className="h-2.5 w-24 rounded bg-[#eef0f5]" /></div>
+            </div>
+            <div className="mt-4 pt-4 border-t border-[#f0f1f5] flex flex-wrap gap-x-10 gap-y-4">
+              {Array.from({ length: 6 }).map((_, i) => <div key={i} className="space-y-1.5"><div className="h-2 w-14 rounded bg-[#eef0f5]" /><div className="h-4 w-16 rounded bg-[#e8eaf0]" /></div>)}
+            </div>
+          </div>
+          <div className="bg-white rounded-lg border border-[#e8eaf0] px-5 py-5 space-y-4">
+            {Array.from({ length: 6 }).map((_, i) => <div key={i} className="flex items-center gap-3"><div className="w-6 h-6 rounded-full bg-[#eef0f5] flex-shrink-0" /><div className="h-3 w-40 rounded bg-[#eef0f5]" /><div className="ml-auto h-3 w-16 rounded bg-[#eef0f5]" /></div>)}
+          </div>
+        </div>
+      ) : (<>
+      {/* Summary card */}
+      <div className="bg-white rounded-lg border border-[#e8eaf0] px-5 py-4">
+        <div className="flex items-start gap-6">
+          <div className="flex-shrink-0">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8]">Total projected</p>
+            <p className="text-2xl font-bold text-[#1a1e35] tracking-tight mt-0.5">{fmt2(total)}</p>
+            <button onClick={() => setShowHow(true)} className="inline-flex items-center gap-1 text-[11px] font-medium text-[#8a8fa8] hover:text-[#1a1e35] transition-colors mt-1"><Info size={11} /> How we get there</button>
+          </div>
+          <div className="flex-1 min-w-0 border-l border-[#f0f1f5] pl-6">
+            <div className="flex items-center justify-between gap-3 mb-2">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8]">Breakdown</p>
+              <div className="flex bg-[#f0f1f5] rounded-md p-0.5">
+                {([["source","Confirmed vs. projected"],["type","Payroll breakdown"]] as const).map(([k, label]) => (
+                  <button key={k} onClick={() => setSegLens(k)} className={`px-2.5 py-0.5 rounded text-[11px] font-medium transition-all ${segLens === k ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>{label}</button>
+                ))}
+              </div>
+            </div>
+            <p className="text-[11px] text-[#8a8fa8] leading-snug mb-3">
+              {segLens === "source" ? "How certain each amount is — confirmed and planned are already committed, while projected is still an estimate." : "What the payout is made of — fixed and hourly pay, PTO, additions and overtime, minus any deductions."}{" "}
+              <a href="#" onClick={(e) => { e.preventDefault(); setShowBreakdownInfo(true); }} className="font-medium underline underline-offset-2 hover:text-[#1a1e35] transition-colors select-none">Learn more</a>
+            </p>
+            {segLens === "source" ? (<>
+            <div className="relative h-3 rounded-full overflow-hidden flex bg-[#eef0f5]">
+              {sourceSegs.map((s, i) => <div key={s.label} className="h-full" title={`${s.label} ${fmt0(s.value)}`} style={{ width: `${Math.round(s.value / total * 100)}%`, background: s.striped ? "repeating-linear-gradient(90deg,#85baf5 0px,#85baf5 5px,#bfdbfe 5px,#bfdbfe 9px)" : s.color, marginRight: i < sourceSegs.length - 1 ? 1 : 0 }} />)}
+            </div>
+            <div className="flex flex-wrap gap-x-6 gap-y-2 mt-3">
+              {sourceSegs.map(s => (
+                <div key={s.label} className="flex items-center gap-1.5 text-[11px]">
+                  <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ background: s.striped ? "repeating-linear-gradient(45deg,#85baf5 0,#85baf5 3px,#bfdbfe 3px,#bfdbfe 5px)" : s.color }} />
+                  <span className="text-[#8a8fa8]">{s.label}</span>
+                  <span className="font-semibold text-[#1a1e35] tabular-nums">{fmt0(s.value)}</span>
+                  {v1SourceLegendInfo[s.label] && <InfoTip text={v1SourceLegendInfo[s.label]} />}
+                </div>
+              ))}
+            </div>
+          </>) : (<>
+            <div className="h-3 rounded-full overflow-hidden flex bg-[#eef0f5]">
+              {typePositives.map(s => <div key={s.label} className="h-full" title={`${s.label} ${fmt0(s.value)}`} style={{ width: `${s.value / typeTrack * 100}%`, minWidth: 4, background: s.color, marginRight: 1 }} />)}
+              {typeDeductions > 0 && <div className="h-full" title={`Deductions −${fmt0(typeDeductions)} (removed from gross)`} style={{ width: `${typeDeductions / typeTrack * 100}%`, minWidth: 4, background: "repeating-linear-gradient(45deg,#ef4444 0,#ef4444 3px,#fca5a5 3px,#fca5a5 6px)" }} />}
+            </div>
+            <div className="flex flex-wrap gap-x-6 gap-y-2 mt-3">
+              {typePositives.map(s => (
+                <div key={s.label} className="flex items-center gap-1.5 text-[11px]">
+                  <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ background: s.color }} />
+                  <span className="text-[#8a8fa8]">{s.label}</span>
+                  <span className="font-semibold text-[#1a1e35] tabular-nums">{fmt0(s.value)}</span>
+                </div>
+              ))}
+              {typeDeductions > 0 && (
+                <div className="flex items-center gap-1.5 text-[11px]">
+                  <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ background: "repeating-linear-gradient(45deg,#ef4444 0,#ef4444 3px,#fca5a5 3px,#fca5a5 6px)" }} />
+                  <span className="text-[#8a8fa8]">Deductions</span>
+                  <span className="font-semibold text-[#c0392b] tabular-nums">−{fmt0(typeDeductions)}</span>
+                </div>
+              )}
+            </div>
+          </>)}
+          </div>
+        </div>
+      </div>
+
+      {/* By-member matrix */}
+      <div className="bg-white rounded-lg border border-[#e8eaf0] overflow-hidden">
+        <div className="flex items-center justify-end gap-3 px-5 py-3 border-b border-[#e8eaf0]">
+          {!grouped && <>
+            <button onClick={() => setCollapsed(anyExpanded ? new Set(rows.map(m => m.name)) : new Set())} className="flex items-center gap-1 text-[11px] text-[#0168dd] hover:opacity-80">{anyExpanded ? "Collapse all" : "Expand all"}</button>
+            <span className="w-px h-3.5 bg-[#e8eaf0]" />
+          </>}
+          <button className="flex items-center gap-1 text-[11px] text-[#0168dd] hover:opacity-80"><Filter size={12} /> Filters</button>
+          <button className="flex items-center gap-1 text-[11px] text-[#0168dd] hover:opacity-80"><Columns size={12} /> Columns</button>
+        </div>
+        <div className="overflow-x-auto">
+        {grouped ? (
+        <table className="w-full text-xs min-w-[1020px]">
+          <thead>
+            <tr>
+              <th rowSpan={2} className={`text-left py-2.5 px-5 align-bottom ${th}`}>Member</th>
+              <th rowSpan={2} className={`text-left py-2.5 px-3 whitespace-nowrap align-bottom ${th}`}>Payment method</th>
+              <th colSpan={2} className={`text-center py-2 px-3 border-l border-[#e8eaf0] ${th} text-emerald-600`}>Confirmed</th>
+              <th colSpan={4} className={`text-center py-2 px-3 border-l border-[#e8eaf0] ${th} text-[#0168dd]`}>Planned</th>
+              <th rowSpan={2} className={`text-right py-2.5 px-5 whitespace-nowrap align-bottom border-l border-[#e8eaf0] ${th}`}>Total</th>
+            </tr>
+            <tr className="border-b border-[#e8eaf0]">
+              <th className={`text-right py-2 px-3 whitespace-nowrap border-l border-[#e8eaf0] ${th}`}>{v1lEtLabel["Hourly"]}</th>
+              <th className={`text-right py-2 px-3 whitespace-nowrap ${th}`}>{v1lEtLabel["Overtime"]}</th>
+              <th className={`text-right py-2 px-3 whitespace-nowrap border-l border-[#e8eaf0] ${th}`}>{v1lEtLabel["Fixed pay"]}</th>
+              <th className={`text-right py-2 px-3 whitespace-nowrap ${th}`}>{v1lEtLabel["PTO / Holiday"]}</th>
+              <th className={`text-right py-2 px-3 whitespace-nowrap ${th}`}>{v1lEtLabel["Additions"]}</th>
+              <th className={`text-right py-2 px-3 whitespace-nowrap ${th}`}>{v1lEtLabel["Deductions"]}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {paged.map(m => (
+              <tr key={m.name} className="border-t border-[#e8eaf0] hover:bg-[#fafbfd]">
+                <td className="py-3 px-5">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0" style={{ background: m.color }}>{m.avatar}</div>
+                    <span className="font-semibold text-[#1a1e35]">{m.name}</span>
+                  </div>
+                </td>
+                <td className="py-3 px-3"><span className="inline-flex items-center gap-1.5 text-[#5b607a] whitespace-nowrap"><ProviderLogo id={m.provider} size={14} />{v1gProviderMeta[m.provider]?.name ?? m.provider}</span></td>
+                <td className="py-3 px-3 text-right tabular-nums text-[#5b607a] border-l border-[#f0f1f5]">
+                  {cell(m.confirmed["Hourly"])}
+                  {m.confirmed["Hourly"] && m.rate && (<div className="text-[10px] text-[#a0a4b8] font-normal tabular-nums">${m.rate}/hr · {m.hours}h</div>)}
+                </td>
+                <td className="py-3 px-3 text-right tabular-nums text-[#5b607a]">{cell(m.confirmed["Overtime"])}</td>
+                <td className="py-3 px-3 text-right tabular-nums text-[#5b607a] border-l border-[#f0f1f5]">{cell(m.planned["Fixed pay"])}</td>
+                <td className="py-3 px-3 text-right tabular-nums text-[#5b607a]">{cell(m.planned["PTO / Holiday"])}</td>
+                <td className="py-3 px-3 text-right tabular-nums text-[#5b607a]">{cell(m.planned["Additions"])}</td>
+                <td className="py-3 px-3 text-right tabular-nums text-[#5b607a]">{cell(m.planned["Deductions"], true)}</td>
+                <td className="py-3 px-5 text-right font-bold text-[#1a1e35] tabular-nums border-l border-[#f0f1f5]">{fmt0(m.known)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        ) : (
+        <table className="w-full text-xs min-w-[1020px]">
+          <thead>
+            <tr className="border-b border-[#e8eaf0]">
+              <th className={`text-left py-2.5 px-5 ${th}`}>Member</th>
+              <th className={`text-left py-2.5 px-3 whitespace-nowrap ${th}`}>Payment method</th>
+              {ETS.map(e => <th key={e} className={`text-right py-2.5 px-3 whitespace-nowrap ${th}`}>{v1lEtLabel[e]}</th>)}
+              <th className={`text-right py-2.5 px-5 whitespace-nowrap ${th}`}>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {paged.map(m => {
+              const open = !collapsed.has(m.name);
+              return (
+              <Fragment key={m.name}>
+                <tr className="border-t border-[#e8eaf0] hover:bg-[#fafbfd] cursor-pointer" onClick={() => toggle(m.name)}>
+                  <td className={`${open ? "pt-3 pb-1" : "py-3"} px-5`}>
+                    <div className="flex items-center gap-2">
+                      <ChevronRight size={13} className={`text-[#b0b3c5] transition-transform flex-shrink-0 ${open ? "rotate-90" : ""}`} />
+                      <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0" style={{ background: m.color }}>{m.avatar}</div>
+                      <span className="font-semibold text-[#1a1e35]">{m.name}</span>
+                    </div>
+                  </td>
+                  <td className={`${open ? "pt-3 pb-1" : "py-3"} px-3`}>
+                    <span className="inline-flex items-center gap-1.5 text-[#5b607a] whitespace-nowrap"><ProviderLogo id={m.provider} size={14} />{v1gProviderMeta[m.provider]?.name ?? m.provider}</span>
+                  </td>
+                  {ETS.map(e => <td key={e} className={`${open ? "pt-3 pb-1" : "py-3"} px-3`} />)}
+                  <td className={`${open ? "pt-3 pb-1" : "py-3"} px-5 text-right font-bold text-[#1a1e35] tabular-nums`}>{fmt0(m.known)}</td>
+                </tr>
+                {open && (<>
+                <tr>
+                  <td className="py-1 px-5 pl-[46px]"><CertaintyLabel status="Confirmed" /></td>
+                  <td className="py-1 px-3" />
+                  {ETS.map(e => (
+                    <td key={e} className="py-1 px-3 text-right tabular-nums text-[#5b607a]">
+                      {cell(m.confirmed[e], e === "Deductions")}
+                      {e === "Hourly" && m.confirmed.Hourly && m.rate && (<div className="text-[10px] text-[#a0a4b8] font-normal tabular-nums">${m.rate}/hr · {m.hours}h</div>)}
+                    </td>
+                  ))}
+                  <td className="py-1 px-5 text-right tabular-nums font-medium text-[#1a1e35]">{cell(m.cTotal)}</td>
+                </tr>
+                <tr>
+                  <td className="py-1 pb-3 px-5 pl-[46px]"><CertaintyLabel status="Planned" /></td>
+                  <td className="py-1 pb-3 px-3" />
+                  {ETS.map(e => <td key={e} className="py-1 pb-3 px-3 text-right tabular-nums text-[#5b607a]">{cell(m.planned[e], e === "Deductions")}</td>)}
+                  <td className="py-1 pb-3 px-5 text-right tabular-nums font-medium text-[#1a1e35]">{cell(m.pTotal)}</td>
+                </tr>
+                </>)}
+              </Fragment>
+              );
+            })}
+          </tbody>
+        </table>
+        )}
+        </div>
+        <div className="flex items-center justify-between gap-3 px-5 py-3 border-t border-[#e8eaf0]">
+          <span className="text-[11px] text-[#8a8fa8]">Showing <span className="font-medium text-[#5b607a]">{rangeFrom}–{rangeTo}</span> of {rows.length} members</span>
+          <div className="flex items-center gap-1">
+            <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={safePage === 0} className="flex items-center justify-center w-7 h-7 rounded border border-[#e8eaf0] text-[#5b607a] hover:bg-[#f5f6fa] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"><ChevronLeft size={14} /></button>
+            {Array.from({ length: pageCount }, (_, i) => (
+              <button key={i} onClick={() => setPage(i)} className={`w-7 h-7 rounded text-[11px] font-medium transition-colors ${i === safePage ? "bg-[#0168dd] text-white" : "text-[#5b607a] hover:bg-[#f5f6fa] border border-[#e8eaf0]"}`}>{i + 1}</button>
+            ))}
+            <button onClick={() => setPage(p => Math.min(pageCount - 1, p + 1))} disabled={safePage >= pageCount - 1} className="flex items-center justify-center w-7 h-7 rounded border border-[#e8eaf0] text-[#5b607a] hover:bg-[#f5f6fa] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"><ChevronRight size={14} /></button>
+          </div>
+        </div>
+      </div>
+      </>)}
+
+      {/* How we get there */}
+      {showHow && (<>
+        <div className="fixed inset-0 z-40 bg-black/30" onClick={() => setShowHow(false)} />
+        <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-[480px] max-w-full max-h-[85vh] flex flex-col pointer-events-auto">
+            <div className="flex items-start justify-between px-6 pt-5 pb-4 border-b border-[#e8eaf0] flex-shrink-0">
+              <div>
+                <h2 className="text-[15px] font-semibold text-[#1a1e35]">How we get there</h2>
+                <p className="text-[11px] text-[#8a8fa8] mt-0.5">How your {activePeriod.label} {isAll ? "projected payout" : provName + " payment"} is built.</p>
+              </div>
+              <button onClick={() => setShowHow(false)} className="p-1 rounded-md text-[#8a8fa8] hover:text-[#1a1e35] hover:bg-[#f0f1f5] transition-colors flex-shrink-0"><X size={16} /></button>
+            </div>
+            <div className="px-6 py-4 overflow-y-auto space-y-4">
+              <div className="flex items-stretch gap-1.5">
+                <div className="flex-1 rounded-lg border border-[#e8eaf0] bg-[#f9f9fc] px-2.5 py-2"><p className="text-[9px] font-semibold uppercase tracking-wider text-[#8a8fa8] leading-tight">Typical period</p><p className="text-[15px] font-bold text-[#1a1e35] mt-1.5 leading-none tracking-tight">{fmt0(typical)}</p><p className="text-[10px] text-[#a0a4b8] mt-1.5 leading-tight">recent monthly avg</p></div>
+                <span className="flex items-center text-[#b0b3c5] font-semibold text-sm flex-shrink-0 px-0.5">+</span>
+                <div className="flex-1 rounded-lg border border-[#e8eaf0] bg-[#f9f9fc] px-2.5 py-2"><p className="text-[9px] font-semibold uppercase tracking-wider text-[#8a8fa8] leading-tight">Adjustments</p><p className="text-[15px] font-bold text-emerald-600 mt-1.5 leading-none tracking-tight">+{adjPct}%</p><p className="text-[10px] text-[#a0a4b8] mt-1.5 leading-tight">headcount + season</p></div>
+                <span className="flex items-center text-[#b0b3c5] font-semibold text-sm flex-shrink-0 px-0.5">=</span>
+                <div className="flex-1 rounded-lg border border-[#bcd4f2] bg-[#f0f6ff] px-2.5 py-2"><p className="text-[9px] font-semibold uppercase tracking-wider text-[#0168dd] leading-tight">Projected</p><p className="text-[15px] font-bold text-[#1a1e35] mt-1.5 leading-none tracking-tight">{fmt0(total)}</p><p className="text-[10px] text-[#a0a4b8] mt-1.5 leading-tight">this period</p></div>
+              </div>
+              <div className="pt-4 border-t border-[#f0f1f5]">
+                <p className="text-[11px] text-[#8a8fa8] leading-snug">The <span className="font-semibold text-emerald-600">+{adjPct}%</span> comes from trends in your history:</p>
+                <div className="mt-2 space-y-1.5">
+                  <div className="flex items-baseline gap-2 text-[12px]"><span className="font-semibold text-emerald-600 w-10 flex-shrink-0">+{hcPct}%</span><span className="text-[#1a1e35] font-medium flex-shrink-0">Headcount change</span></div>
+                  <div className="flex items-baseline gap-2 text-[12px]"><span className="font-semibold text-emerald-600 w-10 flex-shrink-0">+{seasonPct}%</span><span className="text-[#1a1e35] font-medium flex-shrink-0">Seasonality</span><span className="text-[#8a8fa8] truncate">· June is typically above average</span></div>
+                </div>
+              </div>
+              <div className="pt-4 border-t border-[#f0f1f5]">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-2">What makes up the {fmt0(total)}</p>
+                <ul className="space-y-2 text-[11px] leading-snug">
+                  <li className="flex gap-2"><span className="w-2.5 h-2.5 rounded-sm bg-emerald-500 mt-0.5 flex-shrink-0" /><span className="text-[#8a8fa8]"><span className="font-semibold text-[#1a1e35]">Confirmed {fmt0(confirmed)}</span> — hours already tracked. Final.</span></li>
+                  <li className="flex gap-2"><span className="w-2.5 h-2.5 rounded-sm bg-[#0168dd] mt-0.5 flex-shrink-0" /><span className="text-[#8a8fa8]"><span className="font-semibold text-[#1a1e35]">Planned {fmt0(planned)}</span> — scheduled (PTO/holidays, adjustments, fixed pay). Committed unless cancelled.</span></li>
+                  <li className="flex gap-2"><span className="w-2.5 h-2.5 rounded-sm mt-0.5 flex-shrink-0" style={{ background: "repeating-linear-gradient(90deg,#85baf5 0px,#85baf5 3px,#bfdbfe 3px,#bfdbfe 5px)" }} /><span className="text-[#8a8fa8]"><span className="font-semibold text-[#1a1e35]">Projected ~{fmt0(projected)}</span> — remaining hours + bonuses, estimated from history. The gap to the forecast.</span></li>
+                </ul>
+              </div>
+              <p className="text-[11px] text-[#a0a4b8] leading-snug">{fmt0(total)} is an estimate from your history — not a guaranteed figure.</p>
+            </div>
+            <div className="flex items-center justify-end px-6 py-4 border-t border-[#e8eaf0] flex-shrink-0">
+              <button onClick={() => setShowHow(false)} className="px-5 py-2 rounded-lg text-sm font-semibold bg-[#0168dd] text-white hover:bg-[#0057bb] transition-colors">Done</button>
+            </div>
+          </div>
+        </div>
+      </>)}
+
+      {/* What the breakdown means — full reference for both lenses */}
+      {showBreakdownInfo && (<>
+        <div className="fixed inset-0 z-40 bg-black/30" onClick={() => setShowBreakdownInfo(false)} />
+        <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-[460px] max-w-full max-h-[85vh] flex flex-col pointer-events-auto">
+            <div className="flex items-start justify-between px-6 pt-5 pb-4 border-b border-[#e8eaf0] flex-shrink-0">
+              <div>
+                <h2 className="text-[15px] font-semibold text-[#1a1e35]">{segLens === "source" ? "Confirmed vs. projected" : "Payroll breakdown"}</h2>
+              </div>
+              <button onClick={() => setShowBreakdownInfo(false)} className="p-1 rounded-md text-[#8a8fa8] hover:text-[#1a1e35] hover:bg-[#f0f1f5] transition-colors flex-shrink-0"><X size={16} /></button>
+            </div>
+            <div className="px-6 py-4 overflow-y-auto">
+              {segLens === "source" ? (
+                <>
+                <p className="text-[12px] text-[#5b607a] leading-relaxed mb-4">Every amount in this period sits at one of three levels of certainty — some is already locked in, some is scheduled and expected, and the rest is still our best estimate. Together they show how much of the total you can rely on today versus what could still move before payout. Here's what each level means:</p>
+                <ul className="space-y-4 text-[11px] leading-relaxed">
+                  <li className="flex gap-2.5"><span className="w-2.5 h-2.5 rounded-sm bg-[#10b981] mt-1 flex-shrink-0" /><span className="text-[#8a8fa8]"><span className="font-semibold text-[#1a1e35] block mb-0.5">Confirmed</span>Time already tracked and recorded, including overtime. It's final and won't change before payout — the part you can count on. <span className="text-[#a0a4b8]">Example: 120 hours logged this cycle at $50/hr.</span></span></li>
+                  <li className="flex gap-2.5"><span className="w-2.5 h-2.5 rounded-sm bg-[#0168dd] mt-1 flex-shrink-0" /><span className="text-[#8a8fa8]"><span className="font-semibold text-[#1a1e35] block mb-0.5">Planned</span>Amounts scheduled and known ahead of time: fixed salaries, approved PTO and holidays, and manual payroll adjustments. Committed unless someone cancels them. <span className="text-[#a0a4b8]">Example: a $5,000 monthly salary, approved PTO, or a −$200 correction.</span></span></li>
+                  <li className="flex gap-2.5"><span className="w-2.5 h-2.5 rounded-sm mt-1 flex-shrink-0" style={{ background: "repeating-linear-gradient(90deg,#85baf5 0,#85baf5 3px,#bfdbfe 3px,#bfdbfe 5px)" }} /><span className="text-[#8a8fa8]"><span className="font-semibold text-[#1a1e35] block mb-0.5">~Projected</span>Our estimate of what's still to come this period — hours not yet logged, plus likely bonuses. Shown only as a team-wide aggregate, never assigned to a person, because it hasn't happened yet. <span className="text-[#a0a4b8]">Example: the hours left in the month.</span></span></li>
+                </ul>
+                </>
+              ) : (
+                <>
+                <p className="text-[12px] text-[#5b607a] leading-relaxed mb-4">This view slices the same total by what the money actually pays for, rather than how certain it is. Each person's payout is built from a mix of earning types — regular pay, time off, and one-off extras — then any deductions are taken back out to reach the net. Here's what each part means:</p>
+                <ul className="space-y-4 text-[11px] leading-relaxed">
+                  <li className="flex gap-2.5"><span className="w-2.5 h-2.5 rounded-sm mt-1 flex-shrink-0" style={{ background: "#6366f1" }} /><span className="text-[#8a8fa8]"><span className="font-semibold text-[#1a1e35] block mb-0.5">Fixed pay</span>Salaried amounts that don't depend on hours worked — paid in full every cycle regardless of time tracked. <span className="text-[#a0a4b8]">Example: a $6,000/month retainer.</span></span></li>
+                  <li className="flex gap-2.5"><span className="w-2.5 h-2.5 rounded-sm mt-1 flex-shrink-0" style={{ background: "#0168dd" }} /><span className="text-[#8a8fa8]"><span className="font-semibold text-[#1a1e35] block mb-0.5">Hourly pay</span>Tracked hours multiplied by the person's rate. Grows through the period as more time is logged. <span className="text-[#a0a4b8]">Example: 80 hours × $45.</span></span></li>
+                  <li className="flex gap-2.5"><span className="w-2.5 h-2.5 rounded-sm mt-1 flex-shrink-0" style={{ background: "#38bdf8" }} /><span className="text-[#8a8fa8]"><span className="font-semibold text-[#1a1e35] block mb-0.5">PTO / Holiday</span>Approved paid time off and company holidays that fall in this period.</span></li>
+                  <li className="flex gap-2.5"><span className="w-2.5 h-2.5 rounded-sm mt-1 flex-shrink-0" style={{ background: "#10b981" }} /><span className="text-[#8a8fa8]"><span className="font-semibold text-[#1a1e35] block mb-0.5">Additions</span>One-off extras on top of regular pay — bonuses, reimbursements, or spot rewards.</span></li>
+                  <li className="flex gap-2.5"><span className="w-2.5 h-2.5 rounded-sm mt-1 flex-shrink-0" style={{ background: "#f59e0b" }} /><span className="text-[#8a8fa8]"><span className="font-semibold text-[#1a1e35] block mb-0.5">Overtime</span>Hours worked beyond the standard schedule, usually paid at a higher rate.</span></li>
+                  <li className="flex gap-2.5"><span className="w-2.5 h-2.5 rounded-sm mt-1 flex-shrink-0" style={{ background: "repeating-linear-gradient(45deg,#ef4444 0,#ef4444 3px,#fca5a5 3px,#fca5a5 6px)" }} /><span className="text-[#8a8fa8]"><span className="font-semibold text-[#c0392b] block mb-0.5">Deductions</span>Amounts taken out of gross pay, such as advances being repaid or corrections. Subtracted from the total and shown in red.</span></li>
+                </ul>
+                </>
+              )}
+            </div>
+            <div className="flex items-center justify-end px-6 py-4 border-t border-[#e8eaf0] flex-shrink-0">
+              <button onClick={() => setShowBreakdownInfo(false)} className="px-5 py-2 rounded-lg text-sm font-semibold bg-[#0168dd] text-white hover:bg-[#0057bb] transition-colors">Done</button>
+            </div>
+          </div>
+        </div>
+      </>)}
     </div>
   );
 }
@@ -5833,6 +6536,18 @@ function ItemStatusBadge({ status }: { status: "Confirmed" | "Planned" | "Projec
   const s = itemStatusStyle[status];
   return (
     <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ background: s.bg, color: s.text, border: s.border ? `1px ${s.dashed ? "dashed" : "solid"} ${s.border}` : undefined }}>
+      {status}
+    </span>
+  );
+}
+
+// Plain-text certainty label with a small leading dot (used in the 1L matrix).
+function CertaintyLabel({ status, strong = false }: { status: "Confirmed" | "Planned" | "Projected"; strong?: boolean }) {
+  const c = status === "Confirmed" ? "#10b981" : status === "Planned" ? "#0168dd" : "#85baf5";
+  const projected = status === "Projected";
+  return (
+    <span className={`inline-flex items-center gap-1.5 text-[11px] ${strong ? "font-semibold text-[#1a1e35]" : "font-medium text-[#5b607a]"}`}>
+      <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={projected ? { border: `1px dashed ${c}` } : { background: c }} />
       {status}
     </span>
   );
@@ -5921,7 +6636,7 @@ function V2DetailView({ cycleId, onBack }: { cycleId: string; onBack: () => void
   const plannedPct   = Math.round((cycle.planned   / totalWithBuffer) * 100);
   const projectedPct = 100 - confirmedPct - plannedPct;
   const provColor = v2ProviderColors[cycle.provider] ?? "#8a8fa8";
-  const wiseBalance = 8240;
+  const wiseBalance = 48000;
   const wiseRequired = totalWithBuffer;
   const wiseDiff = wiseBalance - wiseRequired;
   return (
@@ -6191,7 +6906,7 @@ const v2CycleForProvider: Record<string, string> = {
 // ─── Root ──────────────────────────────────────────────────────────────────────
 
 export default function App() {
-  const [version, setVersion] = useState<"v1"|"v1c"|"v1d"|"v1e"|"v1f"|"v1g"|"v1h"|"v1i"|"v1j"|"v1k"|"v1l"|"v2">("v1c");
+  const [version, setVersion] = useState<"v1"|"v1c"|"v1d"|"v1e"|"v1f"|"v1g"|"v1h"|"v1i"|"v1j"|"v1k"|"v1l"|"v1m"|"v1n"|"v2">("v1c");
   const [showStatusBreakdown, setShowStatusBreakdown] = useState(false);
   const [seasonalityOn, setSeasonalityOn] = useState(true);
 
@@ -6201,14 +6916,14 @@ export default function App() {
       <div className="flex-1 flex flex-col overflow-hidden bg-[#f5f6fa]">
         <div className="flex items-center justify-between px-6 py-2.5 bg-white border-b border-[#e8eaf0] flex-shrink-0">
           <div className="flex items-center gap-1 text-xs text-[#8a8fa8]">
-            {(version === "v1" || version === "v1c" || version === "v1d" || version === "v1e" || version === "v1f" || version === "v1g" || version === "v1h" || version === "v1i" || version === "v1j" || version === "v1k" || version === "v1l") ? (
+            {(version === "v1" || version === "v1c" || version === "v1d" || version === "v1e" || version === "v1f" || version === "v1g" || version === "v1h" || version === "v1i" || version === "v1j" || version === "v1k" || version === "v1l" || version === "v1m" || version === "v1n") ? (
               <><span className="hover:text-[#0168dd] cursor-pointer">Reports</span><ChevronRight size={12} /><span className="text-[#1a1e35] font-medium">Payments report</span></>
             ) : (
               <><span className="hover:text-[#0168dd] cursor-pointer">Financials</span><ChevronRight size={12} /><span className="text-[#1a1e35] font-medium">Team Payments</span></>
             )}
           </div>
           <div className="flex items-center gap-3">
-            {(version === "v1c" || version === "v1d" || version === "v1e" || version === "v1f" || version === "v1g" || version === "v1h" || version === "v1i" || version === "v1j" || version === "v1k" || version === "v1l") && (
+            {(version === "v1c" || version === "v1d" || version === "v1e" || version === "v1f" || version === "v1g" || version === "v1h" || version === "v1i" || version === "v1j" || version === "v1k" || version === "v1l" || version === "v1m" || version === "v1n") && (
               <div className="flex items-center gap-4 border-r border-[#e8eaf0] pr-4">
                 {[
                   { label: "Status breakdown", val: showStatusBreakdown, set: setShowStatusBreakdown },
@@ -6235,6 +6950,8 @@ export default function App() {
               <button onClick={() => setVersion("v1j")} className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${version === "v1j" ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>1J</button>
               <button onClick={() => setVersion("v1k")} className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${version === "v1k" ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>1K</button>
               <button onClick={() => setVersion("v1l")} className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${version === "v1l" ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>1L</button>
+              <button onClick={() => setVersion("v1m")} className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${version === "v1m" ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>1M</button>
+              <button onClick={() => setVersion("v1n")} className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${version === "v1n" ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>1N</button>
               <button onClick={() => setVersion("v2")}  className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${version === "v2"  ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>2</button>
             </div>
             <div className="flex items-center gap-2 text-xs text-[#8a8fa8]"><Clock size={13} /><span>0:00:00</span></div>
@@ -6251,6 +6968,8 @@ export default function App() {
         {version === "v1j" && <Version1J showStatusBreakdown={showStatusBreakdown} seasonalityOn={seasonalityOn} />}
         {version === "v1k" && <Version1K showStatusBreakdown={showStatusBreakdown} seasonalityOn={seasonalityOn} />}
         {version === "v1l" && <Version1L showStatusBreakdown={showStatusBreakdown} seasonalityOn={seasonalityOn} />}
+        {version === "v1m" && <Version1M showStatusBreakdown={showStatusBreakdown} seasonalityOn={seasonalityOn} />}
+        {version === "v1n" && <Version1N showStatusBreakdown={showStatusBreakdown} seasonalityOn={seasonalityOn} />}
         {version === "v2"  && <Version2 />}
       </div>
     </div>
