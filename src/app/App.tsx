@@ -6906,7 +6906,7 @@ const v2CycleForProvider: Record<string, string> = {
 // ─── Root ──────────────────────────────────────────────────────────────────────
 
 export default function App() {
-  const [version, setVersion] = useState<"v1"|"v1c"|"v1d"|"v1e"|"v1f"|"v1g"|"v1h"|"v1i"|"v1j"|"v1k"|"v1l"|"v1m"|"v1n"|"v2">("v1c");
+  const [version, setVersion] = useState<"v1"|"v1c"|"v1d"|"v1e"|"v1f"|"v1g"|"v1h"|"v1i"|"v1j"|"v1k"|"v1l"|"v1m"|"v1n"|"v2">("v1n");
   const [showStatusBreakdown, setShowStatusBreakdown] = useState(false);
   const [seasonalityOn, setSeasonalityOn] = useState(true);
 
