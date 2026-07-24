@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, Fragment } from "react";
+import { useState, useEffect, useRef, Fragment, type ReactNode } from "react";
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
@@ -418,7 +418,7 @@ function ChevronLeft({ size = 16, className = "" }: { size?: number; className?:
   return <ChevronRight size={size} className={`rotate-180 ${className}`} />;
 }
 
-function Sidebar({ active }: { active: "v1" | "v1c" | "v1d" | "v1e" | "v1f" | "v1g" | "v1h" | "v1i" | "v1j" | "v1k" | "v1l" | "v1m" | "v1n" | "v2" }) {
+function Sidebar({ active }: { active: "v1" | "v1c" | "v1d" | "v1e" | "v1f" | "v1g" | "v1h" | "v1i" | "v1j" | "v1k" | "v1l" | "v1m" | "v1n" | "final" | "v2" }) {
   const topNav = [
     { icon: LayoutDashboard, label: "Dashboard" },
     { icon: ClipboardList,   label: "Timesheets" },
@@ -1458,7 +1458,7 @@ function V1cTriageDrawer({ open, onClose }: { open: boolean; onClose: () => void
 }
 
 function AddAdjustmentDialog({
-  open, onClose, onSave, base, currentProjection, initial,
+  open, onClose, onSave, base, currentProjection, initial, zone = false,
 }: {
   open: boolean;
   onClose: () => void;
@@ -1466,6 +1466,7 @@ function AddAdjustmentDialog({
   base: number;
   currentProjection: number;
   initial?: ManualAdjustment;
+  zone?: boolean;
 }) {
   const [label, setLabel] = useState(initial?.label ?? "Buffer");
   const [adjType, setAdjType] = useState<"add" | "reduce">(initial?.type ?? "add");
@@ -1580,9 +1581,11 @@ function AddAdjustmentDialog({
 
           {/* Footer */}
           <div className="flex items-center justify-between mt-6 pt-4 border-t border-[#e8eaf0]">
-            <button onClick={onClose} className="px-4 py-2 text-sm font-medium text-[#8a8fa8] hover:text-[#1a1e35] transition-colors">Cancel</button>
+            <button onClick={onClose} className={zone ? zbtn("ghostGray", "md") : "px-4 py-2 text-sm font-medium text-[#8a8fa8] hover:text-[#1a1e35] transition-colors"}>Cancel</button>
             <button onClick={handleSave} disabled={!isValid}
-              className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${isValid ? "bg-[#0168dd] text-white hover:bg-[#0057bb]" : "bg-[#e8eaf0] text-[#c8cad4] cursor-not-allowed"}`}>
+              className={zone
+                ? (isValid ? zbtn("solidPrimary", "md") : `${ZBTN_BASE} ${ZBTN_SIZE.md} ${ZBTN_VARIANT.solidPrimary} opacity-30 cursor-not-allowed`)
+                : `px-5 py-2 rounded-lg text-sm font-semibold transition-all ${isValid ? "bg-[#0168dd] text-white hover:bg-[#0057bb]" : "bg-[#e8eaf0] text-[#c8cad4] cursor-not-allowed"}`}>
               {initial ? "Save" : "Add"}
             </button>
           </div>
@@ -3887,7 +3890,7 @@ function Version1F({ showStatusBreakdown, seasonalityOn }: { showStatusBreakdown
 // + your manual adjustments) in one editable list — add / edit / remove inline.
 function V1gManageAdjustmentsDialog({
   open, onClose, base, memberPct, memberAmt, memberNote, seasonPct, seasonAmt,
-  manualAdjustments, setManualAdjustments, finalTotal,
+  manualAdjustments, setManualAdjustments, finalTotal, zone = false,
 }: {
   open: boolean;
   onClose: () => void;
@@ -3897,6 +3900,7 @@ function V1gManageAdjustmentsDialog({
   manualAdjustments: ManualAdjustment[];
   setManualAdjustments: (updater: (prev: ManualAdjustment[]) => ManualAdjustment[]) => void;
   finalTotal: number;
+  zone?: boolean;
 }) {
   const [draftId, setDraftId] = useState<string | null>(null); // "new" | <id> | null
   const [dLabel, setDLabel] = useState("Buffer");
@@ -4052,7 +4056,7 @@ function V1gManageAdjustmentsDialog({
           </div>
 
           <div className="flex items-center justify-end px-6 py-4 border-t border-[#e8eaf0]">
-            <button onClick={onClose} className="px-5 py-2 rounded-lg text-sm font-semibold bg-[#0168dd] text-white hover:bg-[#0057bb] transition-colors">Done</button>
+            <button onClick={onClose} className={zone ? zbtn("solidPrimary", "md") : "px-5 py-2 rounded-lg text-sm font-semibold bg-[#0168dd] text-white hover:bg-[#0057bb] transition-colors"}>Done</button>
           </div>
         </div>
       </div>
@@ -4264,6 +4268,66 @@ function V1jAddToCoverCard({ onViewSchedule }: { onViewSchedule: () => void }) {
 // Shared by the 1K summary card and its full-schedule dialog so they stay identical.
 const v1kDowFull: Record<string, string> = { Sun: "Sunday", Mon: "Monday", Tue: "Tuesday", Wed: "Wednesday", Thu: "Thursday", Fri: "Friday", Sat: "Saturday" };
 
+// ── Zone button recipes ──────────────────────────────────────────────────
+// Faithful to hubstaff-server button.rb (base + size + variant+color), verified
+// against the live Zone button docs. Primary = primary-500 (#2aa7ff), hovers use
+// primary-600 (#2f8af4) / primary-100 (#d4edff); gray uses gray-600/300/100/black.
+// Used only under the `zone` flag (Final UI) so 1G–1N keep their original styling.
+const ZBTN_BASE = "relative inline-flex items-center justify-center font-normal rounded-[6px] transition-colors select-none";
+// Zone's real button sizes (h-8/10/12, verified 32/40/48px in the docs). sm is
+// the smallest Zone offers — there is no xs.
+const ZBTN_SIZE = { sm: "text-sm h-8 px-3 gap-2", md: "text-sm h-10 px-5 gap-2", lg: "text-base h-12 px-5 gap-2" } as const;
+const ZBTN_VARIANT = {
+  solidPrimary: "text-white bg-[#2aa7ff] hover:bg-[#2f8af4] border border-[#2aa7ff] hover:border-[#2f8af4]",
+  outlinePrimary: "text-[#2aa7ff] bg-transparent hover:bg-[#d4edff] border border-[#2aa7ff]",
+  ghostPrimary: "text-[#2aa7ff] bg-transparent hover:bg-[#d4edff]",
+  outlineGray: "text-[#4b5563] bg-white hover:bg-[#f3f4f6] border border-[#d1d5db]",
+  ghostGray: "text-[#4b5563] bg-transparent hover:bg-[#f3f4f6]",
+  solidGray: "text-black bg-[#e5e7eb] hover:bg-[#d1d5db] border border-[#e5e7eb] hover:border-[#d1d5db]",
+} as const;
+const zbtn = (variant: keyof typeof ZBTN_VARIANT, size: keyof typeof ZBTN_SIZE = "sm", extra = "") =>
+  `${ZBTN_BASE} ${ZBTN_SIZE[size]} ${ZBTN_VARIANT[variant]}${extra ? " " + extra : ""}`;
+
+// Zone pill — sizes from the pill docs (sm=py-0 ~20px, md=py-1 ~24px, lg=py-2 ~36px).
+// Filled color variants use the *-100 bg / *-800 text pairs. font weight 400.
+const ZPILL_BASE = "inline-flex items-center gap-1 select-none font-normal whitespace-nowrap rounded-full";
+const ZPILL_SIZE = { sm: "text-xs px-2 py-0", md: "text-xs px-2 py-1", lg: "text-sm px-3 py-2" } as const;
+const ZPILL_COLOR = {
+  primary: "bg-[#d4edff] text-[#0a4b96]",
+  gray: "bg-[#f3f4f6] text-[#4b5563]",
+  green: "bg-[#def7ec] text-[#03543f]",
+} as const;
+const zpill = (color: keyof typeof ZPILL_COLOR = "primary", size: keyof typeof ZPILL_SIZE = "md", extra = "") =>
+  `${ZPILL_BASE} ${ZPILL_SIZE[size]} ${ZPILL_COLOR[color]}${extra ? " " + extra : ""}`;
+
+// ── Zone bar-chart palette ────────────────────────────────────────────────
+// The categorical sequence from the Zone bar-chart docs (used for multi-series
+// bars: payout method, payroll breakdown). Confirmed/Projected map to the two
+// semantic anchors: Projected = Primary/600 (blue), Confirmed = Teal/600 (green-ish).
+const ZONE_CHART = [
+  "#2F8AF4", // 1  Primary/600
+  "#7EDCE2", // 2  Teal/300
+  "#8B1DFF", // 3  Purple/500
+  "#FFD5A8", // 4  Orange/200
+  "#F17EB8", // 5  Pink/400
+  "#FDF6B2", // 6  Yellow/100
+  "#C1E4FD", // 7  Primary/200
+  "#047481", // 8  Teal/600
+  "#D1A5FF", // 9  Purple/200
+  "#FFAC51", // 10 Orange/400
+  "#F8B4D9", // 11 Pink/300
+  "#FCE96A", // 12 Yellow/200
+];
+// Per-swatch opacity from the Zone bar-chart docs (80% / 70%).
+const ZONE_CHART_OPACITY = [0.8, 0.7, 0.8, 0.7, 0.8, 0.7, 0.7, 0.8, 0.7, 0.8, 0.7, 0.8];
+// Bake an opacity into a hex color as an 8-digit #RRGGBBAA so `fill` carries it.
+const withAlpha = (hex: string, o: number) => hex + Math.round(o * 255).toString(16).padStart(2, "0");
+// Tracked (was "Confirmed") / Planned / Projected — the certainty ladder.
+const ZONE_CHART_CONFIRMED = "#0e9f6e"; const ZONE_CHART_OP_CONFIRMED = 0.8; // Green/500 — labeled "Tracked"
+const ZONE_CHART_PLANNED   = "#0168dd"; const ZONE_CHART_OP_PLANNED   = 0.8; // Primary/700 (Blue/700)
+const ZONE_CHART_PROJECTED = "#7fcaff"; const ZONE_CHART_OP_PROJECTED = 0.7; // Primary/300 (light blue)
+const ZONE_CHART_TRACKED_LABEL = "Tracked";
+
 // Small hover tooltip on an info icon — explains a figure or label in place.
 function InfoTip({ text, width = 200 }: { text: string; width?: number }) {
   return (
@@ -4283,10 +4347,24 @@ const v1InfoText = {
   planned:   "Amounts already scheduled: fixed pay, PTO / holiday, and payroll adjustments.",
   projAgg:   "An estimate of the hours and bonuses still to come — shown in aggregate, not per person.",
 };
-const v1SegLegendInfo: Record<string, string> = { Actuals: v1InfoText.actuals, Confirmed: v1InfoText.actuals, Projected: v1InfoText.projected };
-const v1SourceLegendInfo: Record<string, string> = { Confirmed: v1InfoText.confirmed, Planned: v1InfoText.planned, "~Projected": v1InfoText.projAgg };
+const v1SegLegendInfo: Record<string, string> = { Actuals: v1InfoText.actuals, Confirmed: v1InfoText.actuals, Tracked: v1InfoText.actuals, Projected: v1InfoText.projected };
+const v1SourceLegendInfo: Record<string, string> = { Confirmed: v1InfoText.confirmed, Tracked: v1InfoText.confirmed, Planned: v1InfoText.planned, "~Projected": v1InfoText.projAgg };
 
-function V1kFundDateCard({ e, v1l = false, condensed = false, onProviderClick }: { e: V1gFundDate; v1l?: boolean; condensed?: boolean; onProviderClick?: (providerId: string) => void }) {
+function V1kFundDateCard({ e, v1l = false, zone = false, condensed = false, onProviderClick }: { e: V1gFundDate; v1l?: boolean; zone?: boolean; condensed?: boolean; onProviderClick?: (providerId: string) => void }) {
+  // Zone typography (from app.hubstaff.com/zone/docs/typography + real staging table):
+  // body text = 14px (text-sm), labels = 12px (text-xs), Roboto, gray-900/700/500.
+  const zt = {
+    name:      zone ? "text-sm" : "text-xs",              // provider name: 14 vs 12
+    nameColor: zone ? "text-[#111827]" : "text-[#1a1e35]", // gray-900
+    cadence:   zone ? "text-[12px] text-[#6b7280]" : "text-[11px] text-[#8a8fa8]", // 12/gray-500
+    num:       zone ? "text-[12px] text-[#6b7280]" : "text-[12px] text-[#5b607a]", // Balance/Due: gray-500 (lighter than Fund)
+    numStrong: zone ? "text-[12px] text-[#111827]" : "text-[12px] text-[#1a1e35]", // Fund/Total: gray-900 (strongest)
+    head:      zone ? "text-[11px] text-[#6b7280]" : "text-[9px] text-[#8a8fa8]",   // headers 11 vs 9
+    unknown:   zone ? "text-[12px] text-[#9ca3af]" : "text-[12px] text-[#a8adbf]",  // gray-400
+  };
+  // Zone gets a touch more breathing room in the table (rows 8→10px, header 6→8px).
+  const rowPad = zone ? "py-2" : "py-2";
+  const headPad = zone ? "pb-2" : "pb-1.5";
   const isNext = e.tag === "next";
   const projected = e.tag === "projected";
   const check = <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>;
@@ -4301,11 +4379,11 @@ function V1kFundDateCard({ e, v1l = false, condensed = false, onProviderClick }:
   const providerTable = (
     <table className="w-full">
       <thead>
-        <tr className="text-[9px] font-semibold uppercase tracking-wide text-[#8a8fa8]">
-          <th className="text-left font-semibold pb-1.5 border-b border-[#e8eaf0]">Payout method</th>
-          <th className="text-right font-semibold pb-1.5 pl-4 border-b border-[#e8eaf0]">Balance</th>
-          <th className="text-right font-semibold pb-1.5 pl-4 border-b border-[#e8eaf0]">Due</th>
-          <th className="text-right font-semibold pb-1.5 pl-4 border-b border-[#e8eaf0]">{e.funded ? "Status" : "Fund"}</th>
+        <tr className={`${zt.head} font-semibold uppercase tracking-wide`}>
+          <th className={`text-left font-semibold ${headPad} border-b border-[#e8eaf0]`}>Payout method</th>
+          <th className={`text-right font-semibold ${headPad} pl-4 border-b border-[#e8eaf0]`}>Balance</th>
+          <th className={`text-right font-semibold ${headPad} pl-4 border-b border-[#e8eaf0]`}>Due</th>
+          <th className={`text-right font-semibold ${headPad} pl-4 border-b border-[#e8eaf0]`}>{e.funded ? "Status" : "Fund"}</th>
         </tr>
       </thead>
       <tbody>
@@ -4315,29 +4393,29 @@ function V1kFundDateCard({ e, v1l = false, condensed = false, onProviderClick }:
           const res = v1jAddFor(p.id, p.amount);
           const cadence = v1mProviderCycles[p.id]?.cycle ?? "Monthly";
           return (
-            <tr key={p.id} className="border-b border-[#f0f1f5] last:border-0">
-              <td className="py-2 pr-2">
+            <tr key={p.id} className={`border-b last:border-0 ${zone ? "border-[#f3f4f6]" : "border-[#f0f1f5]"}`}>
+              <td className={`${rowPad} pr-2`}>
                 <div className="flex items-center gap-1.5 min-w-0">
                   <ProviderLogo id={p.id} size={16} />
                   {p.id === "export" ? (
-                    <span className="text-xs font-medium text-[#1a1e35] truncate">{meta.name}</span>
+                    <span className={`${zt.name} font-medium ${zt.nameColor} truncate`}>{meta.name}</span>
                   ) : (
-                    <a href="#" onClick={ev => { ev.preventDefault(); onProviderClick?.(p.id); }} className="text-xs font-medium text-[#1a1e35] underline decoration-[#9aa0b4] decoration-[1.5px] underline-offset-2 hover:decoration-[#1a1e35] truncate min-w-0">
+                    <a href="#" onClick={ev => { ev.preventDefault(); onProviderClick?.(p.id); }} className={`${zt.name} font-medium ${zt.nameColor} underline decoration-[#9aa0b4] decoration-[1.5px] underline-offset-2 hover:decoration-[#1a1e35] truncate min-w-0`}>
                       {meta.name}
                     </a>
                   )}
-                  {v1l && <span className="text-[11px] text-[#8a8fa8] whitespace-nowrap flex-shrink-0"><span className="text-[#c8cad4] mx-1">·</span>{cadence}</span>}
+                  {v1l && <span className={`${zt.cadence} whitespace-nowrap flex-shrink-0`}><span className="text-[#c8cad4] mx-1">·</span>{cadence}</span>}
                 </div>
               </td>
-              <td className={`py-2 pl-4 text-right whitespace-nowrap tabular-nums ${v1l ? "text-[12px] text-[#5b607a]" : "text-[11px] font-semibold text-[#5b607a]"}`}>{bal !== undefined ? fmt0(bal) : (v1l ? <span className="inline-flex items-center gap-1 justify-end text-[#a8adbf]">Unknown <InfoTip text={v1InfoText.unknown} /></span> : "—")}</td>
-              <td className={`py-2 pl-4 text-right whitespace-nowrap tabular-nums ${v1l ? "text-[12px] text-[#5b607a]" : "text-[11px] font-semibold text-[#5b607a]"}`}>{fmt0(p.amount)}</td>
-              <td className="py-2 pl-4 text-right whitespace-nowrap">
+              <td className={`${rowPad} pl-4 text-right whitespace-nowrap tabular-nums ${v1l ? zt.num : "text-[11px] font-semibold text-[#5b607a]"}`}>{bal !== undefined ? fmt0(bal) : (v1l ? <span className={`inline-flex items-center gap-1 justify-end ${zone ? "text-[#9ca3af]" : "text-[#a8adbf]"}`}>Unknown <InfoTip text={v1InfoText.unknown} /></span> : "—")}</td>
+              <td className={`${rowPad} pl-4 text-right whitespace-nowrap tabular-nums ${v1l ? zt.num : "text-[11px] font-semibold text-[#5b607a]"}`}>{fmt0(p.amount)}</td>
+              <td className={`${rowPad} pl-4 text-right whitespace-nowrap`}>
                 {e.funded ? (
                   <span className="text-[11px] font-semibold text-emerald-600 inline-flex items-center gap-1 justify-end">{check} paid</span>
                 ) : res.kind === "covered" ? (
                   <span className="text-[11px] font-semibold text-emerald-600 inline-flex items-center gap-1 justify-end">{check} covered</span>
                 ) : (
-                  <span className={v1l ? "text-[12px] text-[#1a1e35] tabular-nums" : "text-xs font-bold text-amber-600"}>{fmt0(res.amount)}</span>
+                  <span className={v1l ? `${zt.numStrong} tabular-nums` : "text-xs font-bold text-amber-600"}>{fmt0(res.amount)}</span>
                 )}
               </td>
             </tr>
@@ -4348,31 +4426,52 @@ function V1kFundDateCard({ e, v1l = false, condensed = false, onProviderClick }:
   );
 
   return (
-    <div className={`rounded-lg border bg-white px-4 py-3 flex flex-col h-full ${isNext ? "border-[#c0c3d3]" : "border-[#e8eaf0]"}`}>
-      <div className="flex items-start justify-between gap-2">
-        <p className={condensed ? "whitespace-nowrap min-w-0" : "min-w-0"}>
-          {v1l && <span className="text-sm text-[#8a8fa8] whitespace-nowrap">Fund by </span>}
-          <span className={`text-sm font-bold whitespace-nowrap ${projected ? "text-[#8a8fa8]" : "text-[#1a1e35]"}`}>{monthDay}</span>
-          <span className="text-sm text-[#8a8fa8] whitespace-nowrap">{v1l ? ` · ${shortDay}` : `, ${weekday}`}</span>
-          {condensed && isNext && <>{" "}<span className="inline-flex items-center gap-1 align-middle text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#e8f2fd] text-[#0168dd]"><CalendarDays size={10} /> next</span></>}
-          {condensed && projected && <>{" "}<span className="align-middle text-[10px] text-[#c0c3d3]">projected</span></>}
-          {!v1l && <>{" "}<span className="whitespace-nowrap"><span className="text-[#c8cad4] mr-1.5">·</span><span className={`text-[11px] ${e.funded ? "text-emerald-600 font-medium" : "text-[#8a8fa8]"}`}>{e.funded ? "Paid" : "Fund deadline"}</span></span></>}
-        </p>
-        {condensed ? (
-          <button onClick={() => setShowDialog(true)} className="text-[11px] font-medium text-[#0168dd] hover:text-[#0057bb] transition-colors select-none flex-shrink-0">View details</button>
-        ) : isNext ? (
-          <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#e8f2fd] text-[#0168dd] flex-shrink-0"><CalendarDays size={10} /> next</span>
-        ) : projected ? (
-          <span className="text-[10px] text-[#c0c3d3] flex-shrink-0 mt-0.5">projected</span>
-        ) : null}
-      </div>
-      <p className="text-[11px] text-[#8a8fa8]">{v1l ? <>Cycle ends {monthDay} · triggers {e.date}</> : <>Payroll runs {e.date} · paid ~{e.paidOn}</>}</p>
+    <div data-component={zone ? "Fund-by card" : undefined} className={`rounded-lg border bg-white ${zone ? "p-4" : "px-4 py-3"} flex flex-col h-full ${zone ? "border-[#e5e7eb]" : (isNext ? "border-[#c0c3d3]" : "border-[#e8eaf0]")}`}>
+      {zone ? (
+        /* Final UI — title + cycle caption stacked on the left, pill on the right */
+        <div className="flex justify-between items-start gap-2 mb-4">
+          <div className="min-w-0">
+            <p>
+              <span className="text-base whitespace-nowrap text-[#1a1e35]">Fund by </span>
+              <span className={`text-base font-bold whitespace-nowrap ${projected ? "text-[#8a8fa8]" : "text-[#111827]"}`}>{monthDay}</span>
+              <span className="text-base text-[#8a8fa8] whitespace-nowrap"> · {shortDay}</span>
+            </p>
+            <p className={zt.cadence}>Cycle ends {monthDay} · triggers {e.date}</p>
+          </div>
+          {isNext ? (
+            <span className={zpill("primary", "md", "flex-shrink-0")}><span className="material-symbols-rounded leading-none" style={{ fontSize: 16, marginRight: 2 }}>event_upcoming</span> Next</span>
+          ) : projected ? (
+            <span className="text-[10px] text-[#c0c3d3] flex-shrink-0">projected</span>
+          ) : null}
+        </div>
+      ) : (
+        <>
+          <div className="flex justify-between gap-2 items-start">
+            <p className={condensed ? "whitespace-nowrap min-w-0" : "min-w-0"}>
+              {v1l && <span className="text-sm whitespace-nowrap text-[#8a8fa8]">Fund by </span>}
+              <span className={`text-sm font-bold whitespace-nowrap ${projected ? "text-[#8a8fa8]" : "text-[#1a1e35]"}`}>{monthDay}</span>
+              <span className="text-sm text-[#8a8fa8] whitespace-nowrap">{v1l ? ` · ${shortDay}` : `, ${weekday}`}</span>
+              {condensed && isNext && <>{" "}<span className="inline-flex items-center gap-1 align-middle text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#e8f2fd] text-[#0168dd]"><CalendarDays size={10} /> next</span></>}
+              {condensed && projected && <>{" "}<span className="align-middle text-[10px] text-[#c0c3d3]">projected</span></>}
+              {!v1l && <>{" "}<span className="whitespace-nowrap"><span className="text-[#c8cad4] mr-1.5">·</span><span className={`text-[11px] ${e.funded ? "text-emerald-600 font-medium" : "text-[#8a8fa8]"}`}>{e.funded ? "Paid" : "Fund deadline"}</span></span></>}
+            </p>
+            {condensed ? (
+              <button onClick={() => setShowDialog(true)} className="text-[11px] font-medium text-[#0168dd] hover:text-[#0057bb] transition-colors select-none flex-shrink-0">View details</button>
+            ) : isNext ? (
+              <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#e8f2fd] text-[#0168dd] flex-shrink-0"><CalendarDays size={10} /> next</span>
+            ) : projected ? (
+              <span className="text-[10px] text-[#c0c3d3] flex-shrink-0 mt-0.5">projected</span>
+            ) : null}
+          </div>
+          <p className={zt.cadence}>{v1l ? <>Cycle ends {monthDay} · triggers {e.date}</> : <>Payroll runs {e.date} · paid ~{e.paidOn}</>}</p>
+        </>
+      )}
 
-      {showTable && <div className="mt-3">{providerTable}</div>}
+      {showTable && <div className={zone ? "" : "mt-3"}>{providerTable}</div>}
 
       <div className={`${showTable ? "mt-auto" : "mt-4"} pt-2 border-t border-[#e8eaf0] flex items-center justify-between gap-2`}>
-        <span className={`text-[#1a1e35] ${v1l ? "text-[12px] font-medium" : "text-[11px] font-semibold"}`}>{e.funded ? "Total paid" : "Total to fund"}{condensed && <span className="font-normal text-[#8a8fa8]"> · {e.providers.length} payment method{e.providers.length > 1 ? "s" : ""}</span>}</span>
-        <span className={v1l ? "text-[12px] font-semibold text-[#1a1e35] tabular-nums" : `text-xs font-bold ${e.funded ? "text-emerald-600" : "text-[#1a1e35]"}`}>{fmt0(e.funded ? dueTotal : fundTotal)}</span>
+        <span className={v1l ? `${zt.numStrong} font-medium` : "text-[#1a1e35] text-[11px] font-semibold"}>{e.funded ? "Total paid" : "Total to fund"}{condensed && <span className="font-normal text-[#8a8fa8]"> · {e.providers.length} payment method{e.providers.length > 1 ? "s" : ""}</span>}</span>
+        <span className={v1l ? `${zt.numStrong} font-semibold tabular-nums` : `text-xs font-bold ${e.funded ? "text-emerald-600" : "text-[#1a1e35]"}`}>{fmt0(e.funded ? dueTotal : fundTotal)}</span>
       </div>
 
       {showDialog && (
@@ -4410,7 +4509,7 @@ function V1kFundDateCard({ e, v1l = false, condensed = false, onProviderClick }:
 }
 
 // 1K — "Learn more": explains the funding lifecycle, the columns, and caveats.
-function V1kLearnMoreDialog({ open, onClose, v1l = false }: { open: boolean; onClose: () => void; v1l?: boolean }) {
+function V1kLearnMoreDialog({ open, onClose, v1l = false, zone = false }: { open: boolean; onClose: () => void; v1l?: boolean; zone?: boolean }) {
   if (!open) return null;
   const nx = v1gFundSchedule.find(e => e.tag === "next");
   const fundByDay = (nx?.fundBy ?? "").split(", ")[1] ?? "—";
@@ -4506,7 +4605,7 @@ function V1kLearnMoreDialog({ open, onClose, v1l = false }: { open: boolean; onC
           </div>
 
           <div className="flex items-center justify-end px-6 py-4 border-t border-[#e8eaf0] flex-shrink-0">
-            <button onClick={onClose} className="px-5 py-2 rounded-lg text-sm font-semibold bg-[#0168dd] text-white hover:bg-[#0057bb] transition-colors">Got it</button>
+            <button onClick={onClose} className={zone ? zbtn("solidPrimary", "md") : "px-5 py-2 rounded-lg text-sm font-semibold bg-[#0168dd] text-white hover:bg-[#0057bb] transition-colors"}>Got it</button>
           </div>
         </div>
       </div>
@@ -4514,33 +4613,33 @@ function V1kLearnMoreDialog({ open, onClose, v1l = false }: { open: boolean; onC
   );
 }
 
-function V1kNextPaymentsCard({ onViewSchedule, v1l = false, condensed = false, onProviderClick }: { onViewSchedule: () => void; v1l?: boolean; condensed?: boolean; onProviderClick?: (providerId: string) => void }) {
+function V1kNextPaymentsCard({ onViewSchedule, v1l = false, zone = false, condensed = false, onProviderClick }: { onViewSchedule: () => void; v1l?: boolean; zone?: boolean; condensed?: boolean; onProviderClick?: (providerId: string) => void }) {
   const upcoming = v1gFundSchedule.filter(e => !e.funded && e.daysOut > 0).slice(0, 2);
   const [showLearn, setShowLearn] = useState(false);
   const learnMoreBtn = (
-    <button onClick={() => setShowLearn(true)} className="inline-flex items-center gap-1 text-[11px] font-medium text-[#5b607a] rounded-md px-2.5 py-1 hover:bg-[#f0f1f5] hover:text-[#1a1e35] transition-colors select-none"><Info size={12} /> Learn more</button>
+    <button onClick={() => setShowLearn(true)} className={zone ? zbtn("ghostGray", "sm") : "inline-flex items-center gap-1 text-[11px] font-medium text-[#5b607a] rounded-md px-2.5 py-1 hover:bg-[#f0f1f5] hover:text-[#1a1e35] transition-colors select-none"}><Info size={zone ? 16 : 12} /> Learn more</button>
   );
   return (
-    <div className="col-span-9 bg-white rounded-lg border border-[#e8eaf0] flex flex-col">
+    <div className={`col-span-9 bg-white rounded-lg border ${zone ? "border-[#e5e7eb]" : "border-[#e8eaf0]"} flex flex-col`}>
       {v1l ? (
         /* 1L — Learn more sits next to the title; no full-schedule link */
-        <div className="px-4 h-[55px] flex items-center gap-3 border-b border-[#e8eaf0] bg-white rounded-t-lg">
-          <p className="text-sm font-semibold text-[#1a1e35]">Funding schedule</p>
+        <div className={`px-4 flex items-center gap-3 border-b bg-white rounded-t-lg ${zone ? "h-[60px] border-[#e5e7eb]" : "h-[55px] border-[#e8eaf0]"}`}>
+          <p className={zone ? "text-lg font-medium text-[#111827]" : "text-sm font-semibold text-[#1a1e35]"}>Funding schedule</p>
           {learnMoreBtn}
         </div>
       ) : (
         <div className="px-4 h-[55px] flex items-center justify-between gap-3 border-b border-[#e8eaf0] bg-white rounded-t-lg">
-          <p className="text-sm font-semibold text-[#1a1e35]">Funding schedule</p>
+          <p className={zone ? "text-lg font-medium text-[#111827]" : "text-sm font-semibold text-[#1a1e35]"}>Funding schedule</p>
           <div className="flex items-center gap-2">
             {learnMoreBtn}
             <button onClick={onViewSchedule} className="text-[11px] font-medium text-[#0168dd] border border-[#0168dd]/40 rounded-md px-2.5 py-1 hover:bg-[#0168dd]/5 transition-colors select-none">View full schedule</button>
           </div>
         </div>
       )}
-      <V1kLearnMoreDialog open={showLearn} onClose={() => setShowLearn(false)} v1l={v1l} />
+      <V1kLearnMoreDialog open={showLearn} onClose={() => setShowLearn(false)} v1l={v1l} zone={zone} />
       <div className="px-4 py-4 flex-1">
         <div className="grid grid-cols-2 gap-4 items-stretch">
-          {upcoming.map(e => <V1kFundDateCard key={e.date} e={e} v1l={v1l} condensed={condensed} onProviderClick={onProviderClick} />)}
+          {upcoming.map(e => <V1kFundDateCard key={e.date} e={e} v1l={v1l} zone={zone} condensed={condensed} onProviderClick={onProviderClick} />)}
         </div>
       </div>
     </div>
@@ -4627,7 +4726,7 @@ function V1kFundingScheduleDialog({ open, onClose }: { open: boolean; onClose: (
 
 // 1I — read-only "How we get there": baseline + adjustment rules → total, in a dialog.
 function V1iHowWeGetThereDialog({
-  open, onClose, base, memberPct, memberNote, seasonPct, adjPct, total, manualAdjustments,
+  open, onClose, base, memberPct, memberNote, seasonPct, adjPct, total, manualAdjustments, zone = false,
 }: {
   open: boolean;
   onClose: () => void;
@@ -4636,6 +4735,7 @@ function V1iHowWeGetThereDialog({
   seasonPct: number;
   adjPct: number; total: number;
   manualAdjustments: ManualAdjustment[];
+  zone?: boolean;
 }) {
   if (!open) return null;
   return (
@@ -4704,7 +4804,7 @@ function V1iHowWeGetThereDialog({
           </div>
 
           <div className="flex items-center justify-end px-6 py-4 border-t border-[#e8eaf0]">
-            <button onClick={onClose} className="px-5 py-2 rounded-lg text-sm font-semibold bg-[#0168dd] text-white hover:bg-[#0057bb] transition-colors">Done</button>
+            <button onClick={onClose} className={zone ? zbtn("solidPrimary", "md") : "px-5 py-2 rounded-lg text-sm font-semibold bg-[#0168dd] text-white hover:bg-[#0057bb] transition-colors"}>Done</button>
           </div>
         </div>
       </div>
@@ -4712,7 +4812,27 @@ function V1iHowWeGetThereDialog({
   );
 }
 
-function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = false, v1i = false, v1j = false, v1k = false, v1l = false, v1m = false, condensed = false, onProviderClick }: { showStatusBreakdown: boolean; seasonalityOn: boolean; sideFund?: boolean; v1i?: boolean; v1j?: boolean; v1k?: boolean; v1l?: boolean; v1m?: boolean; condensed?: boolean; onProviderClick?: (providerId: string) => void }) {
+function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = false, v1i = false, v1j = false, v1k = false, v1l = false, v1m = false, zone = false, condensed = false, onProviderClick }: { showStatusBreakdown: boolean; seasonalityOn: boolean; sideFund?: boolean; v1i?: boolean; v1j?: boolean; v1k?: boolean; v1l?: boolean; v1m?: boolean; zone?: boolean; condensed?: boolean; onProviderClick?: (providerId: string) => void }) {
+  // Zone theme tokens (real Zone hexes) — applied only when `zone` is set (Final UI).
+  // These map the prototype's hand-picked greys to Zone's gray/primary scale.
+  const zc = {
+    border:    zone ? "border-[#e5e7eb]" : "border-[#e8eaf0]",        // gray-200 (card outline)
+    divider:   zone ? "border-[#e5e7eb]" : "border-[#f0f1f5]",        // gray-200 — same as the card outline
+    text:      zone ? "text-[#111827]"   : "text-[#1a1e35]",          // gray-900
+    muted:     zone ? "text-[#6b7280]"   : "text-[#8a8fa8]",          // gray-500
+    segTrack:  zone ? "bg-[#f3f4f6]"     : "bg-[#f0f1f5]",            // gray-100
+    hoverBg:   zone ? "hover:bg-[#f3f4f6]" : "hover:bg-[#eef0f4]",    // gray-100
+    hoverText: zone ? "hover:text-[#111827]" : "hover:text-[#1a1e35]",
+    active:    "bg-white text-[#0168dd] shadow-sm",                   // primary-700 (already Zone)
+    inactive:  zone ? "text-[#6b7280] hover:text-[#111827]" : "text-[#8a8fa8] hover:text-[#1a1e35]",
+    toggleOff: zone ? "bg-[#d1d5db]"     : "bg-[#c8cad4]",            // gray-300
+    toggleOn:  zone ? "bg-[#2aa7ff]"     : "bg-[#0168dd]",            // primary-500
+    // Zone SegmentedControls — connected bordered segments; active = indigo-50 / primary-700 / medium.
+    segWrap: "flex w-fit",
+    // sm size: h-8, 14px, active = medium + primary-700 + indigo-50, inactive = regular + gray-700.
+    // overflow-hidden clips the active bg to the rounded end corners (Zone "radio corner").
+    seg: (active: boolean) => `h-8 px-3 flex items-center justify-center whitespace-nowrap text-sm overflow-hidden transition-colors border border-l-0 first:border-l border-[#d1d5db] first:rounded-l-[6px] last:rounded-r-[6px] ${active ? "bg-[#eef2ff] text-[#0168dd] font-medium" : "text-[#374151] font-normal hover:bg-[#f9fafb]"}`,
+  };
   const [range, setRange]           = useState<V1eRange>(v1l || v1m ? "3M" : "1M"); // 1L/1M drop the 1M view
   const [showYoY, setShowYoY]       = useState(false);
   const [drillMonth, setDrillMonth] = useState<string | null>(null);
@@ -4807,6 +4927,21 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
   };
 
   type SegBar = { key: string; label: string; color: string };
+  // Final UI — recolor series to the Zone bar-chart palette, baking each swatch's opacity
+  // into the color. Confirmed/Projected/Planned map to their semantic anchors (same blue
+  // hue, intensity = certainty); provider/earning-type segments follow the sequence.
+  const zoneRecolor = (arr: SegBar[]): SegBar[] => {
+    if (!zone) return arr;
+    let seq = 0;
+    return arr.map(sb => {
+      if (sb.label === "Confirmed") return { ...sb, label: ZONE_CHART_TRACKED_LABEL, color: withAlpha(ZONE_CHART_CONFIRMED, ZONE_CHART_OP_CONFIRMED) };
+      if (sb.label === "Projected") return { ...sb, color: withAlpha(ZONE_CHART_PROJECTED, ZONE_CHART_OP_PROJECTED) };
+      if (sb.label === "Planned")   return { ...sb, color: withAlpha(ZONE_CHART_PLANNED, ZONE_CHART_OP_PLANNED) };
+      if (sb.label === "Paid" || sb.label === "Pending" || sb.label === "Failed") return sb; // keep status semantic
+      const i = (seq++) % ZONE_CHART.length;
+      return { ...sb, color: withAlpha(ZONE_CHART[i], ZONE_CHART_OPACITY[i]) };
+    });
+  };
   const statusSourceSegs: SegBar[] = [
     { key: "paid",       label: "Paid",      color: "#10b981" },
     { key: "pending",    label: "Pending",   color: "#f59e0b" },
@@ -4814,7 +4949,7 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
     { key: "tracked",    label: "Planned",   color: "#0168dd" },
     { key: "projected",  label: "Projected", color: "#85baf5" },
   ];
-  const weekSegBars: SegBar[] =
+  const weekSegBars: SegBar[] = zoneRecolor(
     segTab === "source"
       ? (showStatusBreakdown
           ? statusSourceSegs
@@ -4825,9 +4960,9 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
             ])
       : segTab === "channel"
       ? [{ key: "chFactual", label: "Confirmed", color: "#10b981" }, ...v1eChannelSeg.map(s => ({ key: s.key, label: s.label, color: s.color }))]
-      : v1eEarningSeg.map(s => ({ key: s.key, label: s.label, color: s.color }));
+      : v1eEarningSeg.map(s => ({ key: s.key, label: s.label, color: s.color })));
 
-  const monthSegBars: SegBar[] =
+  const monthSegBars: SegBar[] = zoneRecolor(
     segTab === "source"
       ? (v1m && showStatusBreakdown
           ? [
@@ -4840,7 +4975,7 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
           : [{ key: "actual", label: "Confirmed", color: "#10b981" }, { key: "projected", label: "Projected", color: "#85baf5" }])
       : segTab === "channel"
       ? v1eChannelSeg.map(s => ({ key: s.key, label: s.label, color: s.color }))
-      : v1eEarningSeg.map(s => ({ key: s.key, label: s.label, color: s.color }));
+      : v1eEarningSeg.map(s => ({ key: s.key, label: s.label, color: s.color })));
 
   const activeSegBars = isWeekly ? weekSegBars : monthSegBars;
 
@@ -4887,9 +5022,9 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
       /* ══ 1J TOP ROW — Estimated-to-fund as its own narrow card + brief card ══ */
       <div className="grid grid-cols-12 gap-6 items-stretch">
         {/* Left — Estimated to fund, sized like the old Fund-your-accounts card */}
-        <div className="col-span-3 bg-white rounded-lg border border-[#e8eaf0] flex flex-col">
-          <div className="px-4 h-[55px] flex items-center border-b border-[#e8eaf0] bg-white rounded-t-lg">
-            <p className="text-sm font-semibold text-[#1a1e35]">Estimated payout <span className="text-[#8a8fa8] font-normal">· June 2026</span></p>
+        <div data-component={zone ? "Estimated payout card" : undefined} className={`col-span-3 bg-white rounded-lg border ${zc.border} flex flex-col`}>
+          <div className={`px-4 flex items-center border-b bg-white rounded-t-lg ${zone ? "h-[60px] border-[#e5e7eb]" : "h-[55px] border-[#e8eaf0]"}`}>
+            <p className={zone ? "text-lg font-medium text-[#111827]" : "text-sm font-semibold text-[#1a1e35]"}>Estimated payout <span className="text-[#8a8fa8] font-normal whitespace-nowrap">· June 2026</span></p>
           </div>
           <div className={`px-4 py-4 flex-1 ${v1l ? "flex flex-col" : ""}`}>
             {/* non-1L keeps the explainer at the top; 1L moves it to the bottom */}
@@ -4899,7 +5034,7 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
               <p className="text-3xl font-bold text-[#1a1e35] tracking-tight leading-none">{fmt0(adjProj)}</p>
               {v1l ? (
                 /* 1L — Adjust sits to the right of the number */
-                <button onClick={() => { setEditingAdj(null); setShowAddDialog(true); }} className="flex-shrink-0 flex items-center gap-1 text-[11px] font-medium text-[#0168dd] border border-[#0168dd]/40 rounded-md px-2.5 py-1 hover:bg-[#0168dd]/5 transition-colors select-none"><SlidersHorizontal size={12} /> Adjust</button>
+                <button onClick={() => { setEditingAdj(null); setShowAddDialog(true); }} className={zone ? zbtn("outlinePrimary", "sm", "flex-shrink-0") : "flex-shrink-0 flex items-center gap-1 text-[11px] font-medium text-[#0168dd] border border-[#0168dd]/40 rounded-md px-2.5 py-1 hover:bg-[#0168dd]/5 transition-colors select-none"}><SlidersHorizontal size={zone ? 16 : 12} /> Adjust</button>
               ) : (
                 <div className="relative flex-shrink-0">
                   <button onClick={() => setDriversOpen(o => !o)} title="See details"
@@ -4958,10 +5093,10 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
             )}
             {v1l && !condensed && (
               /* 1L — the math, on-screen: base → auto adjustments → estimate → manual → total */
-              <div className="mt-4 pt-3 border-t border-[#f0f1f5] space-y-1.5">
+              <div className={`mt-4 pt-3 border-t border-[#f0f1f5] ${zone ? "space-y-2.5" : "space-y-1.5"}`}>
                 <div className="flex items-center justify-between gap-2 mb-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8]">How this adds up</p>
-                  <button onClick={() => setShowMathDialog(true)} className="inline-flex items-center gap-1 text-[10px] font-medium text-[#5b607a] hover:text-[#1a1e35] transition-colors select-none"><Info size={11} /> Details</button>
+                  <p className={zone ? "text-[11px] font-semibold uppercase tracking-wide text-[#6b7280]" : "text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8]"}>How this adds up</p>
+                  <button onClick={() => setShowMathDialog(true)} className={zone ? "text-[12px] font-medium text-[#8a8fa8] underline underline-offset-2 hover:text-[#1a1e35] transition-colors select-none" : "inline-flex items-center gap-1 text-[10px] font-medium text-[#5b607a] hover:text-[#1a1e35] transition-colors select-none"}>{zone ? "Details" : <><Info size={11} /> Details</>}</button>
                 </div>
                 <div className="flex items-baseline gap-3 text-[12px]">
                   <span className="w-16 flex-shrink-0 font-medium text-[#1a1e35] tabular-nums">{fmt0(v1AvgMonthly)}</span>
@@ -5010,7 +5145,7 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
         </div>
         {/* Right — Add to cover: date-card timeline + expandable provider detail */}
         {v1k
-          ? <V1kNextPaymentsCard onViewSchedule={() => setShowScheduleDialog(true)} v1l={v1l} condensed={condensed} onProviderClick={onProviderClick} />
+          ? <V1kNextPaymentsCard onViewSchedule={() => setShowScheduleDialog(true)} v1l={v1l} zone={zone} condensed={condensed} onProviderClick={onProviderClick} />
           : <V1jAddToCoverCard onViewSchedule={() => setShowScheduleDialog(true)} />}
       </div>
       ) : (
@@ -5018,7 +5153,7 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
       {/* ══ TOP ROW — summary card (9/12 + 3/12 fund card in the side-fund layout) ══ */}
       <div className={sideFund ? "grid grid-cols-12 gap-6 items-stretch" : "contents"}>
       {/* ══ SUMMARY CARD — fixed to the current month ══════════════════════ */}
-      <div className={`bg-white rounded-lg border border-[#e8eaf0] ${sideFund ? "col-span-9" : ""}`}>
+      <div data-component={zone ? "Funding schedule card" : undefined} className={`bg-white rounded-lg border ${zc.border} ${sideFund ? "col-span-9" : ""}`}>
         <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-[#e8eaf0] bg-white rounded-t-lg">
           <div className="flex items-center gap-2">
             <span className="text-sm font-semibold text-[#1a1e35]">Predictable Cash Flow</span>
@@ -5159,80 +5294,105 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
       )}
 
       {/* ══ CHART CARD — separate explorer with its own range control ══════ */}
-      <div className="bg-white rounded-lg border border-[#e8eaf0] overflow-hidden">
-        <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-[#e8eaf0] bg-white flex-wrap">
+      <div className={`bg-white rounded-lg border ${zc.border} overflow-hidden`}>
+        <div className={`flex items-center justify-between gap-3 border-b ${zone ? zc.divider : zc.border} bg-white flex-wrap ${zone ? "px-4 h-[60px]" : "px-5 py-3"}`}>
           <div>
-            <p className="text-sm font-semibold text-[#1a1e35]">Explore your payments over time</p>
-            <p className="text-[11px] text-[#8a8fa8]">Projected payouts ahead — browsing here doesn't change the numbers above.</p>
+            <p className={zone ? "text-lg font-medium text-[#111827]" : `text-sm font-semibold ${zc.text}`}>Explore your payments over time</p>
+            {!zone && <p className={`text-[11px] ${zc.muted}`}>Projected payouts ahead — browsing here doesn't change the numbers above.</p>}
           </div>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center bg-[#f0f1f5] rounded-md p-0.5">
+          <div className={`flex items-center flex-shrink-0 ${zone ? "gap-4" : "gap-3"}`}>
+            {/* Final UI — one control row in the header: view segmented · ranges · YoY toggle (last) */}
+            {zone && (
+              <div className={zc.segWrap}>
+                {([["source","Confirmed vs. projected"],["channel","Payout method"],["type","Payroll breakdown"]] as const).map(([id, label]) => (
+                  <button key={id} onClick={() => setSegTab(id)} className={zc.seg(segTab === id)}>{label}</button>
+                ))}
+              </div>
+            )}
+            <div className={zone ? zc.segWrap : `flex items-center ${zc.segTrack} rounded-md p-0.5`}>
               {((v1l || v1m ? ["3M","6M","12M"] : ["1M","3M","6M","12M"]) as V1eRange[]).map(r => (
                 <button key={r} onClick={() => applyRange(r)}
-                  className={`px-2.5 py-0.5 rounded text-[11px] font-medium transition-all ${range === r ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>
+                  className={zone ? zc.seg(range === r) : `px-2.5 py-0.5 rounded text-[11px] font-medium transition-all ${range === r ? zc.active : zc.inactive}`}>
                   {r}
                 </button>
               ))}
             </div>
-            <div className="relative flex items-center gap-1 text-[11px]">
+            {zone && !is1M && !drillMonth && (
+              /* Zone Toggle — size sm. Track w-8 h-4 rounded-[24px]; 12px white thumb,
+                 2px inset, 16px travel, no shadow. role=switch + data-state.
+                 Checked fill = primary-700 #0168dd per the Figma tokens (source of truth).
+                 NB: the shipped Rails component uses bg-blue-600 #2f8af4 — code/design drift. */
+              <button onClick={() => setShowYoY(p => !p)} role="switch" aria-checked={showYoY}
+                data-zone="toggle" data-size="sm" data-variant={showYoY ? "on" : "off"}
+                className="group flex items-center gap-2 text-[11px] select-none cursor-pointer flex-shrink-0">
+                <span data-state={showYoY ? "checked" : "unchecked"}
+                  className={`relative w-8 h-4 rounded-[24px] transition-colors flex-shrink-0 inline-flex ${showYoY ? "bg-[#0168dd]" : "bg-[#d1d5db]"}`}>
+                  <span className={`absolute top-[2px] left-[2px] w-3 h-3 rounded-full bg-white transition-transform ${showYoY ? "translate-x-[16px]" : "translate-x-0"}`} />
+                </span>
+                <span className={zc.muted}>vs last year</span>
+              </button>
+            )}
+            {!zone && <div className="relative flex items-center gap-1 text-[11px]">
               <button onClick={() => { if (is1M && !drillMonth) stepMonth(-1); }}
                 disabled={is1M && !drillMonth && oneMonthIdx <= 0}
-                className="p-0.5 rounded text-[#8a8fa8] hover:text-[#1a1e35] hover:bg-[#eef0f4] transition-colors disabled:opacity-30 disabled:hover:bg-transparent">{chevLeft}</button>
+                className={`p-0.5 rounded ${zc.muted} ${zc.hoverText} ${zc.hoverBg} transition-colors disabled:opacity-30 disabled:hover:bg-transparent`}>{chevLeft}</button>
               {drillMonth ? (
-                <span className="font-medium text-[#1a1e35] min-w-[130px] text-center">{drillMonth} — weekly</span>
+                <span className={`font-medium ${zc.text} min-w-[130px] text-center`}>{drillMonth} — weekly</span>
               ) : is1M ? (
                 <button onClick={() => setMonthPickerOpen(o => !o)}
-                  className="text-[11px] font-medium text-[#1a1e35] min-w-[130px] text-center hover:bg-[#eef0f4] rounded px-2 py-0.5 flex items-center justify-center gap-1 transition-colors">
+                  className={`text-[11px] font-medium ${zc.text} min-w-[130px] text-center ${zc.hoverBg} rounded px-2 py-0.5 flex items-center justify-center gap-1 transition-colors`}>
                   {v1eFullMonthLabel(oneMonth)}
-                  <ChevronDown size={11} className={`text-[#8a8fa8] transition-transform ${monthPickerOpen ? "rotate-180" : ""}`} />
+                  <ChevronDown size={11} className={`${zc.muted} transition-transform ${monthPickerOpen ? "rotate-180" : ""}`} />
                 </button>
               ) : (
-                <span className="font-medium text-[#1a1e35] min-w-[130px] text-center">{cfg.periodLabel}</span>
+                <span className={`font-medium ${zc.text} min-w-[130px] text-center`}>{cfg.periodLabel}</span>
               )}
               <button onClick={() => { if (is1M && !drillMonth) stepMonth(1); }}
                 disabled={is1M && !drillMonth && oneMonthIdx >= v1eMonthNav.length - 1}
-                className="p-0.5 rounded text-[#8a8fa8] hover:text-[#1a1e35] hover:bg-[#eef0f4] transition-colors disabled:opacity-30 disabled:hover:bg-transparent">{chevRight}</button>
+                className={`p-0.5 rounded ${zc.muted} ${zc.hoverText} ${zc.hoverBg} transition-colors disabled:opacity-30 disabled:hover:bg-transparent`}>{chevRight}</button>
               {monthPickerOpen && is1M && !drillMonth && (
                 <>
                   <div className="fixed inset-0 z-20" onClick={() => setMonthPickerOpen(false)} />
-                  <div className="absolute top-8 left-7 z-30 bg-white rounded-lg border border-[#e8eaf0] shadow-xl py-1 w-40 max-h-56 overflow-y-auto">
+                  <div className={`absolute top-8 left-7 z-30 bg-white rounded-lg border ${zc.border} shadow-xl py-1 w-40 max-h-56 overflow-y-auto`}>
                     {v1eMonthNav.map(b => (
                       <button key={b.label} onClick={() => { setOneMonth(b.label); setMonthPickerOpen(false); setLoading(true); setTimeout(() => setLoading(false), 550); }}
-                        className={`w-full text-left px-3 py-1.5 text-[11px] transition-colors ${b.label === oneMonth ? "bg-[#eef3ff] text-[#0168dd] font-medium" : "text-[#1a1e35] hover:bg-[#f5f6fa]"}`}>
+                        className={`w-full text-left px-3 py-1.5 text-[11px] transition-colors ${b.label === oneMonth ? "bg-[#eef3ff] text-[#0168dd] font-medium" : `${zc.text} hover:bg-[#f5f6fa]`}`}>
                         {v1eFullMonthLabel(b.label)}
                       </button>
                     ))}
                   </div>
                 </>
               )}
-            </div>
+            </div>}
           </div>
         </div>
       {/* ── Chart controls ───────────────────────────────────────────────── */}
-      <div className="px-5 pt-4 pb-0">
+      <div className={`${zone ? "px-4" : "px-5"} pt-4 pb-0`}>
         {/* Row 1 — distribution title (left) + segmentation tabs (right, segmented-pill style) */}
         <div className="flex items-start justify-between mb-3 gap-4">
           <div>
-            <p className="text-[11px] text-[#8a8fa8]">{chartCaption}</p>
+            <p className={`text-[11px] ${zc.muted}`}>{zone ? chartCaption.replace(" · click a bar for its weekly breakdown", "") : chartCaption}</p>
           </div>
-          <div className="flex items-center bg-[#f0f1f5] rounded-md p-0.5 flex-shrink-0">
-            {([["source","Confirmed vs. projected"],["channel","Payout method"],["type","Payroll breakdown"]] as const).map(([id, label]) => (
-              <button key={id} onClick={() => setSegTab(id)}
-                className={`px-2.5 py-1 rounded text-[10px] font-medium transition-all whitespace-nowrap ${segTab === id ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>
-                {label}
-              </button>
-            ))}
-          </div>
+          {!zone && (<div className="flex items-center gap-3 flex-shrink-0">
+            <div className={`flex items-center ${zc.segTrack} rounded-md p-0.5`}>
+              {([["source","Confirmed vs. projected"],["channel","Payout method"],["type","Payroll breakdown"]] as const).map(([id, label]) => (
+                <button key={id} onClick={() => setSegTab(id)}
+                  className={zone ? zc.seg(segTab === id) : `px-2.5 py-1 rounded text-[10px] font-medium transition-all whitespace-nowrap ${segTab === id ? zc.active : zc.inactive}`}>
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>)}
         </div>
 
-        {/* Chart-level control — YoY side-by-side comparison (month ranges only) */}
-        {!is1M && !drillMonth && (
+        {/* Chart-level control — YoY side-by-side comparison (month ranges only). Final UI moves it next to the segmented control above. */}
+        {!zone && !is1M && !drillMonth && (
           <div className="flex items-center justify-end my-3">
             <button onClick={() => setShowYoY(p => !p)} className="flex items-center gap-1.5 text-[10px] select-none cursor-pointer">
-              <span className={`relative w-7 h-4 rounded-full transition-colors flex-shrink-0 inline-flex ${showYoY ? "bg-[#0168dd]" : "bg-[#c8cad4]"}`}>
+              <span className={`relative w-7 h-4 rounded-full transition-colors flex-shrink-0 inline-flex ${showYoY ? zc.toggleOn : zc.toggleOff}`}>
                 <span className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow-sm transition-transform ${showYoY ? "translate-x-3.5" : "translate-x-0.5"}`} />
               </span>
-              <span className="text-[#8a8fa8]">vs last year</span>
+              <span className={zc.muted}>vs last year</span>
             </button>
           </div>
         )}
@@ -5264,15 +5424,18 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
         {loading ? (
           <ChartSkeleton bars={isWeekly ? 4 : (cfg.bars.length || 12)} />
         ) : isWeekly ? (
-          <ResponsiveContainer width="100%" height={150}>
-            <BarChart data={weekRows} barCategoryGap="30%" margin={{ top: 20, right: 4, left: 0, bottom: 4 }}>
-              <CartesianGrid vertical={false} stroke="#f0f1f5" />
-              <XAxis dataKey="dateLabel" tick={{ fontSize: 9, fill: "#8a8fa8" }} tickLine={false} axisLine={false} interval={0} />
-              <YAxis tick={{ fontSize: 10, fill: "#8a8fa8" }} tickFormatter={(v: number) => `$${Math.round(v/1000)}k`} axisLine={false} tickLine={false} width={36} />
+          <ResponsiveContainer width="100%" height={zone ? 220 : 150}>
+            <BarChart data={weekRows} barCategoryGap="30%" maxBarSize={zone ? 80 : undefined} margin={{ top: 20, right: 4, left: 0, bottom: 4 }}>
+              <CartesianGrid vertical={false} stroke={zone ? "#e5e7eb" : "#f0f1f5"} strokeDasharray={zone ? "5 5" : undefined} />
+              <XAxis dataKey="dateLabel" tick={{ fontSize: zone ? 12 : 9, fill: zone ? "#6b7280" : "#8a8fa8" }} tickLine={false} axisLine={false} interval={0} />
+              <YAxis tick={{ fontSize: zone ? 12 : 10, fill: zone ? "#6b7280" : "#8a8fa8" }} tickFormatter={(v: number) => `$${Math.round(v/1000)}k`} axisLine={false} tickLine={false} width={zone ? 40 : 36} />
               <Tooltip content={renderTip(weekSegBars)} cursor={{ fill: "#f5f6fa" }} />
               {weekSegBars.map((sb, idx) => (
                 <Bar key={sb.key} dataKey={sb.key} stackId="w" fill={sb.color} name={sb.label}
-                  radius={idx === weekSegBars.length - 1 ? [3, 3, 0, 0] : undefined}>
+                  stroke={zone ? "#ffffff" : undefined} strokeWidth={zone ? 2 : undefined}
+                  radius={zone
+                    ? [idx === weekSegBars.length - 1 ? 4 : 0, idx === weekSegBars.length - 1 ? 4 : 0, idx === 0 ? 4 : 0, idx === 0 ? 4 : 0]
+                    : (idx === weekSegBars.length - 1 ? [3, 3, 0, 0] : undefined)}>
                   {idx === weekSegBars.length - 1 && (
                     <LabelList dataKey="total" position="top" offset={6}
                       formatter={(v: number) => `$${Math.round(v / 1000)}k`}
@@ -5283,11 +5446,11 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
             </BarChart>
           </ResponsiveContainer>
         ) : (
-          <ResponsiveContainer width="100%" height={150}>
-            <ComposedChart data={monthlyRows} barCategoryGap="28%" margin={{ top: 20, right: 4, left: 0, bottom: 4 }}>
-              <CartesianGrid vertical={false} stroke="#f0f1f5" />
-              <XAxis dataKey="label" tick={{ fontSize: range === "12M" ? 9 : 10, fill: "#8a8fa8" }} tickLine={false} axisLine={false} interval={0} />
-              <YAxis tick={{ fontSize: 10, fill: "#8a8fa8" }} tickFormatter={(v: number) => `$${Math.round(v/1000)}k`} axisLine={false} tickLine={false} width={36} />
+          <ResponsiveContainer width="100%" height={zone ? 220 : 150}>
+            <ComposedChart data={monthlyRows} barCategoryGap="28%" maxBarSize={zone ? 80 : undefined} margin={{ top: 20, right: 4, left: 0, bottom: 4 }}>
+              <CartesianGrid vertical={false} stroke={zone ? "#e5e7eb" : "#f0f1f5"} strokeDasharray={zone ? "5 5" : undefined} />
+              <XAxis dataKey="label" tick={{ fontSize: zone ? (range === "12M" ? 10 : 12) : (range === "12M" ? 9 : 10), fill: zone ? "#6b7280" : "#8a8fa8" }} tickLine={false} axisLine={false} interval={0} />
+              <YAxis tick={{ fontSize: zone ? 12 : 10, fill: zone ? "#6b7280" : "#8a8fa8" }} tickFormatter={(v: number) => `$${Math.round(v/1000)}k`} axisLine={false} tickLine={false} width={zone ? 40 : 36} />
               <Tooltip cursor={{ fill: "#f5f6fa" }} content={({ active, payload }: any) => {
                 if (!active || !payload?.length) return null;
                 const d = payload[0]?.payload;
@@ -5318,7 +5481,10 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
               }} />
               {monthSegBars.map((sb, idx) => (
                 <Bar key={sb.key} dataKey={sb.key} stackId="m" fill={sb.color} name={sb.label}
-                  radius={idx === monthSegBars.length - 1 ? [3, 3, 0, 0] : undefined}
+                  stroke={zone ? "#ffffff" : undefined} strokeWidth={zone ? 2 : undefined}
+                  radius={zone
+                    ? [idx === monthSegBars.length - 1 ? 4 : 0, idx === monthSegBars.length - 1 ? 4 : 0, idx === 0 ? 4 : 0, idx === 0 ? 4 : 0]
+                    : (idx === monthSegBars.length - 1 ? [3, 3, 0, 0] : undefined)}
                   cursor="pointer" onClick={(d: any) => d?.label && setDrillMonth(d.label)}>
                   {monthlyRows.map((row, ri) => (
                     <Cell key={ri}
@@ -5332,7 +5498,7 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
                 </Bar>
               ))}
               {showYoY && (
-                <Bar dataKey="yoy" stackId="prev" fill="#c8cad4" name="Last year" radius={[3, 3, 0, 0]} isAnimationActive={false}>
+                <Bar dataKey="yoy" stackId="prev" fill="#c8cad4" name="Last year" radius={zone ? [4, 4, 0, 0] : [3, 3, 0, 0]} isAnimationActive={false}>
                   <LabelList dataKey="yoy" position="top" offset={6}
                     formatter={(v: number) => v > 0 ? `$${Math.round(v / 1000)}k` : ""}
                     style={{ fontSize: 9, fontWeight: 600, fill: "#a0a4b8" }} />
@@ -5345,15 +5511,15 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
         {/* Legend */}
         <div className="flex items-center gap-x-3 gap-y-1 mt-1.5 flex-wrap">
           {activeSegBars.map(sb => (
-            <span key={sb.key} className="flex items-center gap-1 text-[10px] text-[#8a8fa8]">
-              <span className="w-2 h-2 rounded-sm flex-shrink-0" style={{ background: sb.color }} />
+            <span key={sb.key} className={`flex items-center gap-1.5 ${zone ? "text-[12px] text-[#6b7280]" : "text-[10px] text-[#8a8fa8]"}`}>
+              <span className={`w-2 h-2 flex-shrink-0 ${zone ? "rounded-full" : "rounded-sm"}`} style={{ background: sb.color }} />
               {sb.label}
               {v1SegLegendInfo[sb.label] && <InfoTip text={v1SegLegendInfo[sb.label]} />}
             </span>
           ))}
           {showYoY && !isWeekly && (
-            <span className="flex items-center gap-1 text-[10px] text-[#8a8fa8]">
-              <span className="w-2 h-2 rounded-sm flex-shrink-0" style={{ background: "#c8cad4" }} />
+            <span className={`flex items-center gap-1.5 ${zone ? "text-[12px] text-[#6b7280]" : "text-[10px] text-[#8a8fa8]"}`}>
+              <span className={`w-2 h-2 flex-shrink-0 ${zone ? "rounded-full" : "rounded-sm"}`} style={{ background: "#c8cad4" }} />
               Last year (same month)
             </span>
           )}
@@ -5388,6 +5554,7 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
           base={v1AvgMonthly}
           currentProjection={editingAdj ? adjProj - (editingAdj.type === "add" ? editingAdj.dollars : -editingAdj.dollars) : adjProj}
           initial={editingAdj ?? undefined}
+          zone={zone}
         />
       )}
       <V1iHowWeGetThereDialog
@@ -5398,6 +5565,7 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
         seasonPct={seasonPct}
         adjPct={adjPct} total={adjProj}
         manualAdjustments={manualAdjustments}
+        zone={zone}
       />
     </>
   );
@@ -5857,6 +6025,43 @@ function Version1N({ showStatusBreakdown, seasonalityOn }: { showStatusBreakdown
   );
 }
 
+// Final UI — exact copy of 1N; the version we'll iterate the final shell/styling on.
+function VersionFinalUI({ showStatusBreakdown, seasonalityOn }: { showStatusBreakdown: boolean; seasonalityOn: boolean }) {
+  const dense = false;
+  const [bottomTab, setBottomTab] = useState<"history"|"future">("history");
+  const [futureProvider, setFutureProvider] = useState<string>("all");
+  const [futurePeriod, setFuturePeriod] = useState<string>("June 2026");
+  const activityRef = useRef<HTMLDivElement>(null);
+
+  const openFuture = (providerId: string) => {
+    setFutureProvider(providerId);
+    setFuturePeriod(v1mCurrentPeriod(providerId));
+    setBottomTab("future");
+    setTimeout(() => activityRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 0);
+  };
+
+  return (
+    <div className="px-6 pb-5 space-y-6" style={{ fontFamily: '"Roboto", "Helvetica Neue", Helvetica, Arial, sans-serif' }}>
+      {/* Zone page header — real structure from hubstaff-server (shadow-md, sticky, h2 text-2xl font-light) */}
+      <header className="bg-white shadow-md sticky top-12 z-20 -mx-6 px-6">
+        <div className="flex justify-between items-center h-8 pt-3 pb-4 box-content">
+          <h2 className="text-2xl font-light text-[#111827]">Payments report</h2>
+        </div>
+      </header>
+      <V1gPredictivePanel showStatusBreakdown={showStatusBreakdown} seasonalityOn={seasonalityOn} v1i v1j v1k v1l v1m zone condensed={dense} onProviderClick={openFuture} />
+      <div ref={activityRef}>
+        <p className="text-base font-semibold text-[#111827] mb-3">Payment Activity</p>
+        <div className="flex items-center gap-0 mb-6 border-b border-[#e5e7eb]">
+          {([["history","Payment History"],["future","Future Tracked So Far"]] as const).map(([id, label]) => (
+            <button key={id} onClick={() => setBottomTab(id)} className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${bottomTab === id ? "border-[#0168dd] text-[#0168dd]" : "border-transparent text-[#6b7280] hover:text-[#111827]"}`}>{label}</button>
+          ))}
+        </div>
+        {bottomTab === "history" ? <V1PaymentHistory /> : <V1mFutureTracked provider={futureProvider} period={futurePeriod} onProviderChange={setFutureProvider} onPeriodChange={setFuturePeriod} grouped zone />}
+      </div>
+    </div>
+  );
+}
+
 // item E — in-1L "team payment, in advance": how the provider's number was built + who's paid.
 function V1lFutureDetail({ providerId, onBack }: { providerId: string; onBack: () => void }) {
   const [showHow, setShowHow] = useState(false);
@@ -6108,7 +6313,7 @@ function V1lFutureDetail({ providerId, onBack }: { providerId: string; onBack: (
 }
 
 // item E for 1M — "Future Tracked So Far": all providers in one filterable view.
-function V1mFutureTracked({ provider, period, onProviderChange, onPeriodChange, grouped = false }: { provider: string; period: string; onProviderChange: (id: string) => void; onPeriodChange: (label: string) => void; grouped?: boolean }) {
+function V1mFutureTracked({ provider, period, onProviderChange, onPeriodChange, grouped = false, zone = false }: { provider: string; period: string; onProviderChange: (id: string) => void; onPeriodChange: (label: string) => void; grouped?: boolean; zone?: boolean }) {
   const [showHow, setShowHow] = useState(false);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(0);
@@ -6162,9 +6367,9 @@ function V1mFutureTracked({ provider, period, onProviderChange, onPeriodChange, 
 
   // Breakdown-bar lenses (this period's total, not a time series)
   const sourceSegs = [
-    { label: "Confirmed",   value: confirmed, color: "#10b981" },
-    { label: "Planned",     value: planned,   color: "#0168dd" },
-    { label: "~Projected",  value: projected, color: "#85baf5", striped: true },
+    { label: zone ? "Tracked" : "Confirmed", value: confirmed, color: zone ? withAlpha("#0e9f6e", 0.8) : "#10b981" },
+    { label: "Planned",     value: planned,   color: zone ? withAlpha("#0168dd", 0.8) : "#0168dd" },
+    { label: "~Projected",  value: projected, color: zone ? withAlpha("#7fcaff", 0.7) : "#85baf5", striped: !zone },
   ].filter(s => s.value > 0);
   const etSegColor: Record<string, string> = { "Fixed pay": "#6366f1", Hourly: "#0168dd", "PTO / Holiday": "#38bdf8", Additions: "#10b981", Overtime: "#f59e0b" };
   const typeOrder = ["Fixed pay", "Hourly", "PTO / Holiday", "Additions", "Overtime"] as const;
@@ -6220,8 +6425,8 @@ function V1mFutureTracked({ provider, period, onProviderChange, onPeriodChange, 
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button className="flex items-center gap-1.5 text-xs border border-[#e8eaf0] rounded px-3 py-2 text-[#1a1e35] hover:bg-[#f5f6fa] transition-colors"><Download size={12} /> Export</button>
-          {!isAll && <button className="flex items-center gap-1.5 text-xs bg-[#0168dd] text-white rounded px-3 py-2 hover:bg-[#0057bb] transition-colors"><ExternalLink size={12} /> Go to {provName}</button>}
+          <button className={zone ? zbtn("outlineGray", "sm") : "flex items-center gap-1.5 text-xs border border-[#e8eaf0] rounded px-3 py-2 text-[#1a1e35] hover:bg-[#f5f6fa] transition-colors"}><Download size={zone ? 16 : 12} /> Export</button>
+          {!isAll && <button className={zone ? zbtn("solidPrimary", "sm") : "flex items-center gap-1.5 text-xs bg-[#0168dd] text-white rounded px-3 py-2 hover:bg-[#0057bb] transition-colors"}><ExternalLink size={zone ? 16 : 12} /> Go to {provName}</button>}
         </div>
       </div>
 
@@ -6248,14 +6453,16 @@ function V1mFutureTracked({ provider, period, onProviderChange, onPeriodChange, 
           <div className="flex-shrink-0">
             <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8]">Total projected</p>
             <p className="text-2xl font-bold text-[#1a1e35] tracking-tight mt-0.5">{fmt2(total)}</p>
-            <button onClick={() => setShowHow(true)} className="inline-flex items-center gap-1 text-[11px] font-medium text-[#8a8fa8] hover:text-[#1a1e35] transition-colors mt-1"><Info size={11} /> How we get there</button>
+            <button onClick={() => setShowHow(true)} className={zone ? zbtn("ghostGray", "sm", "mt-1") : "inline-flex items-center gap-1 text-[11px] font-medium text-[#8a8fa8] hover:text-[#1a1e35] transition-colors mt-1"}><Info size={zone ? 16 : 11} /> How we get there</button>
           </div>
           <div className="flex-1 min-w-0 border-l border-[#f0f1f5] pl-6">
             <div className="flex items-center justify-between gap-3 mb-2">
               <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8]">Breakdown</p>
-              <div className="flex bg-[#f0f1f5] rounded-md p-0.5">
+              <div className={zone ? "flex w-fit" : "flex bg-[#f0f1f5] rounded-md p-0.5"}>
                 {([["source","Confirmed vs. projected"],["type","Payroll breakdown"]] as const).map(([k, label]) => (
-                  <button key={k} onClick={() => setSegLens(k)} className={`px-2.5 py-0.5 rounded text-[11px] font-medium transition-all ${segLens === k ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>{label}</button>
+                  <button key={k} onClick={() => setSegLens(k)} className={zone
+                    ? `h-8 px-3 flex items-center justify-center whitespace-nowrap text-sm overflow-hidden transition-colors border border-l-0 first:border-l border-[#d1d5db] first:rounded-l-[6px] last:rounded-r-[6px] ${segLens === k ? "bg-[#eef2ff] text-[#0168dd] font-medium" : "text-[#374151] font-normal hover:bg-[#f9fafb]"}`
+                    : `px-2.5 py-0.5 rounded text-[11px] font-medium transition-all ${segLens === k ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>{label}</button>
                 ))}
               </div>
             </div>
@@ -6310,8 +6517,8 @@ function V1mFutureTracked({ provider, period, onProviderChange, onPeriodChange, 
             <button onClick={() => setCollapsed(anyExpanded ? new Set(rows.map(m => m.name)) : new Set())} className="flex items-center gap-1 text-[11px] text-[#0168dd] hover:opacity-80">{anyExpanded ? "Collapse all" : "Expand all"}</button>
             <span className="w-px h-3.5 bg-[#e8eaf0]" />
           </>}
-          <button className="flex items-center gap-1 text-[11px] text-[#0168dd] hover:opacity-80"><Filter size={12} /> Filters</button>
-          <button className="flex items-center gap-1 text-[11px] text-[#0168dd] hover:opacity-80"><Columns size={12} /> Columns</button>
+          <button className={zone ? zbtn("ghostPrimary", "sm") : "flex items-center gap-1 text-[11px] text-[#0168dd] hover:opacity-80"}><Filter size={zone ? 16 : 12} /> Filters</button>
+          <button className={zone ? zbtn("ghostPrimary", "sm") : "flex items-center gap-1 text-[11px] text-[#0168dd] hover:opacity-80"}><Columns size={zone ? 16 : 12} /> Columns</button>
         </div>
         <div className="overflow-x-auto">
         {grouped ? (
@@ -6463,7 +6670,7 @@ function V1mFutureTracked({ provider, period, onProviderChange, onPeriodChange, 
               <p className="text-[11px] text-[#a0a4b8] leading-snug">{fmt0(total)} is an estimate from your history — not a guaranteed figure.</p>
             </div>
             <div className="flex items-center justify-end px-6 py-4 border-t border-[#e8eaf0] flex-shrink-0">
-              <button onClick={() => setShowHow(false)} className="px-5 py-2 rounded-lg text-sm font-semibold bg-[#0168dd] text-white hover:bg-[#0057bb] transition-colors">Done</button>
+              <button onClick={() => setShowHow(false)} className={zone ? zbtn("solidPrimary", "md") : "px-5 py-2 rounded-lg text-sm font-semibold bg-[#0168dd] text-white hover:bg-[#0057bb] transition-colors"}>Done</button>
             </div>
           </div>
         </div>
@@ -6505,7 +6712,7 @@ function V1mFutureTracked({ provider, period, onProviderChange, onPeriodChange, 
               )}
             </div>
             <div className="flex items-center justify-end px-6 py-4 border-t border-[#e8eaf0] flex-shrink-0">
-              <button onClick={() => setShowBreakdownInfo(false)} className="px-5 py-2 rounded-lg text-sm font-semibold bg-[#0168dd] text-white hover:bg-[#0057bb] transition-colors">Done</button>
+              <button onClick={() => setShowBreakdownInfo(false)} className={zone ? zbtn("solidPrimary", "md") : "px-5 py-2 rounded-lg text-sm font-semibold bg-[#0168dd] text-white hover:bg-[#0057bb] transition-colors"}>Done</button>
             </div>
           </div>
         </div>
@@ -6905,10 +7112,100 @@ const v2CycleForProvider: Record<string, string> = {
 
 // ─── Root ──────────────────────────────────────────────────────────────────────
 
+// Version list for the Final UI floating switcher (the template shell has no switcher).
+const FINAL_VERSIONS: [string, string][] = [["v1","1"],["v1c","1C"],["v1d","1D"],["v1e","1E"],["v1f","1F"],["v1g","1G"],["v1h","1H"],["v1i","1I"],["v1j","1J"],["v1k","1K"],["v1l","1L"],["v1m","1M"],["v1n","1N"],["final","Final UI"],["v2","2"]];
+
+// Final UI — wraps the payments report in the real Hubstaff shell template
+// (left panel + top header + design annotations), vendored from the design repo
+// and served from /public/hubstaff-template. The shell injects fixed chrome into
+// <body> and offsets #shell-content; there is no teardown API, so we clean it up
+// manually when leaving this version.
+function FinalUIShell({ children, onVersionChange }: { children: ReactNode; onVersionChange: (v: string) => void }) {
+  useEffect(() => {
+    const base = (import.meta as any).env.BASE_URL as string;
+    let cancelled = false;
+
+    [
+      "https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600&display=swap",
+      "https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@18,400,0,0;24,400,0,0&display=swap",
+    ].forEach(href => {
+      if (document.querySelector(`link[data-hsfont="${href}"]`)) return;
+      const l = document.createElement("link"); l.rel = "stylesheet"; l.href = href; l.dataset.hsfont = href;
+      document.head.appendChild(l);
+    });
+
+    const loadScript = (src: string) => new Promise<void>((res, rej) => {
+      const found = document.querySelector(`script[data-hs="${src}"]`) as (HTMLScriptElement & { _loaded?: boolean }) | null;
+      if (found) { if (found._loaded) res(); else found.addEventListener("load", () => res()); return; }
+      const s = document.createElement("script") as HTMLScriptElement & { _loaded?: boolean };
+      s.src = src; s.dataset.hs = src;
+      s.addEventListener("load", () => { s._loaded = true; res(); });
+      s.addEventListener("error", () => rej(new Error("failed to load " + src)));
+      document.body.appendChild(s);
+    });
+
+    (async () => {
+      await loadScript(base + "hubstaff-template/hubstaff-shell.js");
+      if (cancelled) return;
+      const HS = (window as any).HubstaffShell;
+      if (HS && !document.getElementById("hs-topbar")) HS.init({ activeItem: "payments", logoHref: "#" });
+      await loadScript(base + "hubstaff-template/design-annotations.js");
+      await loadScript(base + "hubstaff-template/design-annotations.data.js");
+      if (cancelled) return;
+      const DA = (window as any).DesignAnnotations;
+      const data = (window as any).DESIGN_ANNOTATIONS_DATA;
+      if (DA && data && !(window as any).__daInited) {
+        DA.init({ pages: data.pages, annotations: data.annotations, mount: "#shell-content", topOffset: 52, trigger: ["contextmenu", "button"], taskCenter: { anchor: ".hs-timer", position: "after" } });
+        (window as any).__daInited = true;
+      }
+      // Dev Mode inspector — sits next to the Design tasks control in the top bar.
+      await loadScript(base + "hubstaff-template/dev-mode.js");
+      if (cancelled) return;
+      const DM = (window as any).DevMode;
+      if (DM && !(window as any).__dmInited) {
+        DM.init({ topOffset: 52, toggleAnchor: ".hs-timer" });
+        (window as any).__dmInited = true;
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      try { (window as any).DesignAnnotations?.destroy?.(); } catch { /* noop */ }
+      try { (window as any).DevMode?.destroy?.(); } catch { /* noop */ }
+      (window as any).__daInited = false;
+      (window as any).__dmInited = false;
+      document.querySelectorAll('[id^="hs-"]').forEach(el => el.remove());
+      document.querySelectorAll("style").forEach(st => { if (st.textContent && st.textContent.includes("#hs-sidebar")) st.remove(); });
+      document.querySelectorAll('[class^="da-"],[id^="da-"],[class^="dm-"],[id^="dm-"]').forEach(el => el.remove());
+      document.body.classList.remove("hs-expanded");
+    };
+  }, []);
+
+  return (
+    <>
+      <div id="shell-content">{children}</div>
+      <div className="fixed bottom-4 left-4 z-[9999] flex items-center gap-1.5 bg-white/95 backdrop-blur border border-[#e8eaf0] rounded-lg shadow-lg px-2.5 py-1.5">
+        <span className="text-[9px] font-semibold uppercase tracking-widest text-[#8a8fa8]">Version</span>
+        <select value="final" onChange={e => onVersionChange(e.target.value)} className="text-[11px] font-medium text-[#1a1e35] bg-transparent outline-none cursor-pointer">
+          {FINAL_VERSIONS.map(([v, label]) => <option key={v} value={v}>{label}</option>)}
+        </select>
+      </div>
+    </>
+  );
+}
+
 export default function App() {
-  const [version, setVersion] = useState<"v1"|"v1c"|"v1d"|"v1e"|"v1f"|"v1g"|"v1h"|"v1i"|"v1j"|"v1k"|"v1l"|"v1m"|"v1n"|"v2">("v1n");
+  const [version, setVersion] = useState<"v1"|"v1c"|"v1d"|"v1e"|"v1f"|"v1g"|"v1h"|"v1i"|"v1j"|"v1k"|"v1l"|"v1m"|"v1n"|"final"|"v2">("final");
   const [showStatusBreakdown, setShowStatusBreakdown] = useState(false);
   const [seasonalityOn, setSeasonalityOn] = useState(true);
+
+  if (version === "final") {
+    return (
+      <FinalUIShell onVersionChange={(v) => setVersion(v as typeof version)}>
+        <VersionFinalUI showStatusBreakdown={showStatusBreakdown} seasonalityOn={seasonalityOn} />
+      </FinalUIShell>
+    );
+  }
 
   return (
     <div className="flex h-screen w-full overflow-hidden font-[Inter,sans-serif]">
@@ -6952,6 +7249,7 @@ export default function App() {
               <button onClick={() => setVersion("v1l")} className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${version === "v1l" ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>1L</button>
               <button onClick={() => setVersion("v1m")} className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${version === "v1m" ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>1M</button>
               <button onClick={() => setVersion("v1n")} className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${version === "v1n" ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>1N</button>
+              <button onClick={() => setVersion("final")} className={`px-3 py-1 rounded-md text-xs font-semibold transition-all whitespace-nowrap ${(version as string) === "final" ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>Final UI</button>
               <button onClick={() => setVersion("v2")}  className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${version === "v2"  ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>2</button>
             </div>
             <div className="flex items-center gap-2 text-xs text-[#8a8fa8]"><Clock size={13} /><span>0:00:00</span></div>
