@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, Fragment, type ReactNode } from "react";
+import { useState, useEffect, useRef, Fragment, createContext, useContext, type ReactNode } from "react";
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
@@ -9,9 +9,9 @@ import {
   Users, CalendarDays, Pencil, LayoutDashboard, ClipboardList,
   Activity, Lightbulb, FolderKanban, BarChart2, UserCircle2,
   Settings, Wallet, MonitorSmartphone, Plus, TrendingUp,
-  TrendingDown, MoreHorizontal, Columns, X,
+  TrendingDown, MoreHorizontal, Columns, Columns3, X,
   Banknote, Gift, Umbrella, Minus, AlertTriangle, SlidersHorizontal, Info,
-  FileSpreadsheet, Filter, ExternalLink,
+  FileSpreadsheet, Filter, ListFilter, ExternalLink,
 } from "lucide-react";
 
 const fmt0 = (n: number) =>
@@ -47,7 +47,7 @@ const v1EarningWeekData = [
   { week: "Week 4", dateLabel: "Jun 23–30", hourly: 6200, fixed: 7400, pto: 1200, bonus: 2800, additions: 800 },
 ];
 const v1EarningColors: Record<string, string> = {
-  hourly: "#0168dd", fixed: "#3d8ae8", pto: "#85baf5", bonus: "#f59e0b", additions: "#10b981",
+  hourly: "#0168dd", fixed: "#3d8ae8", pto: "#85baf5", bonus: "#f59e0b", additions: "#0e9f6e",
 };
 const v1EarningLabels: Record<string, string> = {
   hourly: "Hourly pay", fixed: "Fixed pay", pto: "PTO & Holidays", bonus: "Bonuses", additions: "Additions",
@@ -55,9 +55,9 @@ const v1EarningLabels: Record<string, string> = {
 
 const v1Providers = [
   { name: "Wise",     color: "#0168dd", members: 22, monthly: 24200, weeks: [4100, 7800, 4100, 8200] },
-  { name: "Payoneer", color: "#0ea5a0", members: 15, monthly: 16100, weeks: [2700, 4900, 2700, 5800] },
+  { name: "Payoneer", color: "#0e9f6e", members: 15, monthly: 16100, weeks: [2700, 4900, 2700, 5800] },
   { name: "Deel",     color: "#f59e0b", members: 8,  monthly: 8600,  weeks: [1400, 2600, 1400, 3200] },
-  { name: "Export",   color: "#8a8fa8", members: 5,  monthly: 3800,  weeks: [900,  1200, 900,  800]  },
+  { name: "Export",   color: "#6b7280", members: 5,  monthly: 3800,  weeks: [900,  1200, 900,  800]  },
 ];
 const v1ProviderTotal    = v1Providers.reduce((s, p) => s + p.monthly, 0);
 const v1ProviderWeekData = ["Week 1","Week 2","Week 3","Week 4"].map((w, i) => ({
@@ -71,7 +71,7 @@ const v1EarningPie = [
   { name: "Fixed pay",      value: 14800, color: "#3d8ae8" },
   { name: "Bonuses",        value: 5800,  color: "#f59e0b" },
   { name: "PTO & Holidays", value: 4200,  color: "#85baf5" },
-  { name: "Additions",      value: 2900,  color: "#10b981" },
+  { name: "Additions",      value: 2900,  color: "#0e9f6e" },
   { name: "Deductions",     value: 1400,  color: "#ef4444" },
 ];
 const v1EarningPieTotal = v1EarningPie.reduce((s, e) => s + e.value, 0);
@@ -114,7 +114,7 @@ const v1OwedDaily = [
 const v1OwedRows = [
   { date: "Tue, Jun 16, 2026", members: [
     { name: "Adrian Goia",                avatar: "AG", color: "#0168dd", rate: "No rate set", regular: "8:00:00", overtime: "—", total: "8:00:00", amount: 0 },
-    { name: "alex.schutte@hubstaff.com S", avatar: "AS", color: "#10b981", rate: "No rate set", regular: "8:00:00", overtime: "—", total: "8:00:00", amount: 0 },
+    { name: "alex.schutte@hubstaff.com S", avatar: "AS", color: "#0e9f6e", rate: "No rate set", regular: "8:00:00", overtime: "—", total: "8:00:00", amount: 0 },
     { name: "Alex Yarotsky",               avatar: "AY", color: "#f59e0b", rate: "No rate set", regular: "8:00:00", overtime: "—", total: "8:00:00", amount: 0 },
   ]},
   { date: "Wed, Jun 17, 2026", members: [
@@ -123,9 +123,9 @@ const v1OwedRows = [
   ]},
 ];
 
-const v1AvatarColors: Record<string, string> = { AG: "#0168dd", MK: "#e5764e", JO: "#4e9ee5", AS: "#10b981", AY: "#f59e0b" };
+const v1AvatarColors: Record<string, string> = { AG: "#0168dd", MK: "#e5764e", JO: "#2f8af4", AS: "#0e9f6e", AY: "#f59e0b" };
 const v1CycleBadge: Record<string, [string,string]> = {
-  Weekly:      ["#d1fae5","#059669"],
+  Weekly:      ["#d1fae5","#0e9f6e"],
   "Bi-weekly": ["#dbeafe","#2563eb"],
   Monthly:     ["#ede9fe","#7c3aed"],
 };
@@ -156,7 +156,7 @@ const v2Cycles = [
     projectedBreak: { hourly: 1200 },
   },
   {
-    id: "FP-EXP-001",   provider: "Export",   cycle: "Monthly",   cycleColor: "#8a8fa8",
+    id: "FP-EXP-001",   provider: "Export",   cycle: "Monthly",   cycleColor: "#6b7280",
     dateRange: "Jun 1–30, 2026",  daysLeft: 4, pctTracked: 82, members: 3,
     confirmed: 400,  planned: 1800, projected: 300,  total: 2500,
     confirmedBreak: { hourlyTracked: 400, overtime: 0, pastPTO: 0 },
@@ -178,7 +178,7 @@ const v2HistoryPayments = [
   { id: "ID00304", name: "Global Payroll", range: "May 12–18, 2026",     members: 44, amount: 28900.00, status: "Paid",     paidOn: "May 19, 2026", provider: "Deel"     },
   { id: "ID00301", name: "Team Payment",   range: "May 5–11, 2026",      members: 45, amount: 31200.00, status: "Paid",     paidOn: "May 12, 2026", provider: "Payoneer" },
 ];
-const v2ProviderColors: Record<string, string> = { Wise: "#0168dd", Payoneer: "#0ea5a0", Deel: "#f59e0b", Export: "#8a8fa8" };
+const v2ProviderColors: Record<string, string> = { Wise: "#0168dd", Payoneer: "#0e9f6e", Deel: "#f59e0b", Export: "#6b7280" };
 
 const v2WeeklyMembers = [
   {
@@ -199,7 +199,7 @@ const v2WeeklyMembers = [
   },
   {
     name: "Aurora Arjomilla", email: "aurora.arjomilla@hubstaff.com",
-    avatar: "AA", color: "#10b981", total: 1080,
+    avatar: "AA", color: "#0e9f6e", total: 1080,
     items: [
       { label: "Tracked hours",      sub: "Timesheets", hours: "28:00",  rate: "$22.00/hr", status: "Confirmed" as const, amount: 616 },
       { label: "Scheduled addition", sub: "Adjustment", hours: "—",      rate: "—",         status: "Planned"   as const, amount: 200 },
@@ -208,7 +208,7 @@ const v2WeeklyMembers = [
   },
   {
     name: "Marcus Chen", email: "m.chen@hubstaff.com",
-    avatar: "MC", color: "#0ea5a0", total: 1000,
+    avatar: "MC", color: "#0e9f6e", total: 1000,
     items: [
       { label: "Tracked hours",      sub: "Timesheets", hours: "20:00",  rate: "$25.00/hr", status: "Confirmed" as const, amount: 500 },
       { label: "Estimated remaining",sub: "Timesheets", hours: "~20:00", rate: "$25.00/hr", status: "Projected" as const, amount: 500 },
@@ -239,13 +239,13 @@ const v1lWiseMembers = [
   ...v2WeeklyMembers,
   ...[
     { name: "Sofia Rossi",  avatar: "SR", color: "#e5764e", total: 620 },
-    { name: "Liam OBrien",  avatar: "LO", color: "#0ea5a0", total: 640 },
+    { name: "Liam OBrien",  avatar: "LO", color: "#0e9f6e", total: 640 },
     { name: "Yuki Tanaka",  avatar: "YT", color: "#8b5cf6", total: 600 },
     { name: "Noah Kim",     avatar: "NK", color: "#0168dd", total: 660 },
-    { name: "Emma Novak",   avatar: "EN", color: "#10b981", total: 580 },
+    { name: "Emma Novak",   avatar: "EN", color: "#0e9f6e", total: 580 },
     { name: "Diego Santos", avatar: "DS", color: "#f59e0b", total: 700 },
     { name: "Chloe Dubois", avatar: "CD", color: "#e5764e", total: 610 },
-    { name: "Omar Haddad",  avatar: "OH", color: "#0ea5a0", total: 645 },
+    { name: "Omar Haddad",  avatar: "OH", color: "#0e9f6e", total: 645 },
     { name: "Zara Ali",     avatar: "ZA", color: "#8b5cf6", total: 540 },
   ].map(m => {
     const tracked = Math.round(m.total * 0.6);
@@ -277,11 +277,11 @@ type V1lRow = Partial<Record<V1lEt, number>>;
 // hourly OR salaried, plus scheduled extras. Sums to the authoritative col totals.
 const v1lMatrixMembers: { name: string; avatar: string; color: string; confirmed: V1lRow; planned: V1lRow; rate?: number; hours?: number }[] = [
   // Salaried — fixed pay dominant, plus scheduled extras.
-  { name: "Marcus Chen",      avatar: "MC", color: "#0ea5a0", confirmed: {},                              planned: { "Fixed pay": 8500, Deductions: 300 } },
-  { name: "Aurora Arjomilla", avatar: "AA", color: "#10b981", confirmed: {},                              planned: { "Fixed pay": 6800, "PTO / Holiday": 600, Additions: 400 } },
-  { name: "Liam O'Brien",     avatar: "LO", color: "#0ea5a0", confirmed: {},                              planned: { "Fixed pay": 7000, Additions: 600 } },
+  { name: "Marcus Chen",      avatar: "MC", color: "#0e9f6e", confirmed: {},                              planned: { "Fixed pay": 8500, Deductions: 300 } },
+  { name: "Aurora Arjomilla", avatar: "AA", color: "#0e9f6e", confirmed: {},                              planned: { "Fixed pay": 6800, "PTO / Holiday": 600, Additions: 400 } },
+  { name: "Liam O'Brien",     avatar: "LO", color: "#0e9f6e", confirmed: {},                              planned: { "Fixed pay": 7000, Additions: 600 } },
   { name: "Priya Nair",       avatar: "PN", color: "#e5764e", confirmed: {},                              planned: { "Fixed pay": 6200, "PTO / Holiday": 500 } },
-  { name: "Emma Novak",       avatar: "EN", color: "#10b981", confirmed: {},                              planned: { "Fixed pay": 5800, Additions: 500 } },
+  { name: "Emma Novak",       avatar: "EN", color: "#0e9f6e", confirmed: {},                              planned: { "Fixed pay": 5800, Additions: 500 } },
   { name: "Diego Santos",     avatar: "DS", color: "#f59e0b", confirmed: {},                              planned: { "Fixed pay": 5400 } },
   // Hourly — tracked hours (rate × hours), plus overtime / scheduled extras.
   { name: "Alex Yarotsky",    avatar: "AY", color: "#f59e0b", confirmed: { Hourly: 1600, Overtime: 180 }, planned: { "PTO / Holiday": 320 }, rate: 40, hours: 40 },
@@ -290,7 +290,7 @@ const v1lMatrixMembers: { name: string; avatar: string; color: string; confirmed
   { name: "Full Tseg",        avatar: "FT", color: "#0168dd", confirmed: { Hourly: 1440 },                planned: { Additions: 260 },       rate: 45, hours: 32 },
   { name: "Zara Ali",         avatar: "ZA", color: "#8b5cf6", confirmed: { Hourly: 1326 },                planned: { "PTO / Holiday": 240 }, rate: 51, hours: 26 },
   { name: "Sofia Rossi",      avatar: "SR", color: "#e5764e", confirmed: { Hourly: 1248 },                planned: { Deductions: 150 },      rate: 48, hours: 26 },
-  { name: "Omar Haddad",      avatar: "OH", color: "#0ea5a0", confirmed: { Hourly: 1170, Overtime: 120 },  planned: {},                      rate: 45, hours: 26 },
+  { name: "Omar Haddad",      avatar: "OH", color: "#0e9f6e", confirmed: { Hourly: 1170, Overtime: 120 },  planned: {},                      rate: 45, hours: 26 },
   { name: "Chloe Dubois",     avatar: "CD", color: "#e5764e", confirmed: { Hourly: 1144, Overtime: 140 },  planned: {},                      rate: 44, hours: 26 },
   { name: "Yuki Tanaka",      avatar: "YT", color: "#3d8ae8", confirmed: { Hourly: 988 },                 planned: { Additions: 180 },       rate: 38, hours: 26 },
 ];
@@ -315,7 +315,7 @@ const v1lEtLabel: Record<V1lEt, string> = {
 // June fund schedule: Wise 56k + PayPal 44k + Deel 20k + Export 12k + Bitwage 10k = 142k.
 type V1mMember = { name: string; avatar: string; color: string; provider: string; confirmed: V1lRow; planned: V1lRow; rate?: number; hours?: number };
 const v1mFutureProviderList = [
-  { id: "all",     name: "All providers" },
+  { id: "all",     name: "All payout methods" },
   { id: "wise",    name: "Wise" },
   { id: "paypal",  name: "PayPal" },
   { id: "deel",    name: "Deel" },
@@ -342,29 +342,29 @@ const v1mCurrentPeriod = (providerId: string) => {
 const v1mFutureMembers: V1mMember[] = [
   ...v1lMatrixMembers.map(m => ({ ...m, provider: "wise" })),
   // PayPal — $44,000
-  { name: "Sofia Ramos",  avatar: "SR", color: "#0ea5a0", provider: "paypal", confirmed: {},                              planned: { "Fixed pay": 9500 } },
+  { name: "Sofia Ramos",  avatar: "SR", color: "#0e9f6e", provider: "paypal", confirmed: {},                              planned: { "Fixed pay": 9500 } },
   { name: "Tom Wells",    avatar: "TW", color: "#0168dd", provider: "paypal", confirmed: {},                              planned: { "Fixed pay": 7800, Deductions: 300 } },
   { name: "Lena Marsh",   avatar: "LM", color: "#8b5cf6", provider: "paypal", confirmed: {},                              planned: { "Fixed pay": 8000, "PTO / Holiday": 600 } },
   { name: "Raj Patel",    avatar: "RP", color: "#f59e0b", provider: "paypal", confirmed: { Hourly: 4800, Overtime: 500 }, planned: {}, rate: 60, hours: 80 },
-  { name: "Ivy Chen",     avatar: "IC", color: "#10b981", provider: "paypal", confirmed: { Hourly: 5000 },                planned: {}, rate: 50, hours: 100 },
+  { name: "Ivy Chen",     avatar: "IC", color: "#0e9f6e", provider: "paypal", confirmed: { Hourly: 5000 },                planned: {}, rate: 50, hours: 100 },
   { name: "Ben Ortiz",    avatar: "BO", color: "#e5764e", provider: "paypal", confirmed: {},                              planned: { "Fixed pay": 6800, Additions: 1300 } },
   // Deel — $20,000
-  { name: "Ana Lopez",    avatar: "AL", color: "#0ea5a0", provider: "deel", confirmed: {},                               planned: { "Fixed pay": 5000 } },
+  { name: "Ana Lopez",    avatar: "AL", color: "#0e9f6e", provider: "deel", confirmed: {},                               planned: { "Fixed pay": 5000 } },
   { name: "Kofi Mensah",  avatar: "KM", color: "#0168dd", provider: "deel", confirmed: {},                               planned: { "Fixed pay": 4500, "PTO / Holiday": 500 } },
   { name: "Yara Haddad",  avatar: "YH", color: "#8b5cf6", provider: "deel", confirmed: { Hourly: 3600, Overtime: 400 },  planned: {}, rate: 45, hours: 80 },
   { name: "Sven Berg",    avatar: "SB", color: "#f59e0b", provider: "deel", confirmed: { Hourly: 3200 },                 planned: {}, rate: 40, hours: 80 },
-  { name: "Nina Kaur",    avatar: "NK", color: "#10b981", provider: "deel", confirmed: {},                               planned: { "Fixed pay": 3000, Additions: 200, Deductions: 400 } },
+  { name: "Nina Kaur",    avatar: "NK", color: "#0e9f6e", provider: "deel", confirmed: {},                               planned: { "Fixed pay": 3000, Additions: 200, Deductions: 400 } },
   // Export — $12,000
-  { name: "Hiro Sato",    avatar: "HS", color: "#0ea5a0", provider: "export", confirmed: {},                             planned: { "Fixed pay": 4000 } },
+  { name: "Hiro Sato",    avatar: "HS", color: "#0e9f6e", provider: "export", confirmed: {},                             planned: { "Fixed pay": 4000 } },
   { name: "Mara Vidal",   avatar: "MV", color: "#0168dd", provider: "export", confirmed: {},                             planned: { "Fixed pay": 3500, "PTO / Holiday": 300 } },
   { name: "Owen Reid",    avatar: "OR", color: "#8b5cf6", provider: "export", confirmed: { Hourly: 2400, Overtime: 200 }, planned: {}, rate: 40, hours: 60 },
   { name: "Tess Frost",   avatar: "TF", color: "#f59e0b", provider: "export", confirmed: {},                             planned: { "Fixed pay": 1800, Additions: 100, Deductions: 300 } },
   // Bitwage — $10,000
-  { name: "Dario Costa",  avatar: "DC", color: "#0ea5a0", provider: "bitwage", confirmed: {},                            planned: { "Fixed pay": 5000 } },
+  { name: "Dario Costa",  avatar: "DC", color: "#0e9f6e", provider: "bitwage", confirmed: {},                            planned: { "Fixed pay": 5000 } },
   { name: "Priya Rao",    avatar: "PR", color: "#0168dd", provider: "bitwage", confirmed: { Hourly: 3000 },               planned: {}, rate: 50, hours: 60 },
   { name: "Luca Bianchi", avatar: "LB", color: "#8b5cf6", provider: "bitwage", confirmed: {},                            planned: { "Fixed pay": 2200, "PTO / Holiday": 200, Deductions: 400 } },
   // Gusto — $8,000
-  { name: "Grace Miller", avatar: "GM", color: "#0ea5a0", provider: "gusto", confirmed: {},                             planned: { "Fixed pay": 3500 } },
+  { name: "Grace Miller", avatar: "GM", color: "#0e9f6e", provider: "gusto", confirmed: {},                             planned: { "Fixed pay": 3500 } },
   { name: "Theo Blanc",   avatar: "TB", color: "#0168dd", provider: "gusto", confirmed: {},                             planned: { "Fixed pay": 2800, "PTO / Holiday": 200 } },
   { name: "Ines Moreau",  avatar: "IM", color: "#8b5cf6", provider: "gusto", confirmed: { Hourly: 1500 },               planned: {}, rate: 50, hours: 30 },
 ];
@@ -378,18 +378,18 @@ function ChartTip({ active, payload, label }: any) {
   const visible = payload.filter((p: any) => p.value > 0);
   const total = visible.reduce((s: number, p: any) => s + p.value, 0);
   return (
-    <div className="bg-white border border-[#e8eaf0] rounded-lg shadow-lg p-3 text-xs min-w-[160px]">
-      <p className="font-semibold text-[#1a1e35] mb-1.5">{header}</p>
+    <div className="bg-white border border-[#e5e7eb] rounded-lg shadow-lg p-3 text-xs min-w-[160px]">
+      <p className="font-semibold text-[#111827] mb-1.5">{header}</p>
       {visible.map((p: any) => (
         <div key={p.dataKey} className="flex justify-between gap-4 py-0.5">
           <span style={{ color: p.fill ?? p.color }}>{p.name}</span>
-          <span className="font-medium text-[#1a1e35]">{fmt0(p.value)}</span>
+          <span className="font-medium text-[#111827]">{fmt0(p.value)}</span>
         </div>
       ))}
       {visible.length > 1 && (
-        <div className="flex justify-between gap-4 py-0.5 mt-1 pt-1.5 border-t border-[#e8eaf0]">
-          <span className="text-[#8a8fa8]">Total</span>
-          <span className="font-semibold text-[#1a1e35]">{fmt0(total)}</span>
+        <div className="flex justify-between gap-4 py-0.5 mt-1 pt-1.5 border-t border-[#e5e7eb]">
+          <span className="text-[#6b7280]">Total</span>
+          <span className="font-semibold text-[#111827]">{fmt0(total)}</span>
         </div>
       )}
     </div>
@@ -408,8 +408,8 @@ function WeekTick({ x, y, index, data }: { x?: number; y?: number; index?: numbe
   if (!d) return null;
   return (
     <g transform={`translate(${x},${y})`}>
-      <text x={0} dy={14} textAnchor="middle" fill="#1a1e35" fontSize={11} fontWeight={600}>{d.week}</text>
-      <text x={0} dy={26} textAnchor="middle" fill="#8a8fa8" fontSize={10}>{d.dateLabel}</text>
+      <text x={0} dy={14} textAnchor="middle" fill="#111827" fontSize={11} fontWeight={600}>{d.week}</text>
+      <text x={0} dy={26} textAnchor="middle" fill="#6b7280" fontSize={10}>{d.dateLabel}</text>
     </g>
   );
 }
@@ -430,7 +430,7 @@ function Sidebar({ active }: { active: "v1" | "v1c" | "v1d" | "v1e" | "v1f" | "v
     { icon: UserCircle2,     label: "People" },
   ];
   return (
-    <div className="w-[220px] flex-shrink-0 bg-[#1a1e35] flex flex-col h-full">
+    <div className="w-[220px] flex-shrink-0 bg-[#111827] flex flex-col h-full">
       <div className="flex items-center gap-2 px-4 py-4 border-b border-white/10">
         <div className="w-6 h-6 rounded bg-[#0168dd] flex items-center justify-center"><div className="w-3 h-3 rounded-sm bg-white" /></div>
         <span className="text-white font-semibold text-sm tracking-wide">Hubstaff</span>
@@ -467,16 +467,16 @@ function V1DateBar({ tab, onTab }: { tab: "ME"|"ALL"; onTab: (t:"ME"|"ALL")=>voi
     <div className="flex items-center justify-between">
       <div className="flex">
         {(["ME","ALL"] as const).map(t => (
-          <button key={t} onClick={() => onTab(t)} className={`px-3 py-1 text-xs font-semibold rounded transition-colors ${tab === t ? "bg-[#0168dd] text-white" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>{t}</button>
+          <button key={t} onClick={() => onTab(t)} className={`px-3 py-1 text-xs font-semibold rounded transition-colors ${tab === t ? "bg-[#0168dd] text-white" : "text-[#6b7280] hover:text-[#111827]"}`}>{t}</button>
         ))}
       </div>
       <div className="flex items-center gap-2">
-        <button className="p-1 text-[#8a8fa8] hover:text-[#1a1e35]"><ChevronLeft size={14} /></button>
-        <button className="p-1 text-[#8a8fa8] hover:text-[#1a1e35]"><ChevronRight size={14} /></button>
-        <div className="flex items-center gap-1.5 border border-[#e8eaf0] rounded px-3 py-1.5 text-xs text-[#1a1e35] bg-white">
-          <CalendarDays size={12} className="text-[#8a8fa8]" />Sun, May 24, 2026 – Wed, Jun 24, 2026
+        <button className="p-1 text-[#6b7280] hover:text-[#111827]"><ChevronLeft size={14} /></button>
+        <button className="p-1 text-[#6b7280] hover:text-[#111827]"><ChevronRight size={14} /></button>
+        <div className="flex items-center gap-1.5 border border-[#e5e7eb] rounded px-3 py-1.5 text-xs text-[#111827] bg-white">
+          <CalendarDays size={12} className="text-[#6b7280]" />Sun, May 24, 2026 – Wed, Jun 24, 2026
         </div>
-        <button className="text-xs border border-[#e8eaf0] rounded px-3 py-1.5 text-[#1a1e35] bg-white hover:bg-[#f5f6fa]">Today</button>
+        <button className="text-xs border border-[#e5e7eb] rounded px-3 py-1.5 text-[#111827] bg-white hover:bg-[#f9fafb]">Today</button>
         <button className="text-xs bg-[#0168dd] text-white rounded px-3 py-1.5 flex items-center gap-1.5 hover:bg-[#0057bb]">Filters <ChevronDown size={12} /></button>
       </div>
     </div>
@@ -494,11 +494,11 @@ function V1PredictivePanel() {
 
   return (
     <div>
-      <div className="grid grid-cols-4 divide-x divide-[#e8eaf0] border-b border-[#e8eaf0]">
+      <div className="grid grid-cols-4 divide-x divide-[#e5e7eb] border-b border-[#e5e7eb]">
         <div className="px-5 py-4">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-1 h-[21px] flex items-center">Monthly avg payout</p>
-          <p className="text-3xl font-bold text-[#1a1e35] tracking-tight">{fmt0(v1AvgMonthly)}</p>
-          <p className="text-[11px] text-[#8a8fa8] mt-0.5">last 5 months</p>
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6b7280] mb-1 h-[21px] flex items-center">Monthly avg payout</p>
+          <p className="text-3xl font-bold text-[#111827] tracking-tight">{fmt0(v1AvgMonthly)}</p>
+          <p className="text-[11px] text-[#6b7280] mt-0.5">last 5 months</p>
           <ResponsiveContainer width="100%" height={32} className="mt-2">
             <AreaChart data={v1MonthlyHistory} margin={{ top: 2, right: 2, left: 0, bottom: 0 }}>
               <XAxis dataKey="month" hide /><YAxis hide domain={["auto","auto"]} />
@@ -507,72 +507,72 @@ function V1PredictivePanel() {
           </ResponsiveContainer>
         </div>
         <div className="px-5 py-4">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-1">Headcount change</p>
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6b7280] mb-1">Headcount change</p>
           <div className="flex items-baseline gap-2">
             <span className={`text-3xl font-bold tracking-tight ${up ? "text-emerald-600" : "text-red-500"}`}>{up ? "+" : ""}{v1DeltaPct.toFixed(0)}%</span>
             {up ? <TrendingUp size={16} className="text-emerald-500" /> : <TrendingDown size={16} className="text-red-400" />}
           </div>
-          <p className="text-[11px] text-[#8a8fa8] mt-0.5">{v1CurrMembers} this cycle vs avg {v1AvgMembers}</p>
+          <p className="text-[11px] text-[#6b7280] mt-0.5">{v1CurrMembers} this cycle vs avg {v1AvgMembers}</p>
           <div className="flex gap-2 mt-2">
             {v1PayTypes.map(pt => (
-              <div key={pt.key} className="flex items-center gap-1 text-[10px] text-[#8a8fa8]">
+              <div key={pt.key} className="flex items-center gap-1 text-[10px] text-[#6b7280]">
                 <div className="w-1.5 h-1.5 rounded-full" style={{ background: pt.color }} />{pt.count}
               </div>
             ))}
-            <span className="text-[10px] text-[#8a8fa8]">= {v1CurrMembers}</span>
+            <span className="text-[10px] text-[#6b7280]">= {v1CurrMembers}</span>
           </div>
         </div>
         <div className="px-5 py-4">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-1 h-[21px] flex items-center">Recommended projection</p>
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6b7280] mb-1 h-[21px] flex items-center">Recommended projection</p>
           <p className="text-3xl font-bold text-[#0168dd] tracking-tight">{fmt0(v1AdjProj)}</p>
-          <p className="text-[11px] text-[#8a8fa8] mt-0.5">avg × ({v1CurrMembers}/{v1AvgMembers} members)</p>
+          <p className="text-[11px] text-[#6b7280] mt-0.5">avg × ({v1CurrMembers}/{v1AvgMembers} members)</p>
           <div className="mt-3 h-1.5 bg-[#e8f2fd] rounded-full overflow-hidden">
             <div className="h-full bg-[#0168dd] rounded-full" style={{ width: `${Math.min(100, (v1AdjProj / 70000) * 100)}%` }} />
           </div>
-          <div className="flex justify-between text-[10px] text-[#8a8fa8] mt-0.5"><span>{fmt0(v1AvgMonthly)} avg</span><span>{fmt0(70000)} cap</span></div>
+          <div className="flex justify-between text-[10px] text-[#6b7280] mt-0.5"><span>{fmt0(v1AvgMonthly)} avg</span><span>{fmt0(70000)} cap</span></div>
         </div>
         <div className="px-5 py-4">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-2">By pay cycle</p>
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6b7280] mb-2">By pay cycle</p>
           <div className="space-y-2">
             {v1PayTypes.map(pt => (
               <div key={pt.key} className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: pt.color }} />
-                <div className="flex-1 h-1.5 bg-[#f0f1f5] rounded-full overflow-hidden">
+                <div className="flex-1 h-1.5 bg-[#f3f4f6] rounded-full overflow-hidden">
                   <div className="h-full rounded-full" style={{ width: `${(pt.count / v1CurrMembers) * 100}%`, background: pt.color }} />
                 </div>
-                <span className="text-xs font-semibold text-[#1a1e35] w-6 text-right">{pt.count}</span>
-                <span className="text-[10px] text-[#8a8fa8] w-14">{pt.label}</span>
+                <span className="text-xs font-semibold text-[#111827] w-6 text-right">{pt.count}</span>
+                <span className="text-[10px] text-[#6b7280] w-14">{pt.label}</span>
               </div>
             ))}
           </div>
-          <div className="flex items-center gap-1.5 mt-3 pt-2 border-t border-[#e8eaf0] text-xs text-[#8a8fa8]">
-            <Users size={11} /><span>Total: <span className="font-semibold text-[#1a1e35]">{v1CurrMembers} members</span></span>
+          <div className="flex items-center gap-1.5 mt-3 pt-2 border-t border-[#e5e7eb] text-xs text-[#6b7280]">
+            <Users size={11} /><span>Total: <span className="font-semibold text-[#111827]">{v1CurrMembers} members</span></span>
           </div>
         </div>
       </div>
-      <div className="flex divide-x divide-[#e8eaf0]">
+      <div className="flex divide-x divide-[#e5e7eb]">
         <div className="flex-1 px-5 py-4 flex flex-col">
           <div className="flex items-center justify-between mb-3">
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-0.5">Week-by-week distribution</p>
-              <p className="text-[11px] text-[#8a8fa8]">{mode === "earning" ? "Stacked by earning type" : "Stacked by payment provider"}</p>
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6b7280] mb-0.5">Week-by-week distribution</p>
+              <p className="text-[11px] text-[#6b7280]">{mode === "earning" ? "Stacked by earning type" : "Stacked by payment provider"}</p>
             </div>
-            <div className="flex items-center bg-[#f0f1f5] rounded-md p-0.5">
-              <button onClick={() => setMode("earning")} className={`px-2.5 py-1 rounded text-[10px] font-medium transition-all whitespace-nowrap ${mode === "earning" ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8]"}`}>By earning type</button>
-              <button onClick={() => setMode("provider")} className={`px-2.5 py-1 rounded text-[10px] font-medium transition-all whitespace-nowrap ${mode === "provider" ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8]"}`}>By provider</button>
+            <div className="flex items-center bg-[#f3f4f6] rounded-md p-0.5">
+              <button onClick={() => setMode("earning")} className={`px-2.5 py-1 rounded text-[10px] font-medium transition-all whitespace-nowrap ${mode === "earning" ? "bg-white text-[#0168dd] shadow-sm" : "text-[#6b7280]"}`}>By earning type</button>
+              <button onClick={() => setMode("provider")} className={`px-2.5 py-1 rounded text-[10px] font-medium transition-all whitespace-nowrap ${mode === "provider" ? "bg-white text-[#0168dd] shadow-sm" : "text-[#6b7280]"}`}>By provider</button>
             </div>
           </div>
           {mode === "earning" && (
             <ResponsiveContainer key="v1-earning" width="100%" height={160}>
               <BarChart data={v1EarningWeekData} margin={{ top: 4, right: 4, left: 0, bottom: 28 }} barCategoryGap="30%">
                 <XAxis dataKey="week" tick={(p) => <WeekTick {...p} data={v1EarningWeekData} />} axisLine={false} tickLine={false} interval={0} />
-                <YAxis tickFormatter={v => `$${(v/1000).toFixed(0)}k`} tick={{ fontSize: 10, fill: "#8a8fa8" }} axisLine={false} tickLine={false} width={32} />
-                <Tooltip content={<ChartTip />} cursor={{ fill: "#f5f6fa" }} />
+                <YAxis tickFormatter={v => `$${(v/1000).toFixed(0)}k`} tick={{ fontSize: 10, fill: "#6b7280" }} axisLine={false} tickLine={false} width={32} />
+                <Tooltip content={<ChartTip />} cursor={{ fill: "#f9fafb" }} />
                 <Bar dataKey="hourly"    name="Hourly pay"     stackId="s" fill="#0168dd" radius={[0,0,0,0]} />
                 <Bar dataKey="fixed"     name="Fixed pay"      stackId="s" fill="#3d8ae8" radius={[0,0,0,0]} />
                 <Bar dataKey="pto"       name="PTO & Holidays" stackId="s" fill="#85baf5" radius={[0,0,0,0]} />
                 <Bar dataKey="bonus"     name="Bonuses"        stackId="s" fill="#f59e0b" radius={[0,0,0,0]} />
-                <Bar dataKey="additions" name="Additions"      stackId="s" fill="#10b981" radius={[0,0,0,0]} />
+                <Bar dataKey="additions" name="Additions"      stackId="s" fill="#0e9f6e" radius={[0,0,0,0]} />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -580,31 +580,31 @@ function V1PredictivePanel() {
             <ResponsiveContainer key="v1-provider" width="100%" height={160}>
               <BarChart data={v1ProviderWeekData} margin={{ top: 4, right: 4, left: 0, bottom: 28 }} barCategoryGap="30%">
                 <XAxis dataKey="week" tick={(p) => <WeekTick {...p} data={v1ProviderWeekData} />} axisLine={false} tickLine={false} interval={0} />
-                <YAxis tickFormatter={v => `$${(v/1000).toFixed(0)}k`} tick={{ fontSize: 10, fill: "#8a8fa8" }} axisLine={false} tickLine={false} width={32} />
-                <Tooltip content={<ChartTip />} cursor={{ fill: "#f5f6fa" }} />
+                <YAxis tickFormatter={v => `$${(v/1000).toFixed(0)}k`} tick={{ fontSize: 10, fill: "#6b7280" }} axisLine={false} tickLine={false} width={32} />
+                <Tooltip content={<ChartTip />} cursor={{ fill: "#f9fafb" }} />
                 <Bar dataKey="Wise"     name="Wise"     stackId="s" fill="#0168dd" radius={[0,0,0,0]} />
-                <Bar dataKey="Payoneer" name="Payoneer" stackId="s" fill="#0ea5a0" radius={[0,0,0,0]} />
+                <Bar dataKey="Payoneer" name="Payoneer" stackId="s" fill="#0e9f6e" radius={[0,0,0,0]} />
                 <Bar dataKey="Deel"     name="Deel"     stackId="s" fill="#f59e0b" radius={[0,0,0,0]} />
-                <Bar dataKey="Export"   name="Export"   stackId="s" fill="#8a8fa8" radius={[0,0,0,0]} />
+                <Bar dataKey="Export"   name="Export"   stackId="s" fill="#6b7280" radius={[0,0,0,0]} />
               </BarChart>
             </ResponsiveContainer>
           )}
           <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-1">
             {legend.map(l => (
-              <div key={l.key} className="flex items-center gap-1.5 text-[11px] text-[#8a8fa8]">
+              <div key={l.key} className="flex items-center gap-1.5 text-[11px] text-[#6b7280]">
                 <div className="w-2 h-2 rounded-sm" style={{ background: l.color }} />{l.label}
               </div>
             ))}
           </div>
         </div>
         <div className="w-44 flex-shrink-0 px-4 py-4 flex flex-col">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-1">{mode === "earning" ? "Monthly mix" : "By provider"}</p>
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6b7280] mb-1">{mode === "earning" ? "Monthly mix" : "By provider"}</p>
           <ResponsiveContainer key={`v1-pie-${mode}`} width="100%" height={110}>
             <PieChart>
               <Pie data={activePieData} cx="50%" cy="50%" innerRadius={26} outerRadius={52} dataKey="value" labelLine={false} label={<PieLabel />}>
                 {activePieData.map(e => <Cell key={e.name} fill={e.color} />)}
               </Pie>
-              <Tooltip formatter={(v: number, name: string) => [fmt0(v), name]} contentStyle={{ fontSize: 11, borderRadius: 6, border: "1px solid #e8eaf0" }} />
+              <Tooltip formatter={(v: number, name: string) => [fmt0(v), name]} contentStyle={{ fontSize: 11, borderRadius: 6, border: "1px solid #e5e7eb" }} />
             </PieChart>
           </ResponsiveContainer>
           <div className="space-y-1 mt-1 flex-1">
@@ -612,11 +612,157 @@ function V1PredictivePanel() {
               <div key={e.name} className="flex items-center justify-between text-[10px]">
                 <div className="flex items-center gap-1.5 min-w-0">
                   <div className="w-1.5 h-1.5 rounded-sm flex-shrink-0" style={{ background: e.color }} />
-                  <span className="text-[#8a8fa8] truncate">{e.name}</span>
+                  <span className="text-[#6b7280] truncate">{e.name}</span>
                 </div>
-                <span className="font-semibold text-[#1a1e35] ml-1 flex-shrink-0">{e.pct}%</span>
+                <span className="font-semibold text-[#111827] ml-1 flex-shrink-0">{e.pct}%</span>
               </div>
             ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Zone Payment History — the Zone DataTable UI (bordered header, 48px rows, expandable
+// rows, pill pagination) applied to the legacy V1PaymentHistory content model: grouped by
+// member, each member expands to its payment-type rows (One-time / Automatic / Timesheets)
+// with the full Paid on → Bonus → Total Amount breakdown. Data reuses v1TableMembers.
+function V1PaymentHistoryZone() {
+  const [page, setPage] = useState(0);
+  const [tab, setTab] = useState<"ME" | "ALL">("ALL");
+  const [expanded, setExpanded] = useState<Set<string>>(new Set([v1TableMembers[0]?.name]));
+  const toggle = (k: string) => setExpanded(prev => { const n = new Set(prev); n.has(k) ? n.delete(k) : n.add(k); return n; });
+  const rows = v1TableMembers;
+  const PAGE = 10;
+  const pageCount = Math.max(1, Math.ceil(rows.length / PAGE));
+  const safePage = Math.min(page, pageCount - 1);
+  const paged = rows.slice(safePage * PAGE, safePage * PAGE + PAGE);
+  const rangeFrom = rows.length ? safePage * PAGE + 1 : 0;
+  const rangeTo = safePage * PAGE + paged.length;
+  const hCls = "px-3 py-2.5 border-r border-[#e5e7eb] bg-[#f9fafb] text-[#1f2937] text-sm font-semibold text-left whitespace-nowrap";
+  const hLast = "px-3 py-2.5 border-[#e5e7eb] bg-[#f9fafb] text-[#1f2937] text-sm font-semibold text-left whitespace-nowrap";
+  const sub = "px-3 py-2 border-r border-t border-[#e5e7eb] text-left tabular-nums text-[#374151] text-sm whitespace-nowrap";
+  const barGray = "text-[#4b5563] bg-transparent hover:bg-[#f3f4f6] border border-[#d1d5db]"; // date-bar buttons — no white fill, blend with the gray-50 canvas
+  return (
+    <div className="space-y-4">
+      {/* Date bar — ME/ALL segmented control · period nav (icon buttons) · date range · Today · Filters */}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex w-fit">
+          {(["ME", "ALL"] as const).map(t => (
+            <button key={t} onClick={() => setTab(t)} className={`h-10 px-5 flex items-center justify-center text-sm transition-colors border border-l-0 first:border-l border-[#d1d5db] first:rounded-l-[6px] last:rounded-r-[6px] ${tab === t ? "bg-[#f0f5ff] text-[#0168dd] font-medium" : "text-[#374151] font-normal hover:bg-[#f9fafb]"}`}>{t}</button>
+          ))}
+        </div>
+        {/* period-nav (arrows) · date+today · filters — 8px within a group, 16px between groups */}
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <button aria-label="Previous period" className={`${ZBTN_BASE} h-10 w-10 ${barGray}`}><ChevronRight size={18} className="rotate-180" /></button>
+            <button aria-label="Next period" className={`${ZBTN_BASE} h-10 w-10 ${barGray}`}><ChevronRight size={18} /></button>
+          </div>
+          <div className="flex items-center gap-2">
+            <button className={`relative inline-flex items-center justify-between h-10 pl-4 pr-3 gap-3 text-sm font-normal rounded-[6px] transition-colors select-none min-w-[300px] ${barGray}`}><span className="text-[#374151]">Sun, May 24, 2026 – Wed, Jun 24, 2026</span><CalendarDays size={16} className="text-[#2aa7ff]" /></button>
+            <button className={zbtn("ghostGray", "md")}>Today</button>
+          </div>
+          <button className={zbtn("outlinePrimary", "md")}><ListFilter size={16} /> Filters</button>
+        </div>
+      </div>
+      {/* Summary */}
+      <div className="flex items-stretch bg-white rounded-lg border border-[#e5e7eb] overflow-hidden">
+        <div className="flex-1 px-6 py-4 border-r border-[#e5e7eb]">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-[#6b7280]">Payments</p>
+          <p className="text-2xl font-bold text-[#111827] mt-0.5">47</p>
+        </div>
+        <div className="flex-1 px-6 py-4">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-[#6b7280]">Amount</p>
+          <p className="text-2xl font-bold text-[#0e9f6e] mt-0.5">$34,198.00</p>
+        </div>
+      </div>
+      <div className="bg-white rounded-lg border border-[#e5e7eb] overflow-hidden">
+        {/* Toolbar — Group by (left) · Columns (icon-only, right) */}
+        <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-[#e5e7eb]">
+          <label className="flex items-center gap-2">
+            <span className="text-[11px] font-semibold uppercase tracking-wide text-[#6b7280]">Group by</span>
+            <span className="relative inline-flex">
+              <select aria-label="Group by" className="appearance-none h-8 rounded-[6px] border border-gray-300 bg-white pl-3 pr-8 text-sm text-gray-700 cursor-pointer focus:outline-none focus:border-[#2aa7ff] focus:ring-1 focus:ring-[#2aa7ff]">
+                <option>Members</option>
+                <option>Currency</option>
+              </select>
+              <span className="material-symbols-rounded absolute right-1.5 top-1/2 -translate-y-1/2 text-[#6b7280] pointer-events-none" style={{ fontSize: 18 }}>keyboard_arrow_down</span>
+            </span>
+          </label>
+          <button aria-label="Columns" title="Columns" className={`${ZBTN_BASE} h-8 w-8 ${ZBTN_VARIANT.outlineGray}`}><Columns3 size={16} /></button>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm border-separate border-spacing-0 min-w-[1120px]">
+            <thead>
+              <tr>
+                <th className={`${hCls} min-w-[280px]`}>Payment type</th>
+                <th className={hCls}>Paid on</th>
+                <th className={hCls}>Total Hours</th>
+                <th className={hCls}>Hourly pay</th>
+                <th className={hCls}>Fixed pay</th>
+                <th className={hCls}>PTO &amp; Holidays</th>
+                <th className={hCls}>Additions</th>
+                <th className={hCls}>Deductions</th>
+                <th className={hCls}>Bonus</th>
+                <th className={hLast}>Total Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {paged.map(m => {
+                const open = expanded.has(m.name);
+                return (
+                  <Fragment key={m.name}>
+                    <tr className="group/row h-12 [&>td]:align-middle cursor-pointer" onClick={() => toggle(m.name)}>
+                      <td colSpan={9} className={`px-3 py-2 border-r border-t border-[#e5e7eb] ${open ? "bg-[#f9fafb]" : "group-hover/row:bg-[#f9fafb]"}`}>
+                        <div className="flex items-center gap-2.5">
+                          <ChevronRight size={16} className={`text-[#9ca3af] shrink-0 transition-transform ${open ? "rotate-90" : ""}`} />
+                          <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-[10px] font-semibold shrink-0" style={{ background: v1AvatarColors[m.avatar] ?? "#6b7280" }}>{m.avatar}</div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5 leading-tight">
+                              <span className="text-[#111827] text-sm font-semibold">{m.name}</span>
+                              <span className="w-[3px] h-[3px] rounded-full bg-[#9ca3af] shrink-0" />
+                              <span className="text-[#6b7280] text-sm">{m.cycle}</span>
+                            </div>
+                            <div className="flex items-center gap-1 text-xs text-[#6b7280] leading-tight mt-0.5"><ProviderLogo id={m.provider.toLowerCase()} size={13} /> {m.provider}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className={`px-3 py-2 border-t border-[#e5e7eb] text-left tabular-nums font-semibold text-[#111827] text-sm whitespace-nowrap ${open ? "bg-[#f9fafb]" : "group-hover/row:bg-[#f9fafb]"}`}>{fmt2(m.total)}</td>
+                    </tr>
+                    {open && m.rows.map((row, i) => (
+                      <tr key={i} className="h-12 [&>td]:align-middle">
+                        <td className="px-3 py-2 border-r border-t border-[#e5e7eb]"><span className="pl-8 block text-[#374151] text-sm">{row.type}</span></td>
+                        <td className="px-3 py-2 border-r border-t border-[#e5e7eb] text-[#6b7280] text-sm whitespace-nowrap">{row.date}</td>
+                        <td className="px-3 py-2 border-r border-t border-[#e5e7eb] text-left tabular-nums text-[#6b7280] text-sm whitespace-nowrap">{row.hours}</td>
+                        <td className={sub}>{row.hourly ? fmt2(row.hourly) : "$0.00"}</td>
+                        <td className={sub}>{row.fixed ? fmt2(row.fixed) : "$0.00"}</td>
+                        <td className={sub}>{row.pto ? fmt2(row.pto) : "$0.00"}</td>
+                        <td className={sub}>{row.additions ? fmt2(row.additions) : "$0.00"}</td>
+                        <td className={sub}>{row.deductions ? fmt2(row.deductions) : "$0.00"}</td>
+                        <td className={sub}>{row.bonus ? fmt2(row.bonus) : "$0.00"}</td>
+                        <td className="px-3 py-2 border-t border-[#e5e7eb] text-left tabular-nums text-[#374151] text-sm font-medium whitespace-nowrap">{fmt2(row.total)}</td>
+                      </tr>
+                    ))}
+                  </Fragment>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        {/* Zone pagination */}
+        <div className="flex items-center justify-between gap-3 px-5 py-3 border-t border-[#e5e7eb]">
+          <div className="flex items-center gap-3 text-sm text-[#6b7280]">
+            <span>Showing {rangeFrom}–{rangeTo} items</span>
+            <span className="inline-flex items-center gap-0.5 border border-[#e5e7eb] rounded-[4px] pl-2.5 pr-1 py-1 text-[#111827] select-none"><span className="font-medium">10</span><span className="material-symbols-rounded" style={{ fontSize: 18 }}>keyboard_arrow_down</span></span>
+            <span>Per page</span>
+          </div>
+          <div className="flex items-center gap-1">
+            {safePage > 0 && (<button onClick={() => setPage(p => Math.max(0, p - 1))} className="inline-flex items-center gap-0.5 h-8 pl-1 pr-2.5 rounded-[4px] text-sm text-[#6b7280] hover:text-[#111827] transition-colors"><span className="material-symbols-rounded" style={{ fontSize: 18 }}>chevron_left</span>Previous</button>)}
+            {Array.from({ length: pageCount }, (_, i) => (
+              <button key={i} onClick={() => setPage(i)} className={`relative h-8 min-w-[32px] px-2 rounded-[4px] text-sm transition-colors ${i === safePage ? "bg-[#eaf6ff] text-[#0168dd] font-medium" : "text-[#6b7280] font-normal hover:bg-[#f9fafb]"}`}>{i + 1}{i === safePage && <span className="absolute left-1/2 -translate-x-1/2 -bottom-[1.5px] w-[18px] h-[3px] rounded-full bg-[#0168dd]" />}</button>
+            ))}
+            <button onClick={() => setPage(p => Math.min(pageCount - 1, p + 1))} disabled={safePage >= pageCount - 1} className="inline-flex items-center gap-0.5 h-8 pl-2.5 pr-1 rounded-[4px] text-sm text-[#6b7280] hover:text-[#111827] disabled:opacity-40 disabled:cursor-not-allowed transition-colors">Next<span className="material-symbols-rounded" style={{ fontSize: 18 }}>chevron_right</span></button>
           </div>
         </div>
       </div>
@@ -632,30 +778,30 @@ function V1PaymentHistory() {
   return (
     <div className="space-y-3">
       <V1DateBar tab={tab} onTab={setTab} />
-      <div className="flex items-stretch bg-white rounded-lg border border-[#e8eaf0] overflow-hidden">
-        <div className="flex-1 px-6 py-4 border-r border-[#e8eaf0]">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8]">Payments</p>
-          <p className="text-2xl font-bold text-[#1a1e35] mt-0.5">47</p>
+      <div className="flex items-stretch bg-white rounded-lg border border-[#e5e7eb] overflow-hidden">
+        <div className="flex-1 px-6 py-4 border-r border-[#e5e7eb]">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6b7280]">Payments</p>
+          <p className="text-2xl font-bold text-[#111827] mt-0.5">47</p>
         </div>
         <div className="flex-1 px-6 py-4">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8]">Amount</p>
-          <p className="text-2xl font-bold text-[#0ea5a0] mt-0.5">$34,198.00</p>
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6b7280]">Amount</p>
+          <p className="text-2xl font-bold text-[#0e9f6e] mt-0.5">$34,198.00</p>
         </div>
       </div>
-      <div className="bg-white rounded-lg border border-[#e8eaf0] overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-2 border-b border-[#e8eaf0]">
-          <button className="flex items-center gap-1 text-xs text-[#1a1e35] font-medium hover:text-[#0168dd]"><span>≡ Group by: Member</span><ChevronDown size={13} /></button>
+      <div className="bg-white rounded-lg border border-[#e5e7eb] overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-2 border-b border-[#e5e7eb]">
+          <button className="flex items-center gap-1 text-xs text-[#111827] font-medium hover:text-[#0168dd]"><span>≡ Group by: Member</span><ChevronDown size={13} /></button>
           <div className="flex items-center gap-3">
             <button className="flex items-center gap-1.5 text-xs text-[#0168dd]"><Send size={12} /> Send</button>
             <button className="flex items-center gap-1.5 text-xs text-[#0168dd]"><Clock size={12} /> Schedule</button>
             <button className="flex items-center gap-1.5 text-xs text-[#0168dd]"><Download size={12} /> Export</button>
-            <button className="text-[#8a8fa8]"><Settings size={14} /></button>
+            <button className="text-[#6b7280]"><Settings size={14} /></button>
           </div>
         </div>
         <table className="w-full text-xs">
           <thead>
-            <tr className="border-b border-[#e8eaf0] bg-[#f5f6fa]">
-              {cols.map(c => <th key={c} className={`py-2 px-3 text-left font-semibold text-[#8a8fa8] whitespace-nowrap ${c === "Total Amount" ? "text-right" : ""}`}>{c}</th>)}
+            <tr className="border-b border-[#e5e7eb] bg-[#f9fafb]">
+              {cols.map(c => <th key={c} className={`py-2 px-3 text-left font-semibold text-[#6b7280] whitespace-nowrap ${c === "Total Amount" ? "text-right" : ""}`}>{c}</th>)}
             </tr>
           </thead>
           {v1TableMembers.map(member => {
@@ -663,30 +809,30 @@ function V1PaymentHistory() {
             const [bgC, textC] = v1CycleBadge[member.cycle];
             return (
               <tbody key={member.name}>
-                <tr className="border-b border-[#e8eaf0] cursor-pointer hover:bg-[#f9f9fc]" onClick={() => toggle(member.name)}>
+                <tr className="border-b border-[#e5e7eb] cursor-pointer hover:bg-[#f9fafb]" onClick={() => toggle(member.name)}>
                   <td colSpan={9} className="py-2.5 px-3">
                     <div className="flex items-center gap-2">
-                      <ChevronRight size={14} className={`text-[#8a8fa8] transition-transform ${isOpen ? "rotate-90" : ""}`} />
+                      <ChevronRight size={14} className={`text-[#6b7280] transition-transform ${isOpen ? "rotate-90" : ""}`} />
                       <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-semibold" style={{ background: v1AvatarColors[member.avatar] }}>{member.avatar}</div>
-                      <span className="font-semibold text-[#1a1e35]">{member.name}</span>
+                      <span className="font-semibold text-[#111827]">{member.name}</span>
                       <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full" style={{ background: bgC, color: textC }}>{member.cycle}</span>
-                      <span className="inline-flex items-center gap-1 text-[10px] text-[#8a8fa8]">via <ProviderLogo id={member.provider.toLowerCase()} size={12} /> {member.provider}</span>
+                      <span className="inline-flex items-center gap-1 text-[10px] text-[#6b7280]">via <ProviderLogo id={member.provider.toLowerCase()} size={12} /> {member.provider}</span>
                     </div>
                   </td>
-                  <td className="py-2.5 px-3 text-right font-semibold text-[#1a1e35]">{fmt2(member.total)}</td>
+                  <td className="py-2.5 px-3 text-right font-semibold text-[#111827]">{fmt2(member.total)}</td>
                 </tr>
                 {isOpen && member.rows.map((row, i) => (
-                  <tr key={i} className="border-b border-[#e8eaf0] hover:bg-[#f9f9fc]">
-                    <td className="py-2 px-3 pl-10 text-[#1a1e35]">{row.type}</td>
-                    <td className="py-2 px-3 text-[#8a8fa8]">{row.date}</td>
-                    <td className="py-2 px-3 text-[#8a8fa8]">{row.hours}</td>
-                    <td className="py-2 px-3 text-[#1a1e35]">{row.hourly ? fmt2(row.hourly) : "$0.00"}</td>
-                    <td className="py-2 px-3 text-[#1a1e35]">{row.fixed ? fmt2(row.fixed) : "$0.00"}</td>
-                    <td className="py-2 px-3 text-[#1a1e35]">{row.pto ? fmt2(row.pto) : "$0.00"}</td>
-                    <td className="py-2 px-3 text-[#1a1e35]">{row.additions ? fmt2(row.additions) : "$0.00"}</td>
-                    <td className="py-2 px-3 text-[#1a1e35]">{row.deductions ? fmt2(row.deductions) : "$0.00"}</td>
-                    <td className="py-2 px-3 text-[#1a1e35]">{row.bonus ? fmt2(row.bonus) : "$0.00"}</td>
-                    <td className="py-2 px-3 text-right font-medium text-[#1a1e35]">{fmt2(row.total)}</td>
+                  <tr key={i} className="border-b border-[#e5e7eb] hover:bg-[#f9fafb]">
+                    <td className="py-2 px-3 pl-10 text-[#111827]">{row.type}</td>
+                    <td className="py-2 px-3 text-[#6b7280]">{row.date}</td>
+                    <td className="py-2 px-3 text-[#6b7280]">{row.hours}</td>
+                    <td className="py-2 px-3 text-[#111827]">{row.hourly ? fmt2(row.hourly) : "$0.00"}</td>
+                    <td className="py-2 px-3 text-[#111827]">{row.fixed ? fmt2(row.fixed) : "$0.00"}</td>
+                    <td className="py-2 px-3 text-[#111827]">{row.pto ? fmt2(row.pto) : "$0.00"}</td>
+                    <td className="py-2 px-3 text-[#111827]">{row.additions ? fmt2(row.additions) : "$0.00"}</td>
+                    <td className="py-2 px-3 text-[#111827]">{row.deductions ? fmt2(row.deductions) : "$0.00"}</td>
+                    <td className="py-2 px-3 text-[#111827]">{row.bonus ? fmt2(row.bonus) : "$0.00"}</td>
+                    <td className="py-2 px-3 text-right font-medium text-[#111827]">{fmt2(row.total)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -703,31 +849,31 @@ function V1FutureTracked() {
   return (
     <div className="space-y-3">
       <V1DateBar tab={tab} onTab={setTab} />
-      <div className="flex items-stretch bg-white rounded-lg border border-[#e8eaf0] overflow-hidden">
-        <div className="px-6 py-4 border-r border-[#e8eaf0] flex-1">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8]">Hours</p>
-          <p className="text-2xl font-bold text-[#0ea5a0] mt-0.5">248:00:00</p>
+      <div className="flex items-stretch bg-white rounded-lg border border-[#e5e7eb] overflow-hidden">
+        <div className="px-6 py-4 border-r border-[#e5e7eb] flex-1">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6b7280]">Hours</p>
+          <p className="text-2xl font-bold text-[#0e9f6e] mt-0.5">248:00:00</p>
         </div>
         <div className="px-6 py-4 flex-1">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8]">Amount</p>
-          <p className="text-2xl font-bold text-[#0ea5a0] mt-0.5">$1,600.00</p>
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6b7280]">Amount</p>
+          <p className="text-2xl font-bold text-[#0e9f6e] mt-0.5">$1,600.00</p>
         </div>
       </div>
-      <div className="bg-white rounded-lg border border-[#e8eaf0] px-4 py-4">
-        <p className="text-xs font-medium text-[#1a1e35] mb-3">Total amount per day</p>
+      <div className="bg-white rounded-lg border border-[#e5e7eb] px-4 py-4">
+        <p className="text-xs font-medium text-[#111827] mb-3">Total amount per day</p>
         <ResponsiveContainer width="100%" height={140}>
           <AreaChart data={v1OwedDaily} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
             <defs><linearGradient id="v1owedGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#0168dd" stopOpacity={0.2}/><stop offset="95%" stopColor="#0168dd" stopOpacity={0}/></linearGradient></defs>
-            <XAxis dataKey="date" tick={{ fontSize: 10, fill: "#8a8fa8" }} axisLine={false} tickLine={false} interval={2} />
-            <YAxis tick={{ fontSize: 10, fill: "#8a8fa8" }} axisLine={false} tickLine={false} width={28} />
-            <Tooltip formatter={(v: number) => [fmt2(v), "Amount"]} contentStyle={{ fontSize: 11, borderRadius: 6, border: "1px solid #e8eaf0" }} />
+            <XAxis dataKey="date" tick={{ fontSize: 10, fill: "#6b7280" }} axisLine={false} tickLine={false} interval={2} />
+            <YAxis tick={{ fontSize: 10, fill: "#6b7280" }} axisLine={false} tickLine={false} width={28} />
+            <Tooltip formatter={(v: number) => [fmt2(v), "Amount"]} contentStyle={{ fontSize: 11, borderRadius: 6, border: "1px solid #e5e7eb" }} />
             <Area type="monotone" dataKey="amount" stroke="#0168dd" strokeWidth={1.5} fill="url(#v1owedGrad)" dot={{ fill: "#0168dd", r: 2 }} />
           </AreaChart>
         </ResponsiveContainer>
       </div>
-      <div className="bg-white rounded-lg border border-[#e8eaf0] overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-2 border-b border-[#e8eaf0]">
-          <span className="text-xs font-semibold text-[#1a1e35]">Hubstaff <span className="font-normal text-[#8a8fa8]">Etc · UTC</span></span>
+      <div className="bg-white rounded-lg border border-[#e5e7eb] overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-2 border-b border-[#e5e7eb]">
+          <span className="text-xs font-semibold text-[#111827]">Hubstaff <span className="font-normal text-[#6b7280]">Etc · UTC</span></span>
           <div className="flex items-center gap-3">
             <button className="flex items-center gap-1.5 text-xs text-[#0168dd]"><Send size={12} /> Send</button>
             <button className="flex items-center gap-1.5 text-xs text-[#0168dd]"><Download size={12} /> Export</button>
@@ -736,33 +882,33 @@ function V1FutureTracked() {
         </div>
         <table className="w-full text-xs">
           <thead>
-            <tr className="border-b border-[#e8eaf0] bg-[#f5f6fa]">
-              <th className="py-2 px-4 text-left font-semibold text-[#8a8fa8]">Member</th>
-              <th className="py-2 px-4 text-left font-semibold text-[#8a8fa8]">Current rate</th>
-              <th className="py-2 px-4 text-left font-semibold text-[#8a8fa8]">Regular hours</th>
-              <th className="py-2 px-4 text-left font-semibold text-[#8a8fa8]">Overtime</th>
-              <th className="py-2 px-4 text-left font-semibold text-[#8a8fa8]">Total hours</th>
-              <th className="py-2 px-4 text-right font-semibold text-[#8a8fa8]">Amount</th>
+            <tr className="border-b border-[#e5e7eb] bg-[#f9fafb]">
+              <th className="py-2 px-4 text-left font-semibold text-[#6b7280]">Member</th>
+              <th className="py-2 px-4 text-left font-semibold text-[#6b7280]">Current rate</th>
+              <th className="py-2 px-4 text-left font-semibold text-[#6b7280]">Regular hours</th>
+              <th className="py-2 px-4 text-left font-semibold text-[#6b7280]">Overtime</th>
+              <th className="py-2 px-4 text-left font-semibold text-[#6b7280]">Total hours</th>
+              <th className="py-2 px-4 text-right font-semibold text-[#6b7280]">Amount</th>
             </tr>
           </thead>
           {v1OwedRows.map(group => (
             <tbody key={group.date}>
-              <tr className="bg-[#f9f9fc] border-b border-[#e8eaf0]">
-                <td colSpan={6} className="py-1.5 px-4 text-[11px] font-semibold text-[#8a8fa8]">{group.date}</td>
+              <tr className="bg-[#f9fafb] border-b border-[#e5e7eb]">
+                <td colSpan={6} className="py-1.5 px-4 text-[11px] font-semibold text-[#6b7280]">{group.date}</td>
               </tr>
               {group.members.map((m, i) => (
-                <tr key={`${group.date}-${i}`} className="border-b border-[#e8eaf0] hover:bg-[#f9f9fc]">
+                <tr key={`${group.date}-${i}`} className="border-b border-[#e5e7eb] hover:bg-[#f9fafb]">
                   <td className="py-2.5 px-4">
                     <div className="flex items-center gap-2">
                       <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-semibold" style={{ background: m.color }}>{m.avatar}</div>
-                      <span className="text-[#1a1e35] font-medium">{m.name}</span>
+                      <span className="text-[#111827] font-medium">{m.name}</span>
                     </div>
                   </td>
-                  <td className="py-2.5 px-4 text-[#8a8fa8]">{m.rate}</td>
-                  <td className="py-2.5 px-4 text-[#1a1e35]">{m.regular}</td>
-                  <td className="py-2.5 px-4 text-[#8a8fa8]">{m.overtime}</td>
-                  <td className="py-2.5 px-4"><div className="flex items-center gap-1 text-[#1a1e35]"><Clock size={11} className="text-[#8a8fa8]" />{m.total}</div></td>
-                  <td className="py-2.5 px-4 text-right font-medium text-[#1a1e35]">{fmt2(m.amount)}</td>
+                  <td className="py-2.5 px-4 text-[#6b7280]">{m.rate}</td>
+                  <td className="py-2.5 px-4 text-[#111827]">{m.regular}</td>
+                  <td className="py-2.5 px-4 text-[#6b7280]">{m.overtime}</td>
+                  <td className="py-2.5 px-4"><div className="flex items-center gap-1 text-[#111827]"><Clock size={11} className="text-[#6b7280]" />{m.total}</div></td>
+                  <td className="py-2.5 px-4 text-right font-medium text-[#111827]">{fmt2(m.amount)}</td>
                 </tr>
               ))}
             </tbody>
@@ -777,19 +923,19 @@ function Version1() {
   const [bottomTab, setBottomTab] = useState<"history"|"future">("history");
   return (
     <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
-      <h1 className="text-xl font-semibold text-[#1a1e35]">Payments report</h1>
-      <div className="bg-white rounded-lg border border-[#e8eaf0] overflow-hidden">
-        <div className="flex items-center gap-2 px-5 py-3 border-b border-[#e8eaf0] bg-[#f9f9fc]">
+      <h1 className="text-xl font-semibold text-[#111827]">Payments report</h1>
+      <div className="bg-white rounded-lg border border-[#e5e7eb] overflow-hidden">
+        <div className="flex items-center gap-2 px-5 py-3 border-b border-[#e5e7eb] bg-[#f9fafb]">
           <TrendingUp size={15} className="text-[#0168dd]" />
-          <span className="text-sm font-semibold text-[#1a1e35]">Predictable Cash Flow</span>
-          <span className="text-xs text-[#8a8fa8]">— based on historical payments</span>
+          <span className="text-sm font-semibold text-[#111827]">Predictable Cash Flow</span>
+          <span className="text-xs text-[#6b7280]">— based on historical payments</span>
         </div>
         <V1PredictivePanel />
       </div>
       <div>
-        <div className="flex items-center gap-0 mb-3 border-b border-[#e8eaf0]">
+        <div className="flex items-center gap-0 mb-3 border-b border-[#e5e7eb]">
           {([["history","Payment History"],["future","Future Tracked So Far"]] as const).map(([id, label]) => (
-            <button key={id} onClick={() => setBottomTab(id)} className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${bottomTab === id ? "border-[#0168dd] text-[#0168dd]" : "border-transparent text-[#8a8fa8] hover:text-[#1a1e35]"}`}>{label}</button>
+            <button key={id} onClick={() => setBottomTab(id)} className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${bottomTab === id ? "border-[#0168dd] text-[#0168dd]" : "border-transparent text-[#6b7280] hover:text-[#111827]"}`}>{label}</button>
           ))}
         </div>
         {bottomTab === "history" ? <V1PaymentHistory /> : <V1FutureTracked />}
@@ -829,7 +975,7 @@ function SegmentedWeekBar(props: any) {
     curY -= h;
     rects.push(<rect key={key} x={lx} y={curY} width={bw} height={h} fill={fill} rx={roundTop ? 4 : 0} />);
   };
-  addSeg("factual",   factual,   "#10b981", !tracked && !projected);
+  addSeg("factual",   factual,   "#0e9f6e", !tracked && !projected);
   addSeg("tracked",   tracked,   "#0168dd", !projected);
   addSeg("projected", projected, "#85baf5", true);
   return <g>{rects}</g>;
@@ -839,20 +985,20 @@ function ExportDropdown() {
   const [open, setOpen] = useState(false);
   return (
     <div className="relative">
-      <button onClick={() => setOpen(o => !o)} className="flex items-center gap-1.5 text-xs font-medium text-[#1a1e35] border border-[#e8eaf0] rounded-md px-3 py-1.5 bg-white hover:bg-[#f5f6fa] transition-colors select-none">
-        <Download size={12} className="text-[#8a8fa8]" />
+      <button onClick={() => setOpen(o => !o)} className="flex items-center gap-1.5 text-xs font-medium text-[#111827] border border-[#e5e7eb] rounded-md px-3 py-1.5 bg-white hover:bg-[#f9fafb] transition-colors select-none">
+        <Download size={12} className="text-[#6b7280]" />
         Export
-        <ChevronDown size={11} className={`text-[#8a8fa8] transition-transform duration-150 ${open ? "rotate-180" : ""}`} />
+        <ChevronDown size={11} className={`text-[#6b7280] transition-transform duration-150 ${open ? "rotate-180" : ""}`} />
       </button>
       {open && (
         <>
           <div className="fixed inset-0 z-20" onClick={() => setOpen(false)} />
-          <div className="absolute top-full right-0 mt-1.5 z-30 bg-white rounded-lg border border-[#e8eaf0] shadow-lg w-36 py-1 overflow-hidden">
+          <div className="absolute top-full right-0 mt-1.5 z-30 bg-white rounded-lg border border-[#e5e7eb] shadow-lg w-36 py-1 overflow-hidden">
             {([
               { label: "CSV", ext: "CSV" },
               { label: "PDF", ext: "PDF" },
             ] as const).map(({ label, ext }) => (
-              <button key={ext} onClick={() => setOpen(false)} className="w-full text-left px-4 py-2 text-xs text-[#1a1e35] hover:bg-[#f5f6fa] transition-colors">
+              <button key={ext} onClick={() => setOpen(false)} className="w-full text-left px-4 py-2 text-xs text-[#111827] hover:bg-[#f9fafb] transition-colors">
                 {label}
               </button>
             ))}
@@ -878,10 +1024,10 @@ function BreakdownPopover() {
     return { ...e, pct, amount: Math.round((pct / 100) * v1AvgMonthly) };
   });
   const providerItems = [
-    { name: "Wise",     symbol: "W", color: "#10b981" },
+    { name: "Wise",     symbol: "W", color: "#0e9f6e" },
     { name: "Payoneer", symbol: "P", color: "#3b82f6" },
     { name: "Deel",     symbol: "D", color: "#7c3aed" },
-    { name: "Export",   symbol: "E", color: "#8a8fa8" },
+    { name: "Export",   symbol: "E", color: "#6b7280" },
   ].map(p => {
     const pct = v1ProviderPieData.find(d => d.name === p.name)?.pct ?? 0;
     return { ...p, pct, amount: Math.round((pct / 100) * v1AvgMonthly) };
@@ -894,10 +1040,10 @@ function BreakdownPopover() {
       {open && (
         <>
           <div className="fixed inset-0 z-20" onClick={() => setOpen(false)} />
-          <div className="absolute top-6 right-0 z-30 bg-white rounded-lg border border-[#e8eaf0] shadow-xl w-56 overflow-hidden">
-            <div className="flex border-b border-[#e8eaf0]">
+          <div className="absolute top-6 right-0 z-30 bg-white rounded-lg border border-[#e5e7eb] shadow-xl w-56 overflow-hidden">
+            <div className="flex border-b border-[#e5e7eb]">
               {(["earning", "provider"] as const).map(t => (
-                <button key={t} onClick={() => setTab(t)} className={`flex-1 py-2 text-[10px] font-semibold transition-colors border-b-2 -mb-px ${tab === t ? "text-[#0168dd] border-[#0168dd]" : "text-[#8a8fa8] border-transparent hover:text-[#1a1e35]"}`}>
+                <button key={t} onClick={() => setTab(t)} className={`flex-1 py-2 text-[10px] font-semibold transition-colors border-b-2 -mb-px ${tab === t ? "text-[#0168dd] border-[#0168dd]" : "text-[#6b7280] border-transparent hover:text-[#111827]"}`}>
                   {t === "earning" ? "By type" : "By provider"}
                 </button>
               ))}
@@ -905,13 +1051,13 @@ function BreakdownPopover() {
             <div className="p-3 space-y-0.5">
               {tab === "earning" ? earningItems.map(({ name, Icon, pct, amount }) => (
                 <div key={name} className="flex items-center justify-between py-1 text-[11px]">
-                  <div className="flex items-center gap-2 min-w-0"><Icon size={12} className="flex-shrink-0 text-[#0168dd]" /><span className="text-[#8a8fa8] truncate">{name}</span></div>
-                  <div className="flex items-center gap-2 ml-3 flex-shrink-0"><span className="text-[10px] text-[#8a8fa8]">{pct}%</span><span className="font-semibold text-[#1a1e35]">{fmt0(amount)}</span></div>
+                  <div className="flex items-center gap-2 min-w-0"><Icon size={12} className="flex-shrink-0 text-[#0168dd]" /><span className="text-[#6b7280] truncate">{name}</span></div>
+                  <div className="flex items-center gap-2 ml-3 flex-shrink-0"><span className="text-[10px] text-[#6b7280]">{pct}%</span><span className="font-semibold text-[#111827]">{fmt0(amount)}</span></div>
                 </div>
               )) : providerItems.map(({ name, symbol, color, pct, amount }) => (
                 <div key={name} className="flex items-center justify-between py-1 text-[11px]">
-                  <div className="flex items-center gap-2 min-w-0"><span className="w-4 h-4 rounded text-[9px] font-bold flex items-center justify-center flex-shrink-0 text-white leading-none" style={{ background: color }}>{symbol}</span><span className="text-[#8a8fa8]">{name}</span></div>
-                  <div className="flex items-center gap-2 ml-3 flex-shrink-0"><span className="text-[10px] text-[#8a8fa8]">{pct}%</span><span className="font-semibold text-[#1a1e35]">{fmt0(amount)}</span></div>
+                  <div className="flex items-center gap-2 min-w-0"><span className="w-4 h-4 rounded text-[9px] font-bold flex items-center justify-center flex-shrink-0 text-white leading-none" style={{ background: color }}>{symbol}</span><span className="text-[#6b7280]">{name}</span></div>
+                  <div className="flex items-center gap-2 ml-3 flex-shrink-0"><span className="text-[10px] text-[#6b7280]">{pct}%</span><span className="font-semibold text-[#111827]">{fmt0(amount)}</span></div>
                 </div>
               ))}
             </div>
@@ -927,33 +1073,33 @@ function V1bPredictivePanel() {
   const [chartView, setChartView] = useState<"a" | "b">("a");
   return (
     <div>
-      <div className="grid grid-cols-3 divide-x divide-[#e8eaf0] border-b border-[#e8eaf0]">
+      <div className="grid grid-cols-3 divide-x divide-[#e5e7eb] border-b border-[#e5e7eb]">
         <div className="px-5 py-4">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-1 h-[21px] flex items-center">Monthly avg payout</p>
-          <p className="text-3xl font-bold text-[#1a1e35] tracking-tight">{fmt0(v1AvgMonthly)}</p>
-          <p className="text-[11px] text-[#8a8fa8] mt-0.5">last 5 months</p>
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6b7280] mb-1 h-[21px] flex items-center">Monthly avg payout</p>
+          <p className="text-3xl font-bold text-[#111827] tracking-tight">{fmt0(v1AvgMonthly)}</p>
+          <p className="text-[11px] text-[#6b7280] mt-0.5">last 5 months</p>
         </div>
         <div className="px-5 py-4">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-1">Headcount change</p>
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6b7280] mb-1">Headcount change</p>
           <div className="flex items-baseline gap-2">
             <span className={`text-3xl font-bold tracking-tight ${up ? "text-emerald-600" : "text-red-500"}`}>{up ? "+" : ""}{v1DeltaPct.toFixed(0)}%</span>
             {up ? <TrendingUp size={16} className="text-emerald-500" /> : <TrendingDown size={16} className="text-red-400" />}
           </div>
-          <p className="text-[11px] text-[#8a8fa8] mt-0.5">{v1CurrMembers} this cycle vs avg {v1AvgMembers}</p>
+          <p className="text-[11px] text-[#6b7280] mt-0.5">{v1CurrMembers} this cycle vs avg {v1AvgMembers}</p>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2">
             {v1PayTypes.map(pt => (
-              <div key={pt.key} className="flex items-center gap-1 text-[10px] text-[#8a8fa8]">
+              <div key={pt.key} className="flex items-center gap-1 text-[10px] text-[#6b7280]">
                 <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: pt.color }} />
-                <span className="font-semibold text-[#1a1e35]">{pt.count}</span><span>{pt.label}</span>
+                <span className="font-semibold text-[#111827]">{pt.count}</span><span>{pt.label}</span>
               </div>
             ))}
-            <div className="flex items-center gap-1 text-[10px] text-[#8a8fa8] border-l border-[#e8eaf0] pl-3 ml-1">
-              <Users size={11} /><span className="font-semibold text-[#1a1e35]">{v1CurrMembers}</span>
+            <div className="flex items-center gap-1 text-[10px] text-[#6b7280] border-l border-[#e5e7eb] pl-3 ml-1">
+              <Users size={11} /><span className="font-semibold text-[#111827]">{v1CurrMembers}</span>
             </div>
           </div>
         </div>
         <div className="px-5 py-4">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-1 h-[21px] flex items-center">Recommended projection</p>
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6b7280] mb-1 h-[21px] flex items-center">Recommended projection</p>
           <div className="flex items-baseline gap-2">
             <p className="text-3xl font-bold text-[#0168dd] tracking-tight">{fmt0(v1AdjProj)}</p>
             <BreakdownPopover />
@@ -966,21 +1112,21 @@ function V1bPredictivePanel() {
                 <div className="h-full flex-1 bg-[#85baf5]" />
               </div>
             </div>
-            <div className="flex justify-between text-[10px] text-[#8a8fa8] mt-0.5">
+            <div className="flex justify-between text-[10px] text-[#6b7280] mt-0.5">
               <span>{fmt0(v1AvgMonthly)} avg</span>
               <span>{fmt0(v1AdjProj)} total</span>
             </div>
             <div className="absolute top-full left-0 mt-2 hidden group-hover:block z-20 pointer-events-none">
-              <div className="bg-white border border-[#e8eaf0] rounded-lg shadow-lg p-3 w-48">
+              <div className="bg-white border border-[#e5e7eb] rounded-lg shadow-lg p-3 w-48">
                 {([
-                  { label: "Confirmed",  color: "#10b981", value: v1bConfirmed, pct: v1bPctC },
+                  { label: "Confirmed",  color: "#0e9f6e", value: v1bConfirmed, pct: v1bPctC },
                   { label: "Planned",    color: "#0168dd", value: v1bPlanned,   pct: v1bPctP },
                   { label: "~Projected", color: "#85baf5", value: v1bProjected, pct: v1bPctR },
                 ] as const).map(({ label, color, value, pct }) => {
                   const k = value / 1000;
                   const fmtK = `$${k % 1 === 0 ? k.toFixed(0) : k.toFixed(1)}k`;
                   return (
-                    <div key={label} className="flex items-center justify-between text-[11px] font-semibold mb-1 last:mb-0 text-[#8a8fa8]">
+                    <div key={label} className="flex items-center justify-between text-[11px] font-semibold mb-1 last:mb-0 text-[#6b7280]">
                       <div className="flex items-center gap-1.5">
                         <div className="w-2 h-2 rounded-sm flex-shrink-0" style={{ background: color }} />
                         <span>{label}</span>
@@ -994,28 +1140,28 @@ function V1bPredictivePanel() {
           </div>
         </div>
       </div>
-      <div className="flex divide-x divide-[#e8eaf0]">
+      <div className="flex divide-x divide-[#e5e7eb]">
         <div className="flex-1 px-5 py-4 flex flex-col">
           <div className="flex items-start justify-between mb-3">
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-0.5">Week-by-week distribution</p>
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6b7280] mb-0.5">Week-by-week distribution</p>
               {chartView === "a" ? (
-                <p className="text-[11px] text-[#8a8fa8]">Past weeks show confirmed · current &amp; future show planned + projected</p>
+                <p className="text-[11px] text-[#6b7280]">Past weeks show confirmed · current &amp; future show planned + projected</p>
               ) : (
-                <p className="text-[11px] text-[#8a8fa8]">Amounts owed per payment provider per week</p>
+                <p className="text-[11px] text-[#6b7280]">Amounts owed per payment provider per week</p>
               )}
             </div>
             <div className="flex items-center gap-3 flex-shrink-0 ml-4">
-              <div className="flex items-center bg-[#f0f1f5] rounded-md p-0.5">
+              <div className="flex items-center bg-[#f3f4f6] rounded-md p-0.5">
                 <button
                   onClick={() => setChartView("a")}
-                  className={`px-2.5 py-1 rounded text-[10px] font-medium transition-all whitespace-nowrap ${chartView === "a" ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8]"}`}
+                  className={`px-2.5 py-1 rounded text-[10px] font-medium transition-all whitespace-nowrap ${chartView === "a" ? "bg-white text-[#0168dd] shadow-sm" : "text-[#6b7280]"}`}
                 >
                   By source of prediction
                 </button>
                 <button
                   onClick={() => setChartView("b")}
-                  className={`px-2.5 py-1 rounded text-[10px] font-medium transition-all whitespace-nowrap ${chartView === "b" ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8]"}`}
+                  className={`px-2.5 py-1 rounded text-[10px] font-medium transition-all whitespace-nowrap ${chartView === "b" ? "bg-white text-[#0168dd] shadow-sm" : "text-[#6b7280]"}`}
                 >
                   By cash flow channel
                 </button>
@@ -1026,41 +1172,41 @@ function V1bPredictivePanel() {
           {chartView === "a" ? (
           <ResponsiveContainer key="v1b-bar-a" width="100%" height={160}>
             <BarChart data={v1bWeeklyData} margin={{ top: 4, right: 4, left: 0, bottom: 28 }} barCategoryGap="30%">
-              <CartesianGrid strokeDasharray="2 4" stroke="#e8eaf0" vertical={false} />
+              <CartesianGrid strokeDasharray="2 4" stroke="#e5e7eb" vertical={false} />
               <XAxis dataKey="week" tick={(p) => <WeekTick {...p} data={v1bWeeklyData} />} axisLine={false} tickLine={false} interval={0} />
-              <YAxis tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 10, fill: "#8a8fa8" }} axisLine={false} tickLine={false} width={32} />
+              <YAxis tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 10, fill: "#6b7280" }} axisLine={false} tickLine={false} width={32} />
               <Tooltip
                 content={({ active, payload }) => {
                   if (!active || !payload?.length) return null;
                   const d = payload[0]?.payload;
                   if (!d) return null;
                   const items = [
-                    { key: "factual",   label: "Confirmed",      color: "#10b981", value: d.factual   },
+                    { key: "factual",   label: "Confirmed",      color: "#0e9f6e", value: d.factual   },
                     { key: "tracked",   label: "Planned",        color: "#0168dd", value: d.tracked   },
                     { key: "projected", label: "Projected",      color: "#85baf5", value: d.projected },
                   ].filter(i => i.value > 0);
                   const total = items.reduce((s, i) => s + i.value, 0);
                   return (
-                    <div className="bg-white border border-[#e8eaf0] rounded-lg shadow-lg p-3 text-xs min-w-[160px]">
-                      <p className="font-semibold text-[#1a1e35] mb-1.5">{d.week} · {d.dateLabel}</p>
+                    <div className="bg-white border border-[#e5e7eb] rounded-lg shadow-lg p-3 text-xs min-w-[160px]">
+                      <p className="font-semibold text-[#111827] mb-1.5">{d.week} · {d.dateLabel}</p>
                       {items.map(i => (
                         <div key={i.key} className="flex justify-between gap-4 py-0.5">
                           <span style={{ color: i.color }}>{i.label}</span>
-                          <span className="font-medium text-[#1a1e35]">{fmt0(i.value)}</span>
+                          <span className="font-medium text-[#111827]">{fmt0(i.value)}</span>
                         </div>
                       ))}
                       {items.length > 1 && (
-                        <div className="flex justify-between gap-4 py-0.5 mt-1 pt-1.5 border-t border-[#e8eaf0]">
-                          <span className="text-[#8a8fa8]">Total</span>
-                          <span className="font-semibold text-[#1a1e35]">{fmt0(total)}</span>
+                        <div className="flex justify-between gap-4 py-0.5 mt-1 pt-1.5 border-t border-[#e5e7eb]">
+                          <span className="text-[#6b7280]">Total</span>
+                          <span className="font-semibold text-[#111827]">{fmt0(total)}</span>
                         </div>
                       )}
                     </div>
                   );
                 }}
-                cursor={{ fill: "#f5f6fa" }}
+                cursor={{ fill: "#f9fafb" }}
               />
-              <Bar dataKey="factual"   name="Confirmed"  stackId="s" fill="#10b981" radius={[4,4,0,0]} />
+              <Bar dataKey="factual"   name="Confirmed"  stackId="s" fill="#0e9f6e" radius={[4,4,0,0]} />
               <Bar dataKey="tracked"   name="Planned"    stackId="s" fill="#0168dd" radius={[0,0,0,0]} />
               <Bar dataKey="projected" name="Projected"  stackId="s" fill="#85baf5" radius={[4,4,0,0]} />
             </BarChart>
@@ -1068,32 +1214,32 @@ function V1bPredictivePanel() {
           ) : (
           <ResponsiveContainer key="v1b-bar-b" width="100%" height={160}>
             <BarChart data={v1ProviderWeekData} margin={{ top: 4, right: 4, left: 0, bottom: 28 }} barCategoryGap="30%">
-              <CartesianGrid strokeDasharray="2 4" stroke="#e8eaf0" vertical={false} />
+              <CartesianGrid strokeDasharray="2 4" stroke="#e5e7eb" vertical={false} />
               <XAxis dataKey="week" tick={(p) => <WeekTick {...p} data={v1ProviderWeekData} />} axisLine={false} tickLine={false} interval={0} />
-              <YAxis tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 10, fill: "#8a8fa8" }} axisLine={false} tickLine={false} width={32} />
-              <Tooltip content={<ChartTip />} cursor={{ fill: "#f5f6fa" }} />
-              <Bar dataKey="factual"  name="Confirmed"   stackId="s" fill="#10b981" radius={[4,4,0,0]} />
+              <YAxis tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 10, fill: "#6b7280" }} axisLine={false} tickLine={false} width={32} />
+              <Tooltip content={<ChartTip />} cursor={{ fill: "#f9fafb" }} />
+              <Bar dataKey="factual"  name="Confirmed"   stackId="s" fill="#0e9f6e" radius={[4,4,0,0]} />
               <Bar dataKey="Wise"     name="Wise"        stackId="s" fill="#0168dd" radius={[0,0,0,0]} />
-              <Bar dataKey="Payoneer" name="Payoneer"    stackId="s" fill="#0ea5a0" radius={[0,0,0,0]} />
+              <Bar dataKey="Payoneer" name="Payoneer"    stackId="s" fill="#0e9f6e" radius={[0,0,0,0]} />
               <Bar dataKey="Deel"     name="Deel"        stackId="s" fill="#f59e0b" radius={[0,0,0,0]} />
-              <Bar dataKey="Export"   name="Export"      stackId="s" fill="#8a8fa8" radius={[4,4,0,0]} />
+              <Bar dataKey="Export"   name="Export"      stackId="s" fill="#6b7280" radius={[4,4,0,0]} />
             </BarChart>
           </ResponsiveContainer>
           )}
           <div className="flex items-center justify-between mt-1">
             <div className="flex flex-wrap gap-x-4 gap-y-1">
               {([
-                { label: "Confirmed", color: "#10b981", desc: "Payments already received"            },
+                { label: "Confirmed", color: "#0e9f6e", desc: "Payments already received"            },
                 { label: "Planned",   color: "#0168dd", desc: "Upcoming tracked payments"            },
                 { label: "Projected", color: "#85baf5", desc: "Estimated based on historical trends" },
               ] as const).map(({ label, color, desc }) => (
-                <div key={label} className="relative group flex items-center gap-1.5 text-[11px] text-[#8a8fa8] cursor-default">
+                <div key={label} className="relative group flex items-center gap-1.5 text-[11px] text-[#6b7280] cursor-default">
                   <div className="w-2 h-2 rounded-sm" style={{ background: color }} />
                   {label}
                   <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block z-20 pointer-events-none whitespace-nowrap">
-                    <div className="bg-white border border-[#e8eaf0] rounded-lg shadow-lg p-3 text-xs">
+                    <div className="bg-white border border-[#e5e7eb] rounded-lg shadow-lg p-3 text-xs">
                       <p className="font-semibold mb-0.5" style={{ color }}>{label}</p>
-                      <p className="text-[#8a8fa8]">{desc}</p>
+                      <p className="text-[#6b7280]">{desc}</p>
                     </div>
                   </div>
                 </div>
@@ -1101,8 +1247,8 @@ function V1bPredictivePanel() {
             </div>
             {chartView === "a" && (
               <div className="flex items-center gap-3 text-[10px]">
-                <span className="text-[#8a8fa8]">Wk 1–2: <span className="font-semibold text-emerald-600">past</span></span>
-                <span className="text-[#8a8fa8]">Wk 3–4: <span className="font-semibold text-[#0168dd]">upcoming</span></span>
+                <span className="text-[#6b7280]">Wk 1–2: <span className="font-semibold text-emerald-600">past</span></span>
+                <span className="text-[#6b7280]">Wk 3–4: <span className="font-semibold text-[#0168dd]">upcoming</span></span>
               </div>
             )}
           </div>
@@ -1116,22 +1262,22 @@ function Version1B() {
   const [bottomTab, setBottomTab] = useState<"history"|"future">("history");
   return (
     <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
-      <h1 className="text-xl font-semibold text-[#1a1e35]">Payments report</h1>
-      <div className="bg-white rounded-lg border border-[#e8eaf0] overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-3 border-b border-[#e8eaf0] bg-[#f9f9fc]">
+      <h1 className="text-xl font-semibold text-[#111827]">Payments report</h1>
+      <div className="bg-white rounded-lg border border-[#e5e7eb] overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-[#e5e7eb] bg-[#f9fafb]">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-[#1a1e35]">Predictable Cash Flow</span>
-            <span className="text-xs text-[#8a8fa8]">— based on historical payments</span>
+            <span className="text-sm font-semibold text-[#111827]">Predictable Cash Flow</span>
+            <span className="text-xs text-[#6b7280]">— based on historical payments</span>
           </div>
           <ExportDropdown />
         </div>
         <V1bPredictivePanel />
       </div>
       <div className="mt-6">
-        <p className="text-base font-semibold text-[#1a1e35] mb-3">Payment Activity</p>
-        <div className="flex items-center gap-0 mb-3 border-b border-[#e8eaf0]">
+        <p className="text-base font-semibold text-[#111827] mb-3">Payment Activity</p>
+        <div className="flex items-center gap-0 mb-3 border-b border-[#e5e7eb]">
           {([["history","Payment History"],["future","Future Tracked So Far"]] as const).map(([id, label]) => (
-            <button key={id} onClick={() => setBottomTab(id)} className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${bottomTab === id ? "border-[#0168dd] text-[#0168dd]" : "border-transparent text-[#8a8fa8] hover:text-[#1a1e35]"}`}>{label}</button>
+            <button key={id} onClick={() => setBottomTab(id)} className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${bottomTab === id ? "border-[#0168dd] text-[#0168dd]" : "border-transparent text-[#6b7280] hover:text-[#111827]"}`}>{label}</button>
           ))}
         </div>
         {bottomTab === "history" ? <V1PaymentHistory /> : <V1FutureTracked />}
@@ -1169,7 +1315,7 @@ const v1cPctR       = 100 - v1cPctC - v1cPctP;
 
 const v1cEarningTypes = [
   { key: "hourly",  label: "Hourly pay",     color: "#0168dd", group: "stable"   },
-  { key: "fixed",   label: "Fixed pay",      color: "#0ea5a0", group: "stable"   },
+  { key: "fixed",   label: "Fixed pay",      color: "#0e9f6e", group: "stable"   },
   { key: "bonuses", label: "Bonuses",        color: "#f59e0b", group: "variable" },
   { key: "pto",     label: "PTO & Holidays", color: "#8b5cf6", group: "variable" },
   { key: "adds",    label: "Additions",      color: "#f97316", group: "variable" },
@@ -1187,7 +1333,7 @@ const v1cBreakdownTabs = [
     key: "prediction" as const,
     label: "By source of prediction",
     rows: [
-      { label: "Confirmed",  color: "#10b981", value: 22600 },
+      { label: "Confirmed",  color: "#0e9f6e", value: 22600 },
       { label: "Planned",    color: "#0168dd", value:  1600 },
       { label: "~Projected", color: "#85baf5", value: 43947 },
     ],
@@ -1196,10 +1342,10 @@ const v1cBreakdownTabs = [
     key: "channel" as const,
     label: "By cash flow channel",
     rows: [
-      { label: "Wise",     color: "#0ea5a0", value: 31350 },
+      { label: "Wise",     color: "#0e9f6e", value: 31350 },
       { label: "Payoneer", color: "#f59e0b", value: 21806 },
       { label: "Deel",     color: "#7c3aed", value: 12266 },
-      { label: "Export",   color: "#8a8fa8", value:  2725 },
+      { label: "Export",   color: "#6b7280", value:  2725 },
     ],
   },
   {
@@ -1207,7 +1353,7 @@ const v1cBreakdownTabs = [
     label: "By earning type",
     rows: [
       { label: "Hourly pay",     color: "#0168dd", value: 31548 },
-      { label: "Fixed pay",      color: "#0ea5a0", value: 18400 },
+      { label: "Fixed pay",      color: "#0e9f6e", value: 18400 },
       { label: "Bonuses",        color: "#f59e0b", value:  9530 },
       { label: "PTO & Holidays", color: "#8b5cf6", value:  5452 },
       { label: "Additions",      color: "#f97316", value:  3217 },
@@ -1216,10 +1362,10 @@ const v1cBreakdownTabs = [
 ];
 
 const v1cProviders = [
-  { key: "Wise",     letter: "W", color: "#0ea5a0" },
+  { key: "Wise",     letter: "W", color: "#0e9f6e" },
   { key: "Payoneer", letter: "P", color: "#f59e0b" },
   { key: "Deel",     letter: "D", color: "#7c3aed" },
-  { key: "Export",   letter: "E", color: "#8a8fa8" },
+  { key: "Export",   letter: "E", color: "#6b7280" },
 ] as const;
 
 function ProviderLetterBadge({ letter, color, size = 14 }: { letter: string; color: string; size?: number }) {
@@ -1238,16 +1384,16 @@ function V1cBreakdownPopover({ dark = false, align = "right" }: { dark?: boolean
   const total = activeTab.rows.reduce((s, r) => s + r.value, 0);
   return (
     <div className="relative mt-1.5">
-      <button onClick={() => setOpen(o => !o)} className={`flex items-center gap-1 text-[11px] whitespace-nowrap transition-colors select-none ${dark ? "text-[#1a1e35] hover:text-[#0168dd]" : "text-[#0168dd] hover:text-[#0057bb]"}`}>
+      <button onClick={() => setOpen(o => !o)} className={`flex items-center gap-1 text-[11px] whitespace-nowrap transition-colors select-none ${dark ? "text-[#111827] hover:text-[#0168dd]" : "text-[#0168dd] hover:text-[#0057bb]"}`}>
         View breakdown <ChevronDown size={11} className={`transition-transform duration-150 ${open ? "rotate-180" : ""}`} />
       </button>
       {open && (
         <>
           <div className="fixed inset-0 z-20" onClick={() => setOpen(false)} />
-          <div className={`absolute top-6 ${align === "left" ? "left-0" : "right-0"} z-30 bg-white rounded-lg border border-[#e8eaf0] shadow-xl w-72 overflow-hidden`}>
-            <div className="flex border-b border-[#e8eaf0]">
+          <div className={`absolute top-6 ${align === "left" ? "left-0" : "right-0"} z-30 bg-white rounded-lg border border-[#e5e7eb] shadow-xl w-72 overflow-hidden`}>
+            <div className="flex border-b border-[#e5e7eb]">
               {v1cBreakdownTabs.map(t => (
-                <button key={t.key} onClick={() => setTab(t.key)} className={`flex-1 py-2 text-[9px] font-semibold transition-colors border-b-2 -mb-px whitespace-nowrap px-1 ${tab === t.key ? "border-[#0168dd] text-[#0168dd]" : "border-transparent text-[#8a8fa8] hover:text-[#1a1e35]"}`}>
+                <button key={t.key} onClick={() => setTab(t.key)} className={`flex-1 py-2 text-[9px] font-semibold transition-colors border-b-2 -mb-px whitespace-nowrap px-1 ${tab === t.key ? "border-[#0168dd] text-[#0168dd]" : "border-transparent text-[#6b7280] hover:text-[#111827]"}`}>
                   {t.label}
                 </button>
               ))}
@@ -1257,22 +1403,22 @@ function V1cBreakdownPopover({ dark = false, align = "right" }: { dark?: boolean
                 const pct = Math.round(value / total * 100);
                 const provider = tab === "channel" ? v1cProviders.find(p => p.key === label) : undefined;
                 return (
-                  <div key={label} className="flex items-center justify-between text-[11px] py-1.5 border-b border-[#f5f6fa] last:border-0">
+                  <div key={label} className="flex items-center justify-between text-[11px] py-1.5 border-b border-[#f9fafb] last:border-0">
                     <div className="flex items-center gap-2">
                       {provider
                         ? <ProviderLetterBadge letter={provider.letter} color={color} size={14} />
                         : <div className="w-2 h-2 rounded-sm flex-shrink-0" style={{ background: color }} />}
-                      <span className="text-[#8a8fa8]">{label}</span>
+                      <span className="text-[#6b7280]">{label}</span>
                     </div>
                     <div className="flex items-center gap-2 text-right">
-                      <span className="text-[10px] text-[#8a8fa8]">{pct}%</span>
-                      <span className="font-semibold text-[#1a1e35] w-16 text-right">{fmt0(value)}</span>
+                      <span className="text-[10px] text-[#6b7280]">{pct}%</span>
+                      <span className="font-semibold text-[#111827] w-16 text-right">{fmt0(value)}</span>
                     </div>
                   </div>
                 );
               })}
-              <div className="flex justify-between items-center pt-2 mt-1 border-t border-[#e8eaf0] text-[11px] font-semibold">
-                <span className="text-[#8a8fa8]">Total</span>
+              <div className="flex justify-between items-center pt-2 mt-1 border-t border-[#e5e7eb] text-[11px] font-semibold">
+                <span className="text-[#6b7280]">Total</span>
                 <span className="text-[#0168dd]">{fmt0(v1cProj)}</span>
               </div>
             </div>
@@ -1287,7 +1433,7 @@ function AdjustmentsBreakdownPopover() {
   const [open, setOpen] = useState(false);
   const fmtK = (n: number) => { const k = n / 1000; return `$${k % 1 === 0 ? k.toFixed(0) : k.toFixed(1)}k`; };
   const drivers = [
-    { label: "Headcount change", pct: v1cMemberPct, amt: v1cMemberAmt, color: "#10b981" },
+    { label: "Headcount change", pct: v1cMemberPct, amt: v1cMemberAmt, color: "#0e9f6e" },
     { label: "Seasonality",   pct: v1cSeasonPct, amt: v1cSeasonAmt, color: "#f59e0b" },
   ];
   return (
@@ -1298,22 +1444,22 @@ function AdjustmentsBreakdownPopover() {
       {open && (
         <>
           <div className="fixed inset-0 z-20" onClick={() => setOpen(false)} />
-          <div className="absolute top-6 right-0 z-30 bg-white rounded-lg border border-[#e8eaf0] shadow-xl w-60 p-3">
-            <div className="flex justify-between text-[11px] pb-2 mb-2 border-b border-[#e8eaf0]">
-              <span className="text-[#8a8fa8]">Base avg payout</span>
-              <span className="font-semibold text-[#1a1e35]">{fmt0(v1AvgMonthly)}</span>
+          <div className="absolute top-6 right-0 z-30 bg-white rounded-lg border border-[#e5e7eb] shadow-xl w-60 p-3">
+            <div className="flex justify-between text-[11px] pb-2 mb-2 border-b border-[#e5e7eb]">
+              <span className="text-[#6b7280]">Base avg payout</span>
+              <span className="font-semibold text-[#111827]">{fmt0(v1AvgMonthly)}</span>
             </div>
             {drivers.map(({ label, pct, amt, color }) => (
               <div key={label} className="flex justify-between items-center text-[11px] py-1">
                 <div className="flex items-center gap-1.5">
                   <span className="font-semibold" style={{ color }}>+{pct}%</span>
-                  <span className="text-[#8a8fa8]">{label}</span>
+                  <span className="text-[#6b7280]">{label}</span>
                 </div>
-                <span className="font-semibold text-[#1a1e35]">+{fmtK(amt)}</span>
+                <span className="font-semibold text-[#111827]">+{fmtK(amt)}</span>
               </div>
             ))}
-            <div className="flex justify-between items-center text-[11px] font-semibold mt-2 pt-2 border-t border-[#e8eaf0]">
-              <span className="text-[#1a1e35]">Projected total <span className="font-normal text-[#8a8fa8]">(+{v1cTotalPct}%)</span></span>
+            <div className="flex justify-between items-center text-[11px] font-semibold mt-2 pt-2 border-t border-[#e5e7eb]">
+              <span className="text-[#111827]">Projected total <span className="font-normal text-[#6b7280]">(+{v1cTotalPct}%)</span></span>
               <span className="text-[#0168dd]">{fmt0(v1cProj)}</span>
             </div>
           </div>
@@ -1325,7 +1471,7 @@ function AdjustmentsBreakdownPopover() {
 
 const v1cProjected  = v1cProj - v1cConfirmed - v1cPlanned;
 const v1cBarHoverRows = [
-  { label: "Confirmed",  color: "#10b981", value: v1cConfirmed, pct: v1cPctC },
+  { label: "Confirmed",  color: "#0e9f6e", value: v1cConfirmed, pct: v1cPctC },
   { label: "Planned",    color: "#0168dd", value: v1cPlanned,   pct: v1cPctP },
   { label: "~Projected", color: "#85baf5", value: v1cProjected, pct: v1cPctR },
 ];
@@ -1374,25 +1520,25 @@ function V1cTriageDrawer({ open, onClose }: { open: boolean; onClose: () => void
       <div className="fixed inset-0 bg-black/30 z-40" onClick={onClose} />
       <div className="fixed right-0 top-0 bottom-0 w-[360px] bg-white z-50 flex flex-col shadow-2xl">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[#e8eaf0]">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[#e5e7eb]">
           <div>
-            <p className="text-sm font-semibold text-[#1a1e35]">Payments needing attention</p>
-            <p className="text-[11px] text-[#8a8fa8] mt-0.5">{v1cTriageItemDefs.length} items · {fmt0(v1cTriagePendingAmt)} total</p>
+            <p className="text-sm font-semibold text-[#111827]">Payments needing attention</p>
+            <p className="text-[11px] text-[#6b7280] mt-0.5">{v1cTriageItemDefs.length} items · {fmt0(v1cTriagePendingAmt)} total</p>
           </div>
-          <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-full text-[#8a8fa8] hover:bg-[#f5f6fa] hover:text-[#1a1e35] text-base leading-none">×</button>
+          <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-full text-[#6b7280] hover:bg-[#f9fafb] hover:text-[#111827] text-base leading-none">×</button>
         </div>
         {/* Confirmation overlay */}
         {confirm && (
           <div className="absolute inset-0 bg-white/95 z-10 flex items-center justify-center p-6">
-            <div className="bg-white border border-[#e8eaf0] rounded-xl shadow-lg p-5 w-full">
-              <p className="text-sm font-semibold text-[#1a1e35] mb-1">
+            <div className="bg-white border border-[#e5e7eb] rounded-xl shadow-lg p-5 w-full">
+              <p className="text-sm font-semibold text-[#111827] mb-1">
                 {confirm.action === "retry" ? "Retry payment?" : "Process payment now?"}
               </p>
-              <p className="text-[12px] text-[#8a8fa8] mb-4">
+              <p className="text-[12px] text-[#6b7280] mb-4">
                 {confirm.item.member} · {fmt0(confirm.item.amount)} via {confirm.item.method}
               </p>
               <div className="flex gap-2">
-                <button onClick={() => setConfirm(null)} className="flex-1 py-2 text-[12px] border border-[#e8eaf0] rounded-lg text-[#8a8fa8] hover:bg-[#f5f6fa]">Cancel</button>
+                <button onClick={() => setConfirm(null)} className="flex-1 py-2 text-[12px] border border-[#e5e7eb] rounded-lg text-[#6b7280] hover:bg-[#f9fafb]">Cancel</button>
                 <button onClick={handleConfirm} className="flex-1 py-2 text-[12px] bg-[#0168dd] text-white rounded-lg font-semibold hover:bg-[#0158c0]">
                   {confirm.action === "retry" ? "Confirm retry" : "Confirm"}
                 </button>
@@ -1424,13 +1570,13 @@ function V1cTriageDrawer({ open, onClose }: { open: boolean; onClose: () => void
                               {item.initials}
                             </div>
                             <div className="min-w-0">
-                              <p className="text-[12px] font-semibold text-[#1a1e35] truncate">{item.member}</p>
-                              <p className="text-[10px] text-[#8a8fa8]">{item.week} ({item.dateLabel}) · {item.method}</p>
+                              <p className="text-[12px] font-semibold text-[#111827] truncate">{item.member}</p>
+                              <p className="text-[10px] text-[#6b7280]">{item.week} ({item.dateLabel}) · {item.method}</p>
                             </div>
                           </div>
-                          <span className="text-[12px] font-semibold text-[#1a1e35] flex-shrink-0">{fmt0(item.amount)}</span>
+                          <span className="text-[12px] font-semibold text-[#111827] flex-shrink-0">{fmt0(item.amount)}</span>
                         </div>
-                        <p className="text-[11px] text-[#8a8fa8] mb-2">{item.reason}</p>
+                        <p className="text-[11px] text-[#6b7280] mb-2">{item.reason}</p>
                         {!isDone ? (
                           <button onClick={() => handleAction(item)} className={`w-full py-1.5 text-[11px] font-semibold rounded-lg text-white ${btnCls}`}>
                             {btnLabel}
@@ -1447,7 +1593,7 @@ function V1cTriageDrawer({ open, onClose }: { open: boolean; onClose: () => void
           })}
         </div>
         {/* Footer */}
-        <div className="px-5 py-3 border-t border-[#e8eaf0]">
+        <div className="px-5 py-3 border-t border-[#e5e7eb]">
           <a href="#" className="flex items-center gap-1 text-[11px] text-[#0168dd] hover:underline">
             Open in Payment records <ChevronRight size={11} />
           </a>
@@ -1456,6 +1602,13 @@ function V1cTriageDrawer({ open, onClose }: { open: boolean; onClose: () => void
     </>
   );
 }
+
+// ── Wise Interest disclosure (opt-in APY on balances held in Wise) ─────────────
+// Surfaced only in the Final UI, behind the top "Wise interest" version switcher.
+// wiseVer: 0 = off, 1–5 = the five treatments. Provided by VersionFinalUI (0 when
+// Wise isn't a connected payout method). No rate/%/amount is ever shown — we link out.
+const WISE_INTEREST_URL = "https://wise.com/us/interest/";
+const WiseVerContext = createContext(0);
 
 function AddAdjustmentDialog({
   open, onClose, onSave, base, currentProjection, initial, zone = false,
@@ -1513,66 +1666,148 @@ function AddAdjustmentDialog({
   };
 
   if (!open) return null;
+
+  // Zone-aware field/segmented styling — Final UI (zone) matches the Zone design
+  // system: uppercase gray-400 12px labels, rounded-[6px] gray-300 inputs (gray-700
+  // 14px text, gray-400 placeholder), and bordered segmented controls like the chart.
+  // Non-zone (1G–1N) keeps the original look.
+  const lblCls = zone
+    ? "text-xs font-medium uppercase text-[#9ca3af] mb-1.5"
+    : "text-[10px] font-semibold uppercase tracking-widest text-[#6b7280] mb-1.5";
+  const fieldCls = (err = false) => zone
+    ? `h-10 rounded-[6px] border px-3 text-sm text-[#374151] placeholder:text-[#9ca3af] focus:outline-none focus:ring-2 transition-colors ${err ? "border-[#f05252] focus:ring-[#f05252]/25 focus:border-[#f05252]" : "border-[#d1d5db] focus:ring-[#2f8af4]/25 focus:border-[#2f8af4]"}`
+    : `border rounded-lg px-3 py-2 text-sm text-[#111827] focus:outline-none focus:ring-2 transition-colors ${err ? "border-red-400 focus:ring-red-200 focus:border-red-400" : "border-[#e5e7eb] focus:ring-[#0168dd]/20 focus:border-[#0168dd]"}`;
+  const segWrapCls = zone ? "flex w-fit" : "flex bg-[#f3f4f6] rounded-lg p-0.5 w-fit";
+  const segCls = (active: boolean, padZone: string, padPlain: string) => zone
+    ? `h-10 ${padZone} flex items-center justify-center whitespace-nowrap text-sm transition-colors border border-l-0 first:border-l border-[#d1d5db] first:rounded-l-[6px] last:rounded-r-[6px] ${active ? "bg-[#f0f5ff] text-[#0168dd] font-medium" : "text-[#374151] font-normal hover:bg-[#f9fafb]"}`
+    : `${padPlain} py-1.5 rounded-md text-sm font-semibold transition-all ${active ? "bg-white text-[#0168dd] shadow-sm" : "text-[#6b7280] hover:text-[#111827]"}`;
+
   return (
     <>
       <div className="fixed inset-0 z-40 bg-black/30" onClick={onClose} />
       <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
-        <div className="bg-white rounded-xl shadow-2xl w-96 p-6 pointer-events-auto">
-          <h2 className="text-[15px] font-semibold text-[#1a1e35] mb-1">
+        <div className={`relative bg-white pointer-events-auto ${zone ? "rounded-lg shadow-xl w-[520px] p-5" : "rounded-xl shadow-2xl w-96 p-6"}`}>
+          {zone && (
+            <button onClick={onClose} aria-label="Close"
+              className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-[6px] text-[#9ca3af] hover:bg-[#f3f4f6] hover:text-[#4b5563] transition-colors">
+              <span className="material-symbols-rounded" style={{ fontSize: 20 }}>close</span>
+            </button>
+          )}
+          <h2 className={zone ? "text-lg font-semibold text-[#111827] mb-1 pr-8" : "text-lg font-semibold text-[#111827] mb-1"}>
             {initial ? "Edit adjustment" : "Add adjustment"}
           </h2>
-          <p className="text-[12px] text-[#8a8fa8] leading-snug mb-5">
+          <p className={zone ? "text-sm text-[#6b7280] leading-snug mb-5" : "text-[12px] text-[#6b7280] leading-snug mb-5"}>
             This estimate is built from your payment history, so it can miss one-offs. Nudge it up or down — add a buffer to stay covered, or reduce it for a cost that won't repeat.
           </p>
 
           {/* Label */}
           <div className="mb-4">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-1.5">Label</p>
+            <p className={lblCls}>Label</p>
             <input type="text" value={label} onChange={e => setLabel(e.target.value)}
-              className="w-full border border-[#e8eaf0] rounded-lg px-3 py-2 text-sm text-[#1a1e35] focus:outline-none focus:ring-2 focus:ring-[#0168dd]/20 focus:border-[#0168dd] transition-colors" />
+              className={`w-full ${fieldCls()}`} />
           </div>
 
-          {/* Type */}
-          <div className="mb-4">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-1.5">Type</p>
-            <div className="flex bg-[#f0f1f5] rounded-lg p-0.5 w-fit">
-              {(["add", "reduce"] as const).map(t => (
-                <button key={t} onClick={() => setAdjType(t)}
-                  className={`px-4 py-1.5 rounded-md text-sm font-semibold transition-all ${adjType === t ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>
-                  {t === "add" ? "Add" : "Reduce"}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Amount */}
-          <div className="mb-1">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-1.5">Amount</p>
-            <div className="flex gap-2">
-              <div className="flex bg-[#f0f1f5] rounded-lg p-0.5 flex-shrink-0">
-                {(["pct", "dollar"] as const).map(u => (
-                  <button key={u} onClick={() => setUnit(u)}
-                    className={`px-2.5 py-1.5 rounded-md text-sm font-semibold transition-all ${unit === u ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8]"}`}>
-                    {u === "pct" ? "%" : "$"}
+          {/* Type — standalone for 1G–1N; Final UI pairs it with "Apply as" in a 50/50 row below */}
+          {!zone && (
+            <div className="mb-4">
+              <p className={lblCls}>Type</p>
+              <div className={segWrapCls}>
+                {(["add", "reduce"] as const).map(t => (
+                  <button key={t} onClick={() => setAdjType(t)} className={segCls(adjType === t, "px-4", "px-4")}>
+                    {t === "add" ? "Add" : "Reduce"}
                   </button>
                 ))}
               </div>
-              <input type="text" inputMode="decimal" value={rawValue}
-                onChange={e => setRawValue(e.target.value)}
-                onBlur={() => setAmountTouched(true)}
-                placeholder={unit === "pct" ? "e.g. 9" : "e.g. 5000"}
-                className={`flex-1 border rounded-lg px-3 py-2 text-sm text-[#1a1e35] focus:outline-none focus:ring-2 transition-colors ${amountError ? "border-red-400 focus:ring-red-200 focus:border-red-400" : "border-[#e8eaf0] focus:ring-[#0168dd]/20 focus:border-[#0168dd]"}`} />
             </div>
-            {amountError && <p className="text-[11px] text-red-500 mt-1">{amountError}</p>}
-          </div>
+          )}
 
-          {/* Helper line */}
-          {isValidAmount && (
-            <p className="text-[11px] text-[#8a8fa8] mt-2 leading-snug">
-              {unit === "dollar"
-                ? <>≈{Math.round(pct)}% of your {fmt0(base)} base · new projection <span className="font-semibold text-[#0168dd]">{fmt0(newProjection)}</span></>
-                : <>= {fmt0(Math.round(dollars))} of your {fmt0(base)} base · new projection <span className="font-semibold text-[#0168dd]">{fmt0(newProjection)}</span></>}
-            </p>
+          {/* Amount — Final UI follows the Bulk Payroll adjustments Figma: an
+              "Apply as" segmented (Amount / Percentage), a unit-aware value input,
+              and a prominent "New value" showing the resulting projection. */}
+          {zone ? (
+            <>
+              {/* Type + Apply as — one row, 50/50, 16px gap */}
+              <div className="flex gap-4 mb-4">
+                <div className="flex-1">
+                  <p className={lblCls}>Type</p>
+                  <div className="flex w-full">
+                    {([["add", "Add", "add"], ["reduce", "Reduce", "remove"]] as const).map(([t, text, icon]) => (
+                      <button key={t} onClick={() => setAdjType(t)} className={`${segCls(adjType === t, "px-2", "px-2")} flex-1`}>
+                        <span className="material-symbols-rounded" style={{ fontSize: 18, marginRight: 4 }}>{icon}</span>{text}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <p className={lblCls}>Apply as</p>
+                  <div className="flex w-full">
+                    {([["dollar", "Amount", "attach_money"], ["pct", "Percentage", "percent"]] as const).map(([u, text, icon]) => (
+                      <button key={u} onClick={() => setUnit(u)} className={`${segCls(unit === u, "px-2", "px-2")} flex-1`}>
+                        <span className="material-symbols-rounded" style={{ fontSize: 18, marginRight: 4 }}>{icon}</span>{text}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Value — label + input reflect the selected unit */}
+              <div className="mb-4">
+                <p className={lblCls}>{unit === "dollar" ? "Amount" : "Percentage"}</p>
+                <div className="relative">
+                  {unit === "dollar" && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[#9ca3af] pointer-events-none">$</span>}
+                  <input type="text" inputMode="decimal" value={rawValue}
+                    onChange={e => setRawValue(e.target.value)}
+                    onBlur={() => setAmountTouched(true)}
+                    placeholder={unit === "pct" ? "e.g. 9" : "e.g. 5000"}
+                    className={`w-full ${fieldCls(!!amountError)} ${unit === "dollar" ? "pl-7" : "pr-8"}`} />
+                  {unit === "pct" && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-[#9ca3af] pointer-events-none">%</span>}
+                </div>
+                {amountError
+                  ? <p className="text-[11px] text-[#f05252] mt-1.5">{amountError}</p>
+                  : isValidAmount && <p className="text-xs text-[#9ca3af] mt-1.5">{unit === "dollar" ? `≈ ${Math.round(pct)}% of your ${fmt0(base)} base` : `= ${fmt0(Math.round(dollars))} of your ${fmt0(base)} base`}</p>}
+              </div>
+
+              {/* New value */}
+              <div>
+                <p className={lblCls}>New value</p>
+                <p className="text-2xl font-semibold text-[#111827] leading-tight">
+                  {fmt0(isValidAmount ? newProjection : currentProjection)}
+                  {isValidAmount && signedDollars !== 0 && (
+                    <span className={`ml-2 text-sm font-medium ${signedDollars > 0 ? "text-[#0e9f6e]" : "text-[#f05252]"}`}>
+                      {signedDollars > 0 ? "+" : "−"}{fmt0(Math.abs(Math.round(signedDollars)))}
+                    </span>
+                  )}
+                </p>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="mb-1">
+                <p className={lblCls}>Amount</p>
+                <div className="flex gap-2">
+                  <div className={`${segWrapCls} flex-shrink-0`}>
+                    {(["pct", "dollar"] as const).map(u => (
+                      <button key={u} onClick={() => setUnit(u)} className={segCls(unit === u, "px-3", "px-2.5")}>
+                        {u === "pct" ? "%" : "$"}
+                      </button>
+                    ))}
+                  </div>
+                  <input type="text" inputMode="decimal" value={rawValue}
+                    onChange={e => setRawValue(e.target.value)}
+                    onBlur={() => setAmountTouched(true)}
+                    placeholder={unit === "pct" ? "e.g. 9" : "e.g. 5000"}
+                    className={`flex-1 ${fieldCls(!!amountError)}`} />
+                </div>
+                {amountError && <p className="text-[11px] text-red-500 mt-1">{amountError}</p>}
+              </div>
+              {isValidAmount && (
+                <p className="text-[11px] text-[#6b7280] mt-2 leading-snug">
+                  {unit === "dollar"
+                    ? <>≈{Math.round(pct)}% of your {fmt0(base)} base · new projection <span className="font-semibold text-[#0168dd]">{fmt0(newProjection)}</span></>
+                    : <>= {fmt0(Math.round(dollars))} of your {fmt0(base)} base · new projection <span className="font-semibold text-[#0168dd]">{fmt0(newProjection)}</span></>}
+                </p>
+              )}
+            </>
           )}
 
           {/* Warnings */}
@@ -1580,12 +1815,12 @@ function AddAdjustmentDialog({
           {showClampWarn  && <p className="text-[11px] text-red-500 mt-1.5">This reduction would bring the projection below $0.</p>}
 
           {/* Footer */}
-          <div className="flex items-center justify-between mt-6 pt-4 border-t border-[#e8eaf0]">
-            <button onClick={onClose} className={zone ? zbtn("ghostGray", "md") : "px-4 py-2 text-sm font-medium text-[#8a8fa8] hover:text-[#1a1e35] transition-colors"}>Cancel</button>
+          <div className={`flex items-center justify-between ${zone ? "mt-6 pt-5" : "mt-6 pt-4 border-t border-[#e5e7eb]"}`}>
+            <button onClick={onClose} className={zone ? zbtn("ghostGray", "md") : "px-4 py-2 text-sm font-medium text-[#6b7280] hover:text-[#111827] transition-colors"}>Cancel</button>
             <button onClick={handleSave} disabled={!isValid}
               className={zone
                 ? (isValid ? zbtn("solidPrimary", "md") : `${ZBTN_BASE} ${ZBTN_SIZE.md} ${ZBTN_VARIANT.solidPrimary} opacity-30 cursor-not-allowed`)
-                : `px-5 py-2 rounded-lg text-sm font-semibold transition-all ${isValid ? "bg-[#0168dd] text-white hover:bg-[#0057bb]" : "bg-[#e8eaf0] text-[#c8cad4] cursor-not-allowed"}`}>
+                : `px-5 py-2 rounded-lg text-sm font-semibold transition-all ${isValid ? "bg-[#0168dd] text-white hover:bg-[#0057bb]" : "bg-[#e5e7eb] text-[#d1d5db] cursor-not-allowed"}`}>
               {initial ? "Save" : "Add"}
             </button>
           </div>
@@ -1618,20 +1853,20 @@ function V1cPredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
   }));
   return (
     <div>
-      <div className="grid grid-cols-3 divide-x divide-[#e8eaf0] border-b border-[#e8eaf0]">
+      <div className="grid grid-cols-3 divide-x divide-[#e5e7eb] border-b border-[#e5e7eb]">
         {/* Card 1 — base */}
         <div className="px-5 py-4">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-1 h-[21px] flex items-center">Monthly avg payout</p>
-          <p className="text-3xl font-bold text-[#1a1e35] tracking-tight">{fmt0(v1AvgMonthly)}</p>
-          <p className="text-[11px] text-[#8a8fa8] mt-0.5">last 5 months</p>
-          <div className="flex items-center gap-x-2 gap-y-1 mt-2 flex-wrap text-[10px] text-[#8a8fa8]">
-            <div className="flex items-center gap-1 border-r border-[#e8eaf0] pr-2 mr-1">
-              <UserCircle2 size={13} className="text-[#1a1e35]" /><span className="font-semibold text-[#1a1e35]">{v1CurrMembers}</span>
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6b7280] mb-1 h-[21px] flex items-center">Monthly avg payout</p>
+          <p className="text-3xl font-bold text-[#111827] tracking-tight">{fmt0(v1AvgMonthly)}</p>
+          <p className="text-[11px] text-[#6b7280] mt-0.5">last 5 months</p>
+          <div className="flex items-center gap-x-2 gap-y-1 mt-2 flex-wrap text-[10px] text-[#6b7280]">
+            <div className="flex items-center gap-1 border-r border-[#e5e7eb] pr-2 mr-1">
+              <UserCircle2 size={13} className="text-[#111827]" /><span className="font-semibold text-[#111827]">{v1CurrMembers}</span>
             </div>
             {v1PayTypes.map((pt, i) => (
               <div key={pt.key} className="flex items-center gap-1">
-                {i > 0 && <span className="text-[#c8cad4]">·</span>}
-                <span className="font-semibold text-[#1a1e35]">{pt.count}</span><span>{pt.label}</span>
+                {i > 0 && <span className="text-[#d1d5db]">·</span>}
+                <span className="font-semibold text-[#111827]">{pt.count}</span><span>{pt.label}</span>
               </div>
             ))}
           </div>
@@ -1640,7 +1875,7 @@ function V1cPredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
         {/* Card 2 — adjustments */}
         <div className="px-5 py-4">
           <div className="flex items-center justify-between mb-1">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] h-[21px] flex items-center">Adjustments</p>
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6b7280] h-[21px] flex items-center">Adjustments</p>
             <button onClick={() => { setEditingAdj(null); setShowAddDialog(true); }}
               className="flex items-center gap-0.5 text-[10px] font-medium text-[#0168dd] border border-[#0168dd]/40 rounded-md px-2 py-0.5 hover:bg-[#0168dd]/5 transition-colors select-none">
               <Plus size={10} /> Add adjustment
@@ -1650,7 +1885,7 @@ function V1cPredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
             <span className={`text-3xl font-bold tracking-tight ${adjPct >= 0 ? "text-emerald-600" : "text-red-500"}`}>{adjPct >= 0 ? "+" : ""}{adjPct}%</span>
             {adjPct >= 0 ? <TrendingUp size={16} className="text-emerald-500" /> : <TrendingDown size={16} className="text-red-400" />}
           </div>
-          <div className="mt-2 divide-y divide-[#f0f1f5]">
+          <div className="mt-2 divide-y divide-[#f3f4f6]">
             {([
               { label: "Headcount change", pct: v1cMemberPct, note: `${v1CurrMembers} this cycle vs avg ${v1AvgMembers}`, positive: true },
               { label: "Seasonality",   pct: v1cSeasonPct, note: "May is typically above avg.",                       positive: true },
@@ -1658,23 +1893,23 @@ function V1cPredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
               const isSeason = label === "Seasonality";
               if (isSeason && !seasonalityOn) return null;
               return (
-                <div key={label} className="flex items-center gap-1.5 text-[11px] py-1.5 min-w-0">
+                <div key={label} className="flex items-center gap-1.5 text-xs py-1.5 min-w-0">
                   <span className={`font-semibold flex-shrink-0 ${positive ? "text-emerald-600" : "text-red-500"}`}>{positive ? "+" : ""}{pct}%</span>
-                  <span className="text-[#1a1e35] font-medium flex-shrink-0">{label}</span>
-                  <span className="text-[#d0d3de] flex-shrink-0">—</span>
-                  <span className="text-[#8a8fa8] truncate">{note}</span>
+                  <span className="text-[#111827] font-medium flex-shrink-0">{label}</span>
+                  <span className="text-[#d1d5db] flex-shrink-0">—</span>
+                  <span className="text-[#6b7280] truncate">{note}</span>
                 </div>
               );
             })}
             {manualAdjustments.map(adj => (
-              <div key={adj.id} className="flex items-center gap-1.5 text-[11px] py-1.5 min-w-0">
+              <div key={adj.id} className="flex items-center gap-1.5 text-xs py-1.5 min-w-0">
                 <span className={`font-semibold flex-shrink-0 ${adj.type === "add" ? "text-emerald-600" : "text-red-500"}`}>{adj.type === "add" ? "+" : "−"}{adj.unit === "pct" ? `${adj.value}%` : `≈${Math.round(adj.pct)}%`}</span>
-                <span className="text-[#1a1e35] font-medium flex-shrink-0">{adj.label}</span>
-                <span className="text-[#d0d3de] flex-shrink-0">—</span>
-                <span className="text-[#8a8fa8] flex-shrink-0">{adj.unit === "dollar" ? fmt0(Math.round(adj.dollars)) : `≈${fmt0(Math.round(adj.dollars))}`}</span>
-                <span className="text-[9px] font-medium bg-[#f0f1f5] text-[#8a8fa8] rounded px-1.5 py-0.5 flex-shrink-0">Added by you</span>
-                <button onClick={() => { setEditingAdj(adj); setShowAddDialog(true); }} className="ml-auto flex-shrink-0 p-0.5 rounded text-[#8a8fa8] hover:text-[#0168dd] hover:bg-[#f0f1f5] transition-colors"><Pencil size={11} /></button>
-                <button onClick={() => setManualAdjustments(prev => prev.filter(a => a.id !== adj.id))} className="flex-shrink-0 p-0.5 rounded text-[#8a8fa8] hover:text-red-500 hover:bg-red-50 transition-colors"><X size={11} /></button>
+                <span className="text-[#111827] font-medium flex-shrink-0">{adj.label}</span>
+                <span className="text-[#d1d5db] flex-shrink-0">—</span>
+                <span className="text-[#6b7280] flex-shrink-0">{adj.unit === "dollar" ? fmt0(Math.round(adj.dollars)) : `≈${fmt0(Math.round(adj.dollars))}`}</span>
+                <span className="text-[9px] font-medium bg-[#f3f4f6] text-[#6b7280] rounded px-1.5 py-0.5 flex-shrink-0">Added by you</span>
+                <button onClick={() => { setEditingAdj(adj); setShowAddDialog(true); }} className="ml-auto flex-shrink-0 p-0.5 rounded text-[#6b7280] hover:text-[#0168dd] hover:bg-[#f3f4f6] transition-colors"><Pencil size={11} /></button>
+                <button onClick={() => setManualAdjustments(prev => prev.filter(a => a.id !== adj.id))} className="flex-shrink-0 p-0.5 rounded text-[#6b7280] hover:text-red-500 hover:bg-red-50 transition-colors"><X size={11} /></button>
               </div>
             ))}
           </div>
@@ -1682,7 +1917,7 @@ function V1cPredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
 
         {/* Card 3 — projection */}
         <div className="px-5 py-4">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-1 h-[21px] flex items-center">Recommended projection</p>
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6b7280] mb-1 h-[21px] flex items-center">Recommended projection</p>
           <p className="text-3xl font-bold text-[#0168dd] tracking-tight">{fmt0(adjProj)}</p>
           <V1cBreakdownPopover />
           <div className="relative group mt-3 cursor-default">
@@ -1693,17 +1928,17 @@ function V1cPredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
                 <div className="h-full flex-1 bg-[#85baf5]" />
               </div>
             </div>
-            <div className="flex justify-between text-[10px] text-[#8a8fa8] mt-0.5">
+            <div className="flex justify-between text-[10px] text-[#6b7280] mt-0.5">
               <span>{fmt0(v1AvgMonthly)} avg</span>
               <span>{fmt0(adjProj)} total</span>
             </div>
             <div className="absolute top-full left-0 mt-2 hidden group-hover:block z-20 pointer-events-none">
-              <div className="bg-white border border-[#e8eaf0] rounded-lg shadow-lg p-3 w-48">
+              <div className="bg-white border border-[#e5e7eb] rounded-lg shadow-lg p-3 w-48">
                 {v1cBarHoverRows.map(({ label, color, value, pct }) => {
                   const k = value / 1000;
                   const fmtK = `${k % 1 === 0 ? k.toFixed(0) : k.toFixed(1)}k`;
                   return (
-                    <div key={label} className="flex items-center justify-between text-[11px] font-semibold mb-1 last:mb-0 text-[#8a8fa8]">
+                    <div key={label} className="flex items-center justify-between text-[11px] font-semibold mb-1 last:mb-0 text-[#6b7280]">
                       <div className="flex items-center gap-1.5">
                         <div className="w-2 h-2 rounded-sm flex-shrink-0" style={{ background: color }} />
                         <span>{label}</span>
@@ -1719,26 +1954,26 @@ function V1cPredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
       </div>
 
       {/* Chart — identical to V1B */}
-      <div className="flex divide-x divide-[#e8eaf0]">
+      <div className="flex divide-x divide-[#e5e7eb]">
         <div className="flex-1 px-5 py-4 flex flex-col">
           <div className="flex items-start justify-between mb-3">
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-0.5">Week-by-week distribution</p>
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6b7280] mb-0.5">Week-by-week distribution</p>
               {chartView === "a" ? (
-                <p className="text-[11px] text-[#8a8fa8]">
+                <p className="text-[11px] text-[#6b7280]">
                   {showStatusBreakdown
                     ? "Past weeks: paid · pending · failed — future: planned + projected"
                     : "Past weeks show confirmed · current & future show planned + projected"}
                 </p>
               ) : chartView === "b" ? (
-                <p className="text-[11px] text-[#8a8fa8]">Amounts owed per payment provider per week</p>
+                <p className="text-[11px] text-[#6b7280]">Amounts owed per payment provider per week</p>
               ) : (
-                <p className="text-[11px] text-[#8a8fa8]">Stable base sits at the bottom · variable earnings stack on top</p>
+                <p className="text-[11px] text-[#6b7280]">Stable base sits at the bottom · variable earnings stack on top</p>
               )}
             </div>
-            <div className="flex items-center bg-[#f0f1f5] rounded-md p-0.5 flex-shrink-0 ml-4">
+            <div className="flex items-center bg-[#f3f4f6] rounded-md p-0.5 flex-shrink-0 ml-4">
               {([["a","By source of prediction"],["b","By cash flow channel"],["c","By earning type"]] as const).map(([v, lbl]) => (
-                <button key={v} onClick={() => setChartView(v)} className={`px-2.5 py-1 rounded text-[10px] font-medium transition-all whitespace-nowrap ${chartView === v ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8]"}`}>{lbl}</button>
+                <button key={v} onClick={() => setChartView(v)} className={`px-2.5 py-1 rounded text-[10px] font-medium transition-all whitespace-nowrap ${chartView === v ? "bg-white text-[#0168dd] shadow-sm" : "text-[#6b7280]"}`}>{lbl}</button>
               ))}
             </div>
           </div>
@@ -1760,15 +1995,15 @@ function V1cPredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
             showStatusBreakdown ? (
               <ResponsiveContainer key="v1c-bar-a-status" width="100%" height={160}>
                 <BarChart data={v1cSourceData} margin={{ top: 4, right: 4, left: 0, bottom: 28 }} barCategoryGap="30%">
-                  <CartesianGrid strokeDasharray="2 4" stroke="#e8eaf0" vertical={false} />
+                  <CartesianGrid strokeDasharray="2 4" stroke="#e5e7eb" vertical={false} />
                   <XAxis dataKey="week" tick={(p) => <WeekTick {...p} data={v1cSourceData} />} axisLine={false} tickLine={false} interval={0} />
-                  <YAxis tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 10, fill: "#8a8fa8" }} axisLine={false} tickLine={false} width={32} />
+                  <YAxis tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 10, fill: "#6b7280" }} axisLine={false} tickLine={false} width={32} />
                   <Tooltip content={({ active, payload }) => {
                     if (!active || !payload?.length) return null;
                     const d = payload[0]?.payload as typeof v1cSourceData[0];
                     if (!d) return null;
                     const items = [
-                      { key: "paid",      label: "Paid",      color: "#10b981", value: d.paid      },
+                      { key: "paid",      label: "Paid",      color: "#0e9f6e", value: d.paid      },
                       { key: "pending",   label: "Pending",   color: "#f59e0b", value: d.pending   },
                       { key: "failed",    label: "Failed",    color: "#ef4444", value: d.failed    },
                       { key: "tracked",   label: "Planned",   color: "#0168dd", value: d.tracked   },
@@ -1776,19 +2011,19 @@ function V1cPredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
                     ].filter(i => i.value > 0);
                     const total = items.reduce((s, i) => s + i.value, 0);
                     return (
-                      <div className="bg-white border border-[#e8eaf0] rounded-lg shadow-lg p-3 text-xs min-w-[160px]">
-                        <p className="font-semibold text-[#1a1e35] mb-1.5">{d.week} · {d.dateLabel}</p>
+                      <div className="bg-white border border-[#e5e7eb] rounded-lg shadow-lg p-3 text-xs min-w-[160px]">
+                        <p className="font-semibold text-[#111827] mb-1.5">{d.week} · {d.dateLabel}</p>
                         {items.map(i => (
                           <div key={i.key} className="flex justify-between gap-4 py-0.5">
                             <span style={{ color: i.color }}>{i.label}</span>
-                            <span className="font-medium text-[#1a1e35]">{fmt0(i.value)}</span>
+                            <span className="font-medium text-[#111827]">{fmt0(i.value)}</span>
                           </div>
                         ))}
-                        {items.length > 1 && <div className="flex justify-between gap-4 py-0.5 mt-1 pt-1.5 border-t border-[#e8eaf0]"><span className="text-[#8a8fa8]">Total</span><span className="font-semibold text-[#1a1e35]">{fmt0(total)}</span></div>}
+                        {items.length > 1 && <div className="flex justify-between gap-4 py-0.5 mt-1 pt-1.5 border-t border-[#e5e7eb]"><span className="text-[#6b7280]">Total</span><span className="font-semibold text-[#111827]">{fmt0(total)}</span></div>}
                       </div>
                     );
-                  }} cursor={{ fill: "#f5f6fa" }} />
-                  <Bar dataKey="paid"      name="Paid"      stackId="s" fill="#10b981" radius={[0,0,0,0]} />
+                  }} cursor={{ fill: "#f9fafb" }} />
+                  <Bar dataKey="paid"      name="Paid"      stackId="s" fill="#0e9f6e" radius={[0,0,0,0]} />
                   <Bar dataKey="pending"   name="Pending"   stackId="s" fill="#f59e0b" radius={[0,0,0,0]} />
                   <Bar dataKey="failed"    name="Failed"    stackId="s" fill="#ef4444" radius={[0,0,0,0]} />
                   <Bar dataKey="tracked"   name="Planned"   stackId="s" fill="#0168dd" radius={[0,0,0,0]} />
@@ -1798,33 +2033,33 @@ function V1cPredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
             ) : (
               <ResponsiveContainer key="v1c-bar-a-simple" width="100%" height={160}>
                 <BarChart data={mergedSourceData} margin={{ top: 4, right: 4, left: 0, bottom: 28 }} barCategoryGap="30%">
-                  <CartesianGrid strokeDasharray="2 4" stroke="#e8eaf0" vertical={false} />
+                  <CartesianGrid strokeDasharray="2 4" stroke="#e5e7eb" vertical={false} />
                   <XAxis dataKey="week" tick={(p) => <WeekTick {...p} data={mergedSourceData} />} axisLine={false} tickLine={false} interval={0} />
-                  <YAxis tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 10, fill: "#8a8fa8" }} axisLine={false} tickLine={false} width={32} />
+                  <YAxis tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 10, fill: "#6b7280" }} axisLine={false} tickLine={false} width={32} />
                   <Tooltip content={({ active, payload }) => {
                     if (!active || !payload?.length) return null;
                     const d = payload[0]?.payload as typeof mergedSourceData[0];
                     if (!d) return null;
                     const items = [
-                      { key: "factual",   label: "Confirmed", color: "#10b981", value: d.factual   },
+                      { key: "factual",   label: "Confirmed", color: "#0e9f6e", value: d.factual   },
                       { key: "tracked",   label: "Planned",   color: "#0168dd", value: d.tracked   },
                       { key: "projected", label: "Projected", color: "#85baf5", value: d.projected },
                     ].filter(i => i.value > 0);
                     const total = items.reduce((s, i) => s + i.value, 0);
                     return (
-                      <div className="bg-white border border-[#e8eaf0] rounded-lg shadow-lg p-3 text-xs min-w-[160px]">
-                        <p className="font-semibold text-[#1a1e35] mb-1.5">{d.week} · {d.dateLabel}</p>
+                      <div className="bg-white border border-[#e5e7eb] rounded-lg shadow-lg p-3 text-xs min-w-[160px]">
+                        <p className="font-semibold text-[#111827] mb-1.5">{d.week} · {d.dateLabel}</p>
                         {items.map(i => (
                           <div key={i.key} className="flex justify-between gap-4 py-0.5">
                             <span style={{ color: i.color }}>{i.label}</span>
-                            <span className="font-medium text-[#1a1e35]">{fmt0(i.value)}</span>
+                            <span className="font-medium text-[#111827]">{fmt0(i.value)}</span>
                           </div>
                         ))}
-                        {items.length > 1 && <div className="flex justify-between gap-4 py-0.5 mt-1 pt-1.5 border-t border-[#e8eaf0]"><span className="text-[#8a8fa8]">Total</span><span className="font-semibold text-[#1a1e35]">{fmt0(total)}</span></div>}
+                        {items.length > 1 && <div className="flex justify-between gap-4 py-0.5 mt-1 pt-1.5 border-t border-[#e5e7eb]"><span className="text-[#6b7280]">Total</span><span className="font-semibold text-[#111827]">{fmt0(total)}</span></div>}
                       </div>
                     );
-                  }} cursor={{ fill: "#f5f6fa" }} />
-                  <Bar dataKey="factual"   name="Confirmed" stackId="s" fill="#10b981" radius={[4,4,0,0]} />
+                  }} cursor={{ fill: "#f9fafb" }} />
+                  <Bar dataKey="factual"   name="Confirmed" stackId="s" fill="#0e9f6e" radius={[4,4,0,0]} />
                   <Bar dataKey="tracked"   name="Planned"   stackId="s" fill="#0168dd" radius={[0,0,0,0]} />
                   <Bar dataKey="projected" name="Projected" stackId="s" fill="#85baf5" radius={[4,4,0,0]} />
                 </BarChart>
@@ -1833,30 +2068,30 @@ function V1cPredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
           ) : chartView === "b" ? (
             <ResponsiveContainer key="v1c-bar-b" width="100%" height={160}>
               <BarChart data={v1ProviderWeekData} margin={{ top: 4, right: 4, left: 0, bottom: 28 }} barCategoryGap="30%">
-                <CartesianGrid strokeDasharray="2 4" stroke="#e8eaf0" vertical={false} />
+                <CartesianGrid strokeDasharray="2 4" stroke="#e5e7eb" vertical={false} />
                 <XAxis dataKey="week" tick={(p) => <WeekTick {...p} data={v1ProviderWeekData} />} axisLine={false} tickLine={false} interval={0} />
-                <YAxis tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 10, fill: "#8a8fa8" }} axisLine={false} tickLine={false} width={32} />
-                <Tooltip content={<ChartTip />} cursor={{ fill: "#f5f6fa" }} />
-                <Bar dataKey="factual"  name="Confirmed" stackId="s" fill="#10b981" radius={[4,4,0,0]} />
-                <Bar dataKey="Wise"     name="Wise"      stackId="s" fill="#0ea5a0" radius={[0,0,0,0]} />
+                <YAxis tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 10, fill: "#6b7280" }} axisLine={false} tickLine={false} width={32} />
+                <Tooltip content={<ChartTip />} cursor={{ fill: "#f9fafb" }} />
+                <Bar dataKey="factual"  name="Confirmed" stackId="s" fill="#0e9f6e" radius={[4,4,0,0]} />
+                <Bar dataKey="Wise"     name="Wise"      stackId="s" fill="#0e9f6e" radius={[0,0,0,0]} />
                 <Bar dataKey="Payoneer" name="Payoneer"  stackId="s" fill="#f59e0b" radius={[0,0,0,0]} />
                 <Bar dataKey="Deel"     name="Deel"      stackId="s" fill="#7c3aed" radius={[0,0,0,0]} />
-                <Bar dataKey="Export"   name="Export"    stackId="s" fill="#8a8fa8" radius={[4,4,0,0]} />
+                <Bar dataKey="Export"   name="Export"    stackId="s" fill="#6b7280" radius={[4,4,0,0]} />
               </BarChart>
             </ResponsiveContainer>
           ) : (
             <ResponsiveContainer key="v1c-bar-c" width="100%" height={160}>
               <BarChart data={v1cEarningTypeData} margin={{ top: 4, right: 4, left: 0, bottom: 28 }} barCategoryGap="30%">
-                <CartesianGrid strokeDasharray="2 4" stroke="#e8eaf0" vertical={false} />
+                <CartesianGrid strokeDasharray="2 4" stroke="#e5e7eb" vertical={false} />
                 <XAxis dataKey="week" tick={(p) => <WeekTick {...p} data={v1cEarningTypeData} />} axisLine={false} tickLine={false} interval={0} />
-                <YAxis tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 10, fill: "#8a8fa8" }} axisLine={false} tickLine={false} width={32} />
+                <YAxis tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 10, fill: "#6b7280" }} axisLine={false} tickLine={false} width={32} />
                 <Tooltip content={({ active, payload }) => {
                   if (!active || !payload?.length) return null;
                   const d = payload[0]?.payload as typeof v1cEarningTypeData[0];
                   if (!d) return null;
                   return (
-                    <div className="bg-white border border-[#e8eaf0] rounded-lg shadow-lg p-3 text-xs min-w-[180px]">
-                      <p className="font-semibold text-[#1a1e35] mb-1.5">{d.week} · {d.dateLabel}</p>
+                    <div className="bg-white border border-[#e5e7eb] rounded-lg shadow-lg p-3 text-xs min-w-[180px]">
+                      <p className="font-semibold text-[#111827] mb-1.5">{d.week} · {d.dateLabel}</p>
                       {v1cEarningTypes.map(({ key, label, color }) => {
                         const val = d[key as keyof typeof d] as number;
                         const pct = Math.round(val / d.total * 100);
@@ -1864,21 +2099,21 @@ function V1cPredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
                           <div key={key} className="flex justify-between gap-3 py-0.5 text-[11px]">
                             <span className="flex items-center gap-1.5">
                               <span className="w-2 h-2 rounded-sm flex-shrink-0 inline-block" style={{ background: color }} />
-                              <span className="text-[#8a8fa8]">{label}</span>
+                              <span className="text-[#6b7280]">{label}</span>
                             </span>
-                            <span className="font-medium text-[#1a1e35]">{fmt0(val)} <span className="text-[#8a8fa8]">({pct}%)</span></span>
+                            <span className="font-medium text-[#111827]">{fmt0(val)} <span className="text-[#6b7280]">({pct}%)</span></span>
                           </div>
                         );
                       })}
-                      <div className="flex justify-between mt-1 pt-1.5 border-t border-[#e8eaf0] font-semibold text-[11px]">
-                        <span className="text-[#8a8fa8]">Total</span>
-                        <span className="text-[#1a1e35]">{fmt0(d.total)}</span>
+                      <div className="flex justify-between mt-1 pt-1.5 border-t border-[#e5e7eb] font-semibold text-[11px]">
+                        <span className="text-[#6b7280]">Total</span>
+                        <span className="text-[#111827]">{fmt0(d.total)}</span>
                       </div>
                     </div>
                   );
-                }} cursor={{ fill: "#f5f6fa" }} />
+                }} cursor={{ fill: "#f9fafb" }} />
                 <Bar dataKey="hourly"  name="Hourly pay"     stackId="s" fill="#0168dd" radius={[0,0,0,0]} />
-                <Bar dataKey="fixed"   name="Fixed pay"      stackId="s" fill="#0ea5a0" radius={[0,0,0,0]} />
+                <Bar dataKey="fixed"   name="Fixed pay"      stackId="s" fill="#0e9f6e" radius={[0,0,0,0]} />
                 <Bar dataKey="bonuses" name="Bonuses"        stackId="s" fill="#f59e0b" radius={[0,0,0,0]} />
                 <Bar dataKey="pto"     name="PTO & Holidays" stackId="s" fill="#8b5cf6" radius={[0,0,0,0]} />
                 <Bar dataKey="adds"    name="Additions"      stackId="s" fill="#f97316" radius={[4,4,0,0]} />
@@ -1890,11 +2125,11 @@ function V1cPredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
               <div className="flex flex-wrap gap-x-5 gap-y-1.5">
                 {(["stable","variable"] as const).map(group => (
                   <div key={group} className="flex items-center gap-3">
-                    <span className="text-[9px] font-semibold uppercase tracking-widest text-[#8a8fa8]">
+                    <span className="text-[9px] font-semibold uppercase tracking-widest text-[#6b7280]">
                       {group === "stable" ? "Stable base" : "Variable — Watch"}
                     </span>
                     {v1cEarningTypes.filter(t => t.group === group).map(({ key, label, color }) => (
-                      <div key={key} className="flex items-center gap-1.5 text-[11px] text-[#8a8fa8]">
+                      <div key={key} className="flex items-center gap-1.5 text-[11px] text-[#6b7280]">
                         <div className="w-2 h-2 rounded-sm flex-shrink-0" style={{ background: color }} />
                         {label}
                       </div>
@@ -1904,12 +2139,12 @@ function V1cPredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
               </div>
             ) : chartView === "b" ? (
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-                <div className="flex items-center gap-1.5 text-[11px] text-[#8a8fa8]">
-                  <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: "#10b981" }} />
+                <div className="flex items-center gap-1.5 text-[11px] text-[#6b7280]">
+                  <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: "#0e9f6e" }} />
                   Confirmed
                 </div>
                 {v1cProviders.map(({ key, letter, color }) => (
-                  <div key={key} className="flex items-center gap-1.5 text-[11px] text-[#8a8fa8]">
+                  <div key={key} className="flex items-center gap-1.5 text-[11px] text-[#6b7280]">
                     <ProviderLetterBadge letter={letter} color={color} size={12} />
                     {key}
                   </div>
@@ -1919,33 +2154,33 @@ function V1cPredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
               showStatusBreakdown ? (
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                   {([
-                    { label: "Paid",    color: "#10b981", desc: "Successfully paid out"                },
+                    { label: "Paid",    color: "#0e9f6e", desc: "Successfully paid out"                },
                     { label: "Pending", color: "#f59e0b", desc: "Payment created, awaiting processing" },
                     { label: "Failed",  color: "#ef4444", desc: "Payment failed — needs attention"     },
                   ] as const).map(({ label, color, desc }) => (
-                    <div key={label} className="relative group flex items-center gap-1.5 text-[11px] text-[#8a8fa8] cursor-default">
+                    <div key={label} className="relative group flex items-center gap-1.5 text-[11px] text-[#6b7280] cursor-default">
                       <div className="w-2 h-2 rounded-sm" style={{ background: color }} />
                       {label}
                       <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block z-20 pointer-events-none whitespace-nowrap">
-                        <div className="bg-white border border-[#e8eaf0] rounded-lg shadow-lg p-3 text-xs">
+                        <div className="bg-white border border-[#e5e7eb] rounded-lg shadow-lg p-3 text-xs">
                           <p className="font-semibold mb-0.5" style={{ color }}>{label}</p>
-                          <p className="text-[#8a8fa8]">{desc}</p>
+                          <p className="text-[#6b7280]">{desc}</p>
                         </div>
                       </div>
                     </div>
                   ))}
-                  <span className="text-[#c8cad4] text-[10px]">·</span>
+                  <span className="text-[#d1d5db] text-[10px]">·</span>
                   {([
                     { label: "Planned",   color: "#0168dd", desc: "Upcoming tracked payments"            },
                     { label: "Projected", color: "#85baf5", desc: "Estimated based on historical trends" },
                   ] as const).map(({ label, color, desc }) => (
-                    <div key={label} className="relative group flex items-center gap-1.5 text-[11px] text-[#8a8fa8] cursor-default">
+                    <div key={label} className="relative group flex items-center gap-1.5 text-[11px] text-[#6b7280] cursor-default">
                       <div className="w-2 h-2 rounded-sm" style={{ background: color }} />
                       {label}
                       <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block z-20 pointer-events-none whitespace-nowrap">
-                        <div className="bg-white border border-[#e8eaf0] rounded-lg shadow-lg p-3 text-xs">
+                        <div className="bg-white border border-[#e5e7eb] rounded-lg shadow-lg p-3 text-xs">
                           <p className="font-semibold mb-0.5" style={{ color }}>{label}</p>
-                          <p className="text-[#8a8fa8]">{desc}</p>
+                          <p className="text-[#6b7280]">{desc}</p>
                         </div>
                       </div>
                     </div>
@@ -1954,17 +2189,17 @@ function V1cPredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
               ) : (
                 <div className="flex flex-wrap gap-x-4 gap-y-1">
                   {([
-                    { label: "Confirmed", color: "#10b981", desc: "Payments already received"            },
+                    { label: "Confirmed", color: "#0e9f6e", desc: "Payments already received"            },
                     { label: "Planned",   color: "#0168dd", desc: "Upcoming tracked payments"            },
                     { label: "Projected", color: "#85baf5", desc: "Estimated based on historical trends" },
                   ] as const).map(({ label, color, desc }) => (
-                    <div key={label} className="relative group flex items-center gap-1.5 text-[11px] text-[#8a8fa8] cursor-default">
+                    <div key={label} className="relative group flex items-center gap-1.5 text-[11px] text-[#6b7280] cursor-default">
                       <div className="w-2 h-2 rounded-sm" style={{ background: color }} />
                       {label}
                       <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block z-20 pointer-events-none whitespace-nowrap">
-                        <div className="bg-white border border-[#e8eaf0] rounded-lg shadow-lg p-3 text-xs">
+                        <div className="bg-white border border-[#e5e7eb] rounded-lg shadow-lg p-3 text-xs">
                           <p className="font-semibold mb-0.5" style={{ color }}>{label}</p>
-                          <p className="text-[#8a8fa8]">{desc}</p>
+                          <p className="text-[#6b7280]">{desc}</p>
                         </div>
                       </div>
                     </div>
@@ -1998,22 +2233,22 @@ function Version1C({ showStatusBreakdown, seasonalityOn }: { showStatusBreakdown
   const [bottomTab, setBottomTab] = useState<"history"|"future">("history");
   return (
     <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
-      <h1 className="text-xl font-semibold text-[#1a1e35]">Payments report</h1>
-      <div className="bg-white rounded-lg border border-[#e8eaf0] overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-3 border-b border-[#e8eaf0] bg-[#f9f9fc]">
+      <h1 className="text-xl font-semibold text-[#111827]">Payments report</h1>
+      <div className="bg-white rounded-lg border border-[#e5e7eb] overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-[#e5e7eb] bg-[#f9fafb]">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-[#1a1e35]">Predictable Cash Flow</span>
-            <span className="text-xs text-[#8a8fa8]">— based on historical payments</span>
+            <span className="text-sm font-semibold text-[#111827]">Predictable Cash Flow</span>
+            <span className="text-xs text-[#6b7280]">— based on historical payments</span>
           </div>
           <ExportDropdown />
         </div>
         <V1cPredictivePanel showStatusBreakdown={showStatusBreakdown} seasonalityOn={seasonalityOn} />
       </div>
       <div className="mt-6">
-        <p className="text-base font-semibold text-[#1a1e35] mb-3">Payment Activity</p>
-        <div className="flex items-center gap-0 mb-3 border-b border-[#e8eaf0]">
+        <p className="text-base font-semibold text-[#111827] mb-3">Payment Activity</p>
+        <div className="flex items-center gap-0 mb-3 border-b border-[#e5e7eb]">
           {([["history","Payment History"],["future","Future Tracked So Far"]] as const).map(([id, label]) => (
-            <button key={id} onClick={() => setBottomTab(id)} className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${bottomTab === id ? "border-[#0168dd] text-[#0168dd]" : "border-transparent text-[#8a8fa8] hover:text-[#1a1e35]"}`}>{label}</button>
+            <button key={id} onClick={() => setBottomTab(id)} className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${bottomTab === id ? "border-[#0168dd] text-[#0168dd]" : "border-transparent text-[#6b7280] hover:text-[#111827]"}`}>{label}</button>
           ))}
         </div>
         {bottomTab === "history" ? <V1PaymentHistory /> : <V1FutureTracked />}
@@ -2068,47 +2303,47 @@ function PrefundConfirmDialog({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
       <div className="bg-white rounded-xl shadow-2xl w-[380px] overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[#e8eaf0]">
-          <span className="text-sm font-semibold text-[#1a1e35]">Fund {provider.name}</span>
-          <button onClick={onClose} className="p-1 rounded text-[#8a8fa8] hover:text-[#1a1e35] hover:bg-[#f0f1f5]"><X size={14} /></button>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[#e5e7eb]">
+          <span className="text-sm font-semibold text-[#111827]">Fund {provider.name}</span>
+          <button onClick={onClose} className="p-1 rounded text-[#6b7280] hover:text-[#111827] hover:bg-[#f3f4f6]"><X size={14} /></button>
         </div>
         <div className="px-5 py-4 space-y-3">
-          <div className="bg-[#f9f9fc] rounded-lg p-3 space-y-2 text-[12px]">
+          <div className="bg-[#f9fafb] rounded-lg p-3 space-y-2 text-[12px]">
             <div className="flex justify-between">
-              <span className="text-[#8a8fa8]">From</span>
-              <span className="text-[#1a1e35] font-medium">Chase ···4892</span>
+              <span className="text-[#6b7280]">From</span>
+              <span className="text-[#111827] font-medium">Chase ···4892</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-[#8a8fa8]">To</span>
-              <span className="text-[#1a1e35] font-medium">{provider.name} account</span>
+              <span className="text-[#6b7280]">To</span>
+              <span className="text-[#111827] font-medium">{provider.name} account</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-[#8a8fa8]">Current balance</span>
-              <span className="text-[#1a1e35] font-medium">{fmt0(provider.balance ?? 0)}</span>
+              <span className="text-[#6b7280]">Current balance</span>
+              <span className="text-[#111827] font-medium">{fmt0(provider.balance ?? 0)}</span>
             </div>
           </div>
           <div>
-            <label className="block text-[11px] font-semibold text-[#8a8fa8] uppercase tracking-widest mb-1.5">Amount</label>
+            <label className="block text-[11px] font-semibold text-[#6b7280] uppercase tracking-widest mb-1.5">Amount</label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[#8a8fa8]">$</span>
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[#6b7280]">$</span>
               <input
                 type="text"
                 value={rawAmt}
                 onChange={e => setRawAmt(e.target.value)}
-                className="w-full pl-7 pr-3 py-2 border border-[#e8eaf0] rounded-lg text-sm font-semibold text-[#1a1e35] focus:outline-none focus:border-[#0168dd]"
+                className="w-full pl-7 pr-3 py-2 border border-[#e5e7eb] rounded-lg text-sm font-semibold text-[#111827] focus:outline-none focus:border-[#0168dd]"
               />
             </div>
             {isValid && (
-              <p className="text-[11px] text-[#8a8fa8] mt-1">
-                Resulting balance: <span className="font-medium text-[#1a1e35]">{fmt0(resulting)}</span>
+              <p className="text-[11px] text-[#6b7280] mt-1">
+                Resulting balance: <span className="font-medium text-[#111827]">{fmt0(resulting)}</span>
                 {resulting >= (provider.needed ?? 0) && <span className="text-emerald-600 ml-1">· Fully funded ✓</span>}
               </p>
             )}
           </div>
-          <p className="text-[11px] text-[#8a8fa8] bg-[#f9f9fc] rounded-lg p-2.5 leading-relaxed">Transfers typically arrive within 1–2 business days. Nothing moves until you confirm.</p>
+          <p className="text-[11px] text-[#6b7280] bg-[#f9fafb] rounded-lg p-2.5 leading-relaxed">Transfers typically arrive within 1–2 business days. Nothing moves until you confirm.</p>
         </div>
-        <div className="flex items-center gap-2 px-5 py-3 border-t border-[#e8eaf0]">
-          <button onClick={onClose} className="flex-1 px-3 py-2 rounded-lg text-xs font-medium text-[#8a8fa8] border border-[#e8eaf0] hover:bg-[#f0f1f5] transition-colors">Cancel</button>
+        <div className="flex items-center gap-2 px-5 py-3 border-t border-[#e5e7eb]">
+          <button onClick={onClose} className="flex-1 px-3 py-2 rounded-lg text-xs font-medium text-[#6b7280] border border-[#e5e7eb] hover:bg-[#f3f4f6] transition-colors">Cancel</button>
           <button
             disabled={!isValid}
             onClick={() => { if (isValid) onConfirm(parsed); }}
@@ -2160,18 +2395,18 @@ function ProviderSettingsSheet({
     <div className={`fixed inset-0 z-50 flex ${variant === "dialog" ? "items-center justify-center bg-black/30 p-4" : "justify-end"}`}>
       {variant === "drawer" && <div className="absolute inset-0 bg-black/20" onClick={onClose} />}
       <div className={`relative bg-white shadow-2xl flex flex-col ${variant === "dialog" ? "w-[460px] max-h-[82vh] rounded-xl overflow-hidden" : "w-[340px] h-full overflow-y-auto"}`}>
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[#e8eaf0] flex-shrink-0">
-          <span className="text-sm font-semibold text-[#1a1e35]">{provider.name} — Funding settings</span>
-          <button onClick={onClose} className="p-1 rounded text-[#8a8fa8] hover:text-[#1a1e35] hover:bg-[#f0f1f5]"><X size={14} /></button>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[#e5e7eb] flex-shrink-0">
+          <span className="text-sm font-semibold text-[#111827]">{provider.name} — Funding settings</span>
+          <button onClick={onClose} className="p-1 rounded text-[#6b7280] hover:text-[#111827] hover:bg-[#f3f4f6]"><X size={14} /></button>
         </div>
         <div className="flex-1 px-5 py-5 space-y-6 overflow-y-auto">
           {/* Funding mode */}
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-2">Funding mode</p>
-            <div className="flex rounded-lg border border-[#e8eaf0] overflow-hidden">
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[#6b7280] mb-2">Funding mode</p>
+            <div className="flex rounded-lg border border-[#e5e7eb] overflow-hidden">
               {(["manual", "automatic"] as const).map(m => (
                 <button key={m} onClick={() => setMode(m)}
-                  className={`flex-1 py-2 text-xs font-semibold capitalize transition-colors ${mode === m ? "bg-[#0168dd] text-white" : "text-[#8a8fa8] hover:bg-[#f9f9fc]"}`}>
+                  className={`flex-1 py-2 text-xs font-semibold capitalize transition-colors ${mode === m ? "bg-[#0168dd] text-white" : "text-[#6b7280] hover:bg-[#f9fafb]"}`}>
                   {m === "manual" ? "Manual" : "Automatic"}
                 </button>
               ))}
@@ -2186,12 +2421,12 @@ function ProviderSettingsSheet({
           {/* Lead time */}
           {mode === "automatic" && (
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-2">Fund ahead of payroll by</p>
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-[#6b7280] mb-2">Fund ahead of payroll by</p>
               <div className="space-y-0.5">
                 {leadTimeOptions.map(opt => (
-                  <label key={opt.days} className="flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-[#f9f9fc] cursor-pointer">
+                  <label key={opt.days} className="flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-[#f9fafb] cursor-pointer">
                     <input type="radio" name="leadTime" checked={leadTimeDays === opt.days} onChange={() => setLeadTimeDays(opt.days)} className="accent-[#0168dd]" />
-                    <span className="text-xs text-[#1a1e35]">{opt.label}</span>
+                    <span className="text-xs text-[#111827]">{opt.label}</span>
                   </label>
                 ))}
               </div>
@@ -2200,24 +2435,24 @@ function ProviderSettingsSheet({
           {/* Buffer */}
           {mode === "automatic" && (
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-2">Buffer</p>
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-[#6b7280] mb-2">Buffer</p>
               <div className="space-y-0.5">
                 {bufferOptions.map(opt => (
-                  <label key={opt.type} className="flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-[#f9f9fc] cursor-pointer">
+                  <label key={opt.type} className="flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-[#f9fafb] cursor-pointer">
                     <input type="radio" name="bufferType" checked={bufferType === opt.type} onChange={() => setBufferType(opt.type)} className="accent-[#0168dd]" />
-                    <span className="text-xs text-[#1a1e35]">{opt.label}</span>
+                    <span className="text-xs text-[#111827]">{opt.label}</span>
                   </label>
                 ))}
               </div>
               {bufferType !== "none" && (
                 <div className="mt-2 flex items-center gap-2 pl-2">
-                  <span className="text-xs text-[#8a8fa8]">{bufferType === "pct" ? "%" : "$"}</span>
+                  <span className="text-xs text-[#6b7280]">{bufferType === "pct" ? "%" : "$"}</span>
                   <input
                     type="number"
                     value={bufferValue}
                     onChange={e => setBufferValue(Number(e.target.value))}
                     min={0}
-                    className="w-20 px-2 py-1.5 border border-[#e8eaf0] rounded-lg text-xs text-[#1a1e35] focus:outline-none focus:border-[#0168dd]"
+                    className="w-20 px-2 py-1.5 border border-[#e5e7eb] rounded-lg text-xs text-[#111827] focus:outline-none focus:border-[#0168dd]"
                   />
                 </div>
               )}
@@ -2226,29 +2461,29 @@ function ProviderSettingsSheet({
           {/* Reminder email */}
           <div>
             <div className="flex items-center justify-between mb-1">
-              <p className="text-[11px] font-semibold uppercase tracking-widest text-[#8a8fa8]">Funding reminder email</p>
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-[#6b7280]">Funding reminder email</p>
               <button
                 onClick={() => setReminderOn(r => !r)}
-                className={`w-9 h-5 rounded-full transition-colors flex items-center ${reminderOn ? "bg-[#0168dd]" : "bg-[#d0d3de]"}`}
+                className={`w-9 h-5 rounded-full transition-colors flex items-center ${reminderOn ? "bg-[#0168dd]" : "bg-[#d1d5db]"}`}
               >
                 <span className={`w-4 h-4 bg-white rounded-full shadow transition-transform mx-0.5 ${reminderOn ? "translate-x-4" : "translate-x-0"}`} />
               </button>
             </div>
             {reminderOn && (
               <div className="mt-2 space-y-0.5">
-                <p className="text-[11px] text-[#8a8fa8] px-2 mb-1">Send reminder email</p>
+                <p className="text-[11px] text-[#6b7280] px-2 mb-1">Send reminder email</p>
                 {reminderOptions.map(opt => (
-                  <label key={opt.days} className="flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-[#f9f9fc] cursor-pointer">
+                  <label key={opt.days} className="flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-[#f9fafb] cursor-pointer">
                     <input type="radio" name="reminderDays" checked={reminderDays === opt.days} onChange={() => setReminderDays(opt.days)} className="accent-[#0168dd]" />
-                    <span className="text-xs text-[#1a1e35]">{opt.label}</span>
+                    <span className="text-xs text-[#111827]">{opt.label}</span>
                   </label>
                 ))}
               </div>
             )}
           </div>
         </div>
-        <div className="flex gap-2 px-5 py-3 border-t border-[#e8eaf0] flex-shrink-0">
-          <button onClick={onClose} className="flex-1 px-3 py-2 rounded-lg text-xs font-medium text-[#8a8fa8] border border-[#e8eaf0] hover:bg-[#f0f1f5] transition-colors">Cancel</button>
+        <div className="flex gap-2 px-5 py-3 border-t border-[#e5e7eb] flex-shrink-0">
+          <button onClick={onClose} className="flex-1 px-3 py-2 rounded-lg text-xs font-medium text-[#6b7280] border border-[#e5e7eb] hover:bg-[#f3f4f6] transition-colors">Cancel</button>
           <button
             onClick={() => { onSave({ mode, leadTimeDays, bufferType, bufferValue }); onClose(); }}
             className="flex-1 px-3 py-2 rounded-lg text-xs font-semibold bg-[#0168dd] text-white hover:bg-[#0059c2] transition-colors"
@@ -2286,7 +2521,7 @@ function ProviderLogo({ id, size = 32 }: { id: string; size?: number }) {
       <path d="M21 19.3047H25.3431V23.5162H21V19.3047Z" fill="#1B1B1B"/>
     </svg>
   );
-  if (id === "export") return <FileSpreadsheet size={size} className="text-[#1a1e35]" style={{ flexShrink: 0 }} />;
+  if (id === "export") return <FileSpreadsheet size={size} className="text-[#111827]" style={{ flexShrink: 0 }} />;
   if (id === "gusto") return (
     <svg width={size} height={size} viewBox="0 0 32 32" fill="none" style={{ flexShrink: 0 }}>
       <rect width="32" height="32" rx="8" fill="#F45D48"/>
@@ -2302,7 +2537,7 @@ function ProviderLogo({ id, size = 32 }: { id: string; size?: number }) {
   );
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" fill="none" style={{ flexShrink: 0 }}>
-      <rect width="32" height="32" rx="8" fill="#e8eaf0"/>
+      <rect width="32" height="32" rx="8" fill="#e5e7eb"/>
     </svg>
   );
 }
@@ -2320,17 +2555,17 @@ function FundingEmailPreviewDialog({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
       <div className="bg-white rounded-xl shadow-2xl w-[560px] max-h-[85vh] overflow-hidden flex flex-col">
         {/* Email client chrome */}
-        <div className="flex items-start justify-between px-5 py-3.5 border-b border-[#e8eaf0] bg-[#f9f9fc] flex-shrink-0">
+        <div className="flex items-start justify-between px-5 py-3.5 border-b border-[#e5e7eb] bg-[#f9fafb] flex-shrink-0">
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-semibold text-[#1a1e35]">Action needed: Fund your {provider.name} account before payroll runs</p>
-            <p className="text-[10px] text-[#8a8fa8] mt-1">From: <span className="text-[#1a1e35]">Hubstaff Payments &lt;payments@hubstaff.com&gt;</span></p>
-            <p className="text-[10px] text-[#8a8fa8]">To: <span className="text-[#1a1e35]">zishe@company.com</span><span className="mx-1.5 text-[#d0d3de]">·</span><span>Jun 25, 2026, 8:00 AM</span></p>
+            <p className="text-xs font-semibold text-[#111827]">Action needed: Fund your {provider.name} account before payroll runs</p>
+            <p className="text-[10px] text-[#6b7280] mt-1">From: <span className="text-[#111827]">Hubstaff Payments &lt;payments@hubstaff.com&gt;</span></p>
+            <p className="text-[10px] text-[#6b7280]">To: <span className="text-[#111827]">zishe@company.com</span><span className="mx-1.5 text-[#d1d5db]">·</span><span>Jun 25, 2026, 8:00 AM</span></p>
           </div>
-          <button onClick={onClose} className="ml-3 p-1 rounded text-[#8a8fa8] hover:text-[#1a1e35] hover:bg-[#f0f1f5] flex-shrink-0"><X size={14} /></button>
+          <button onClick={onClose} className="ml-3 p-1 rounded text-[#6b7280] hover:text-[#111827] hover:bg-[#f3f4f6] flex-shrink-0"><X size={14} /></button>
         </div>
         {/* Email body */}
-        <div className="flex-1 overflow-y-auto bg-[#f4f5f7] p-5">
-          <div className="bg-white rounded-lg overflow-hidden max-w-[460px] mx-auto shadow-sm border border-[#e8eaf0]">
+        <div className="flex-1 overflow-y-auto bg-[#f3f4f6] p-5">
+          <div className="bg-white rounded-lg overflow-hidden max-w-[460px] mx-auto shadow-sm border border-[#e5e7eb]">
             {/* Brand header */}
             <div className="bg-[#0168dd] px-6 py-4 flex items-center gap-2">
               <div className="w-6 h-6 bg-white rounded flex items-center justify-center">
@@ -2340,8 +2575,8 @@ function FundingEmailPreviewDialog({
             </div>
             {/* Content */}
             <div className="px-6 py-5 space-y-4">
-              <p className="text-sm text-[#1a1e35]">Hi Zishe,</p>
-              <p className="text-sm text-[#1a1e35] leading-relaxed">
+              <p className="text-sm text-[#111827]">Hi Zishe,</p>
+              <p className="text-sm text-[#111827] leading-relaxed">
                 Your payroll runs on <strong>Jun 28, 2026</strong> — in 3 days. Your <strong>{provider.name}</strong> account balance is below what's needed to cover all payments.
               </p>
               {/* Shortfall card */}
@@ -2352,12 +2587,12 @@ function FundingEmailPreviewDialog({
                 </div>
                 <div className="space-y-1.5 text-[12px] mt-1">
                   <div className="flex justify-between">
-                    <span className="text-[#8a8fa8]">Current balance</span>
-                    <span className="font-medium text-[#1a1e35]">{fmt0(provider.balance ?? 0)}</span>
+                    <span className="text-[#6b7280]">Current balance</span>
+                    <span className="font-medium text-[#111827]">{fmt0(provider.balance ?? 0)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-[#8a8fa8]">Needed by Jun 28</span>
-                    <span className="font-medium text-[#1a1e35]">{fmt0(provider.needed ?? 0)}</span>
+                    <span className="text-[#6b7280]">Needed by Jun 28</span>
+                    <span className="font-medium text-[#111827]">{fmt0(provider.needed ?? 0)}</span>
                   </div>
                   <div className="border-t border-amber-200 pt-2 flex justify-between">
                     <span className="font-semibold text-amber-800">Add to cover</span>
@@ -2371,21 +2606,21 @@ function FundingEmailPreviewDialog({
                   Fund {provider.name} now →
                 </button>
               </div>
-              <p className="text-[11px] text-[#8a8fa8] leading-relaxed">
+              <p className="text-[11px] text-[#6b7280] leading-relaxed">
                 This reminder was sent because you have <strong>Manual</strong> funding mode enabled for {provider.name}. To switch to automatic funding, <span className="text-[#0168dd] cursor-pointer">update your preferences</span>.
               </p>
             </div>
             {/* Footer */}
-            <div className="border-t border-[#e8eaf0] px-6 py-4 bg-[#f9f9fc] text-center space-y-1">
-              <p className="text-[10px] text-[#8a8fa8]">
+            <div className="border-t border-[#e5e7eb] px-6 py-4 bg-[#f9fafb] text-center space-y-1">
+              <p className="text-[10px] text-[#6b7280]">
                 You're receiving this because funding reminders are enabled for your account.
               </p>
               <p className="text-[10px]">
                 <span className="text-[#0168dd] cursor-pointer">Manage notification preferences</span>
-                <span className="text-[#d0d3de] mx-1">·</span>
+                <span className="text-[#d1d5db] mx-1">·</span>
                 <span className="text-[#0168dd] cursor-pointer">Unsubscribe</span>
               </p>
-              <p className="text-[10px] text-[#c0c3d3] mt-1">Hubstaff Inc. · 300 Colonial Center Pkwy, Roswell, GA 30076</p>
+              <p className="text-[10px] text-[#d1d5db] mt-1">Hubstaff Inc. · 300 Colonial Center Pkwy, Roswell, GA 30076</p>
             </div>
           </div>
         </div>
@@ -2425,8 +2660,8 @@ function FundYourAccountsPanel({ showBars = true }: { showBars?: boolean }) {
         {/* Section title – no card wrapper */}
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-base font-semibold text-[#1a1e35]">Fund your accounts</p>
-            <p className="text-xs text-[#8a8fa8] mt-0.5">
+            <p className="text-base font-semibold text-[#111827]">Fund your accounts</p>
+            <p className="text-xs text-[#6b7280] mt-0.5">
               {totalShortfall > 0
                 ? <span>Recommended for this period: <span className="font-medium text-amber-600">{fmt0(totalShortfall)}</span> to add across {needsFundingRows.length} account{needsFundingRows.length !== 1 ? "s" : ""}</span>
                 : <span className="text-emerald-600 font-medium">All accounts funded for this period ✓</span>
@@ -2434,11 +2669,11 @@ function FundYourAccountsPanel({ showBars = true }: { showBars?: boolean }) {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-0 border border-[#e8eaf0] rounded-md overflow-hidden">
-              <button onClick={() => setLayout("list")} title="List view" className={`px-2 py-1 transition-colors ${layout === "list" ? "bg-[#0168dd] text-white" : "text-[#8a8fa8] hover:bg-[#f0f1f5]"}`}>
+            <div className="flex items-center gap-0 border border-[#e5e7eb] rounded-md overflow-hidden">
+              <button onClick={() => setLayout("list")} title="List view" className={`px-2 py-1 transition-colors ${layout === "list" ? "bg-[#0168dd] text-white" : "text-[#6b7280] hover:bg-[#f3f4f6]"}`}>
                 <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><rect x="0" y="2" width="16" height="2" rx="1"/><rect x="0" y="7" width="16" height="2" rx="1"/><rect x="0" y="12" width="16" height="2" rx="1"/></svg>
               </button>
-              <button onClick={() => setLayout("cards")} title="Card view" className={`px-2 py-1 transition-colors ${layout === "cards" ? "bg-[#0168dd] text-white" : "text-[#8a8fa8] hover:bg-[#f0f1f5]"}`}>
+              <button onClick={() => setLayout("cards")} title="Card view" className={`px-2 py-1 transition-colors ${layout === "cards" ? "bg-[#0168dd] text-white" : "text-[#6b7280] hover:bg-[#f3f4f6]"}`}>
                 <Columns size={12} />
               </button>
             </div>
@@ -2454,7 +2689,7 @@ function FundYourAccountsPanel({ showBars = true }: { showBars?: boolean }) {
               const isRefreshing = refreshingId === p.id;
               const connected = p.status !== "no-connection" && p.status !== "unavailable";
               return (
-                <div key={p.id} className="border border-[#e8eaf0] bg-white rounded-xl p-3.5 flex flex-col gap-2.5">
+                <div key={p.id} className="border border-[#e5e7eb] bg-white rounded-xl p-3.5 flex flex-col gap-2.5">
                   {/* Header: logo + name | go-to / connect action */}
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-start gap-2 min-w-0">
@@ -2462,10 +2697,10 @@ function FundYourAccountsPanel({ showBars = true }: { showBars?: boolean }) {
                       <div className="flex flex-col gap-0.5">
                         <button
                           onClick={() => connected ? setEmailProvider(p) : undefined}
-                          className={`text-xs font-semibold text-[#1a1e35] leading-tight text-left ${connected ? "hover:text-[#0168dd] hover:underline" : ""}`}
+                          className={`text-xs font-semibold text-[#111827] leading-tight text-left ${connected ? "hover:text-[#0168dd] hover:underline" : ""}`}
                         >{p.name}</button>
                         {p.status === "no-connection" && (
-                          <span className="text-[8px] font-semibold px-1.5 py-0.5 rounded uppercase tracking-wide self-start bg-[#f0f1f5] text-[#c0c3d3]">not connected</span>
+                          <span className="text-[8px] font-semibold px-1.5 py-0.5 rounded uppercase tracking-wide self-start bg-[#f3f4f6] text-[#d1d5db]">not connected</span>
                         )}
                       </div>
                     </div>
@@ -2487,10 +2722,10 @@ function FundYourAccountsPanel({ showBars = true }: { showBars?: boolean }) {
                     <>
                       <div className="flex items-end justify-between">
                         <div>
-                          <p className="text-[10px] text-[#8a8fa8]">Balance</p>
+                          <p className="text-[10px] text-[#6b7280]">Balance</p>
                           <div className="flex items-center gap-1">
-                            <span className={`text-sm font-bold ${isRefreshing ? "text-[#8a8fa8]" : "text-[#1a1e35]"}`}>{isRefreshing ? "…" : fmt0(p.balance!)}</span>
-                            <button onClick={() => handleRefresh(p.id)} className="text-[#c0c3d3] hover:text-[#0168dd] transition-colors">
+                            <span className={`text-sm font-bold ${isRefreshing ? "text-[#6b7280]" : "text-[#111827]"}`}>{isRefreshing ? "…" : fmt0(p.balance!)}</span>
+                            <button onClick={() => handleRefresh(p.id)} className="text-[#d1d5db] hover:text-[#0168dd] transition-colors">
                               <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
                               </svg>
@@ -2499,7 +2734,7 @@ function FundYourAccountsPanel({ showBars = true }: { showBars?: boolean }) {
                         </div>
                         {p.status === "needs-funding" && shortfall !== null && (
                           <div className="text-right">
-                            <p className="text-[10px] text-[#8a8fa8]">Add to cover</p>
+                            <p className="text-[10px] text-[#6b7280]">Add to cover</p>
                             <p className="text-sm font-bold text-amber-600">+{fmt0(shortfall)}</p>
                           </div>
                         )}
@@ -2511,7 +2746,7 @@ function FundYourAccountsPanel({ showBars = true }: { showBars?: boolean }) {
                         )}
                       </div>
                       {showBars && (
-                        <div className="h-1.5 bg-[#f0f1f5] rounded-full overflow-hidden">
+                        <div className="h-1.5 bg-[#f3f4f6] rounded-full overflow-hidden">
                           <div className={`h-full rounded-full transition-all ${p.status === "funded" ? "bg-emerald-400" : "bg-amber-400"}`} style={{ width: `${pct}%` }} />
                         </div>
                       )}
@@ -2522,8 +2757,8 @@ function FundYourAccountsPanel({ showBars = true }: { showBars?: boolean }) {
             })}
           </div>
         ) : (
-          <div className="bg-white rounded-lg border border-[#e8eaf0] overflow-hidden">
-            <div className="divide-y divide-[#f0f1f5]">
+          <div className="bg-white rounded-lg border border-[#e5e7eb] overflow-hidden">
+            <div className="divide-y divide-[#f3f4f6]">
               {providers.map(p => {
                 const shortfall = p.balance !== undefined && p.needed !== undefined ? p.needed - p.balance : null;
                 const pct = p.balance !== undefined && p.needed !== undefined ? Math.min(100, Math.round(p.balance / p.needed * 100)) : 0;
@@ -2536,10 +2771,10 @@ function FundYourAccountsPanel({ showBars = true }: { showBars?: boolean }) {
                         <div className="flex items-center gap-1.5">
                           <button
                             onClick={() => p.status !== "no-connection" ? setEmailProvider(p) : undefined}
-                            className={`text-sm font-semibold text-[#1a1e35] ${p.status !== "no-connection" ? "hover:text-[#0168dd] hover:underline cursor-pointer" : "cursor-default"} transition-colors`}
+                            className={`text-sm font-semibold text-[#111827] ${p.status !== "no-connection" ? "hover:text-[#0168dd] hover:underline cursor-pointer" : "cursor-default"} transition-colors`}
                           >{p.name}</button>
                           {p.status !== "no-connection" && (
-                            <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded uppercase tracking-wide ${p.mode === "automatic" ? "bg-[#eef3ff] text-[#0168dd]" : "bg-[#f0f1f5] text-[#8a8fa8]"}`}>
+                            <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded uppercase tracking-wide ${p.mode === "automatic" ? "bg-[#eef3ff] text-[#0168dd]" : "bg-[#f3f4f6] text-[#6b7280]"}`}>
                               {p.mode}
                             </span>
                           )}
@@ -2550,15 +2785,15 @@ function FundYourAccountsPanel({ showBars = true }: { showBars?: boolean }) {
                           <p className="text-xs text-red-500 mt-0.5">Balance unavailable — <button className="underline">retry</button></p>
                         ) : (
                           <div className="flex items-center gap-1 mt-0.5">
-                            <span className={`text-xs font-semibold ${isRefreshing ? "text-[#8a8fa8]" : "text-[#1a1e35]"}`}>{isRefreshing ? "Refreshing…" : fmt0(p.balance!)}</span>
-                            <span className="text-[10px] text-[#8a8fa8]">balance</span>
-                            <button onClick={() => handleRefresh(p.id)} className="ml-0.5 p-0.5 rounded text-[#c0c3d3] hover:text-[#0168dd] transition-colors">
+                            <span className={`text-xs font-semibold ${isRefreshing ? "text-[#6b7280]" : "text-[#111827]"}`}>{isRefreshing ? "Refreshing…" : fmt0(p.balance!)}</span>
+                            <span className="text-[10px] text-[#6b7280]">balance</span>
+                            <button onClick={() => handleRefresh(p.id)} className="ml-0.5 p-0.5 rounded text-[#d1d5db] hover:text-[#0168dd] transition-colors">
                               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M23 4v6h-6" /><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
                               </svg>
                             </button>
-                            <span className="text-[10px] text-[#d0d3de]">·</span>
-                            <span className="text-[10px] text-[#8a8fa8]">{p.lastUpdated}</span>
+                            <span className="text-[10px] text-[#d1d5db]">·</span>
+                            <span className="text-[10px] text-[#6b7280]">{p.lastUpdated}</span>
                           </div>
                         )}
                       </div>
@@ -2568,28 +2803,28 @@ function FundYourAccountsPanel({ showBars = true }: { showBars?: boolean }) {
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
                             Funded
                           </span>
-                          <button onClick={() => setSettingsProvider(p)} className="p-1 rounded text-[#c0c3d3] hover:text-[#1a1e35] hover:bg-[#f0f1f5] transition-colors"><Settings size={12} /></button>
+                          <button onClick={() => setSettingsProvider(p)} className="p-1 rounded text-[#d1d5db] hover:text-[#111827] hover:bg-[#f3f4f6] transition-colors"><Settings size={12} /></button>
                         </div>
                       )}
                       {p.status === "needs-funding" && shortfall !== null && (
                         <div className="flex items-center gap-2 flex-shrink-0">
                           <div className="text-right mr-1">
-                            <p className="text-[10px] text-[#8a8fa8]">Add to cover</p>
+                            <p className="text-[10px] text-[#6b7280]">Add to cover</p>
                             <p className="text-sm font-bold text-amber-600">+{fmt0(shortfall)}</p>
                           </div>
                           <button onClick={() => setPrefundProvider(p)} className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#0168dd] text-white hover:bg-[#0059c2] transition-colors whitespace-nowrap">
                             Prefund {p.name}
                           </button>
-                          <button onClick={() => setSettingsProvider(p)} className="p-1 rounded text-[#c0c3d3] hover:text-[#1a1e35] hover:bg-[#f0f1f5] transition-colors"><Settings size={12} /></button>
+                          <button onClick={() => setSettingsProvider(p)} className="p-1 rounded text-[#d1d5db] hover:text-[#111827] hover:bg-[#f3f4f6] transition-colors"><Settings size={12} /></button>
                         </div>
                       )}
                     </div>
                     {showBars && p.status !== "no-connection" && p.balance !== undefined && p.needed !== undefined && (
                       <div className="mt-2 ml-11 flex items-center gap-2">
-                        <div className="flex-1 h-1.5 bg-[#f0f1f5] rounded-full overflow-hidden">
+                        <div className="flex-1 h-1.5 bg-[#f3f4f6] rounded-full overflow-hidden">
                           <div className={`h-full rounded-full transition-all ${p.status === "funded" ? "bg-emerald-400" : "bg-amber-400"}`} style={{ width: `${pct}%` }} />
                         </div>
-                        <span className="text-[10px] text-[#8a8fa8] flex-shrink-0">{fmt0(p.balance)} of {fmt0(p.needed)} needed</span>
+                        <span className="text-[10px] text-[#6b7280] flex-shrink-0">{fmt0(p.balance)} of {fmt0(p.needed)} needed</span>
                       </div>
                     )}
                   </div>
@@ -2628,12 +2863,12 @@ function Version1D({ showStatusBreakdown, seasonalityOn }: { showStatusBreakdown
   const [bottomTab, setBottomTab] = useState<"history"|"future">("history");
   return (
     <div className="flex-1 overflow-y-auto px-6 py-5 space-y-8">
-      <h1 className="text-xl font-semibold text-[#1a1e35]">Payments report</h1>
-      <div className="bg-white rounded-lg border border-[#e8eaf0] overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-3 border-b border-[#e8eaf0] bg-[#f9f9fc]">
+      <h1 className="text-xl font-semibold text-[#111827]">Payments report</h1>
+      <div className="bg-white rounded-lg border border-[#e5e7eb] overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-[#e5e7eb] bg-[#f9fafb]">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-[#1a1e35]">Predictable Cash Flow</span>
-            <span className="text-xs text-[#8a8fa8]">— based on historical payments</span>
+            <span className="text-sm font-semibold text-[#111827]">Predictable Cash Flow</span>
+            <span className="text-xs text-[#6b7280]">— based on historical payments</span>
           </div>
           <ExportDropdown />
         </div>
@@ -2641,10 +2876,10 @@ function Version1D({ showStatusBreakdown, seasonalityOn }: { showStatusBreakdown
       </div>
       <FundYourAccountsPanel />
       <div>
-        <p className="text-base font-semibold text-[#1a1e35] mb-3">Payment Activity</p>
-        <div className="flex items-center gap-0 mb-3 border-b border-[#e8eaf0]">
+        <p className="text-base font-semibold text-[#111827] mb-3">Payment Activity</p>
+        <div className="flex items-center gap-0 mb-3 border-b border-[#e5e7eb]">
           {([["history","Payment History"],["future","Future Tracked So Far"]] as const).map(([id, label]) => (
-            <button key={id} onClick={() => setBottomTab(id)} className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${bottomTab === id ? "border-[#0168dd] text-[#0168dd]" : "border-transparent text-[#8a8fa8] hover:text-[#1a1e35]"}`}>{label}</button>
+            <button key={id} onClick={() => setBottomTab(id)} className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${bottomTab === id ? "border-[#0168dd] text-[#0168dd]" : "border-transparent text-[#6b7280] hover:text-[#111827]"}`}>{label}</button>
           ))}
         </div>
         {bottomTab === "history" ? <V1PaymentHistory /> : <V1FutureTracked />}
@@ -2728,15 +2963,15 @@ const v1eMonthNav: V1eBar[] = [
 type V1eSeg = "source" | "channel" | "type";
 
 const v1eChannelSeg = [
-  { key: "Wise",     label: "Wise",     color: "#0ea5a0", ratio: 0.46 },
+  { key: "Wise",     label: "Wise",     color: "#0e9f6e", ratio: 0.46 },
   { key: "Payoneer", label: "Payoneer", color: "#f59e0b", ratio: 0.32 },
   { key: "Deel",     label: "Deel",     color: "#7c3aed", ratio: 0.18 },
-  { key: "Export",   label: "Export",   color: "#8a8fa8", ratio: 0.04 },
+  { key: "Export",   label: "Export",   color: "#6b7280", ratio: 0.04 },
 ] as const;
 
 const v1eEarningSeg = [
   { key: "hourly",  label: "Hourly pay",     color: "#0168dd", ratio: 0.46, group: "stable"   },
-  { key: "fixed",   label: "Fixed pay",      color: "#0ea5a0", ratio: 0.27, group: "stable"   },
+  { key: "fixed",   label: "Fixed pay",      color: "#0e9f6e", ratio: 0.27, group: "stable"   },
   { key: "bonuses", label: "Bonuses",        color: "#f59e0b", ratio: 0.14, group: "variable" },
   { key: "pto",     label: "PTO & Holidays", color: "#8b5cf6", ratio: 0.08, group: "variable" },
   { key: "adds",    label: "Additions",      color: "#f97316", ratio: 0.05, group: "variable" },
@@ -2860,7 +3095,7 @@ function ChartSkeleton({ bars = 8 }: { bars?: number }) {
   return (
     <div className="h-[180px] flex items-end gap-2 px-1 animate-pulse" aria-hidden="true">
       {Array.from({ length: bars }).map((_, i) => (
-        <div key={i} className="flex-1 bg-[#eef0f4] rounded-t" style={{ height: `${heights[i % heights.length]}%` }} />
+        <div key={i} className="flex-1 bg-[#f3f4f6] rounded-t" style={{ height: `${heights[i % heights.length]}%` }} />
       ))}
     </div>
   );
@@ -2956,24 +3191,24 @@ function V1ePredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
     segTab === "source"
       ? (showStatusBreakdown
           ? [
-              { key: "paid",      label: "Paid",      color: "#10b981" },
+              { key: "paid",      label: "Paid",      color: "#0e9f6e" },
               { key: "pending",   label: "Pending",   color: "#f59e0b" },
               { key: "failed",    label: "Failed",    color: "#ef4444" },
               { key: "tracked",   label: "Planned",   color: "#0168dd" },
               { key: "projected", label: "Projected", color: "#85baf5" },
             ]
           : [
-              { key: "factual",   label: "Confirmed", color: "#10b981" },
+              { key: "factual",   label: "Confirmed", color: "#0e9f6e" },
               { key: "tracked",   label: "Planned",   color: "#0168dd" },
               { key: "projected", label: "Projected", color: "#85baf5" },
             ])
       : segTab === "channel"
-      ? [{ key: "chFactual", label: "Confirmed", color: "#10b981" }, ...v1eChannelSeg.map(s => ({ key: s.key, label: s.label, color: s.color }))]
+      ? [{ key: "chFactual", label: "Confirmed", color: "#0e9f6e" }, ...v1eChannelSeg.map(s => ({ key: s.key, label: s.label, color: s.color }))]
       : v1eEarningSeg.map(s => ({ key: s.key, label: s.label, color: s.color }));
 
   const monthSegBars: SegBar[] =
     segTab === "source"
-      ? [{ key: "actual", label: "Actuals", color: "#10b981" }, { key: "projected", label: "Projected", color: "#85baf5" }]
+      ? [{ key: "actual", label: "Actuals", color: "#0e9f6e" }, { key: "projected", label: "Projected", color: "#85baf5" }]
       : segTab === "channel"
       ? v1eChannelSeg.map(s => ({ key: s.key, label: s.label, color: s.color }))
       : v1eEarningSeg.map(s => ({ key: s.key, label: s.label, color: s.color }));
@@ -2988,18 +3223,18 @@ function V1ePredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
     const items = segBars.map(sb => ({ ...sb, value: (d[sb.key] ?? 0) as number })).filter(i => i.value > 0);
     const total = items.reduce((s, i) => s + i.value, 0);
     return (
-      <div className="bg-white border border-[#e8eaf0] rounded-lg shadow-lg p-3 text-xs min-w-[170px]">
-        <p className="font-semibold text-[#1a1e35] mb-1.5">{header}</p>
+      <div className="bg-white border border-[#e5e7eb] rounded-lg shadow-lg p-3 text-xs min-w-[170px]">
+        <p className="font-semibold text-[#111827] mb-1.5">{header}</p>
         {items.map(i => (
           <div key={i.key} className="flex justify-between gap-4 py-0.5">
-            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm inline-block flex-shrink-0" style={{ background: i.color }} /><span className="text-[#8a8fa8]">{i.label}</span></span>
-            <span className="font-medium text-[#1a1e35]">{fmt0(i.value)}</span>
+            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm inline-block flex-shrink-0" style={{ background: i.color }} /><span className="text-[#6b7280]">{i.label}</span></span>
+            <span className="font-medium text-[#111827]">{fmt0(i.value)}</span>
           </div>
         ))}
         {items.length > 1 && (
-          <div className="flex justify-between gap-4 py-0.5 mt-1 pt-1.5 border-t border-[#e8eaf0]">
-            <span className="text-[#8a8fa8]">Total</span>
-            <span className="font-semibold text-[#1a1e35]">{fmt0(total)}</span>
+          <div className="flex justify-between gap-4 py-0.5 mt-1 pt-1.5 border-t border-[#e5e7eb]">
+            <span className="text-[#6b7280]">Total</span>
+            <span className="font-semibold text-[#111827]">{fmt0(total)}</span>
           </div>
         )}
       </div>
@@ -3020,16 +3255,16 @@ function V1ePredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
   return (
     <>
       {/* ── Card header — global range control governs the whole card ─────── */}
-      <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-[#e8eaf0] bg-[#f9f9fc] flex-wrap">
+      <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-[#e5e7eb] bg-[#f9fafb] flex-wrap">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold text-[#1a1e35]">Predictable Cash Flow</span>
-          <span className="text-xs text-[#8a8fa8]">· <span className="font-semibold text-[#0168dd]">{headerPeriod}</span></span>
+          <span className="text-sm font-semibold text-[#111827]">Predictable Cash Flow</span>
+          <span className="text-xs text-[#6b7280]">· <span className="font-semibold text-[#0168dd]">{headerPeriod}</span></span>
         </div>
         <div className="flex items-center gap-3">
-          <div className="flex items-center bg-[#f0f1f5] rounded-md p-0.5">
+          <div className="flex items-center bg-[#f3f4f6] rounded-md p-0.5">
             {(["1M","3M","6M","12M"] as V1eRange[]).map(r => (
               <button key={r} onClick={() => applyRange(r)}
-                className={`px-2.5 py-0.5 rounded text-[11px] font-medium transition-all ${range === r ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>
+                className={`px-2.5 py-0.5 rounded text-[11px] font-medium transition-all ${range === r ? "bg-white text-[#0168dd] shadow-sm" : "text-[#6b7280] hover:text-[#111827]"}`}>
                 {r}
               </button>
             ))}
@@ -3037,28 +3272,28 @@ function V1ePredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
           <div className="relative flex items-center gap-1 text-[11px]">
             <button onClick={() => { if (is1M && !drillMonth) stepMonth(-1); }}
               disabled={is1M && !drillMonth && oneMonthIdx <= 0}
-              className="p-0.5 rounded text-[#8a8fa8] hover:text-[#1a1e35] hover:bg-[#eef0f4] transition-colors disabled:opacity-30 disabled:hover:bg-transparent">{chevLeft}</button>
+              className="p-0.5 rounded text-[#6b7280] hover:text-[#111827] hover:bg-[#f3f4f6] transition-colors disabled:opacity-30 disabled:hover:bg-transparent">{chevLeft}</button>
             {drillMonth ? (
-              <span className="font-medium text-[#1a1e35] min-w-[130px] text-center">{drillMonth} — weekly</span>
+              <span className="font-medium text-[#111827] min-w-[130px] text-center">{drillMonth} — weekly</span>
             ) : is1M ? (
               <button onClick={() => setMonthPickerOpen(o => !o)}
-                className="text-[11px] font-medium text-[#1a1e35] min-w-[130px] text-center hover:bg-[#eef0f4] rounded px-2 py-0.5 flex items-center justify-center gap-1 transition-colors">
+                className="text-[11px] font-medium text-[#111827] min-w-[130px] text-center hover:bg-[#f3f4f6] rounded px-2 py-0.5 flex items-center justify-center gap-1 transition-colors">
                 {v1eFullMonthLabel(oneMonth)}
-                <ChevronDown size={11} className={`text-[#8a8fa8] transition-transform ${monthPickerOpen ? "rotate-180" : ""}`} />
+                <ChevronDown size={11} className={`text-[#6b7280] transition-transform ${monthPickerOpen ? "rotate-180" : ""}`} />
               </button>
             ) : (
-              <span className="font-medium text-[#1a1e35] min-w-[130px] text-center">{cfg.periodLabel}</span>
+              <span className="font-medium text-[#111827] min-w-[130px] text-center">{cfg.periodLabel}</span>
             )}
             <button onClick={() => { if (is1M && !drillMonth) stepMonth(1); }}
               disabled={is1M && !drillMonth && oneMonthIdx >= v1e12mBars.length - 1}
-              className="p-0.5 rounded text-[#8a8fa8] hover:text-[#1a1e35] hover:bg-[#eef0f4] transition-colors disabled:opacity-30 disabled:hover:bg-transparent">{chevRight}</button>
+              className="p-0.5 rounded text-[#6b7280] hover:text-[#111827] hover:bg-[#f3f4f6] transition-colors disabled:opacity-30 disabled:hover:bg-transparent">{chevRight}</button>
             {monthPickerOpen && is1M && !drillMonth && (
               <>
                 <div className="fixed inset-0 z-20" onClick={() => setMonthPickerOpen(false)} />
-                <div className="absolute top-8 left-7 z-30 bg-white rounded-lg border border-[#e8eaf0] shadow-xl py-1 w-40 max-h-56 overflow-y-auto">
+                <div className="absolute top-8 left-7 z-30 bg-white rounded-lg border border-[#e5e7eb] shadow-xl py-1 w-40 max-h-56 overflow-y-auto">
                   {v1e12mBars.map(b => (
                     <button key={b.label} onClick={() => { setOneMonth(b.label); setMonthPickerOpen(false); setLoading(true); setTimeout(() => setLoading(false), 550); }}
-                      className={`w-full text-left px-3 py-1.5 text-[11px] transition-colors ${b.label === oneMonth ? "bg-[#eef3ff] text-[#0168dd] font-medium" : "text-[#1a1e35] hover:bg-[#f5f6fa]"}`}>
+                      className={`w-full text-left px-3 py-1.5 text-[11px] transition-colors ${b.label === oneMonth ? "bg-[#eef3ff] text-[#0168dd] font-medium" : "text-[#111827] hover:bg-[#f9fafb]"}`}>
                       {v1eFullMonthLabel(b.label)}
                     </button>
                   ))}
@@ -3071,20 +3306,20 @@ function V1ePredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
       </div>
 
       {/* ── Top 3-column summary (matches Version 1D) ────────────────────── */}
-      <div className="grid grid-cols-3 divide-x divide-[#e8eaf0] border-b border-[#e8eaf0]">
+      <div className="grid grid-cols-3 divide-x divide-[#e5e7eb] border-b border-[#e5e7eb]">
         {/* Card 1 — base */}
         <div className="px-5 py-4">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-1 h-[21px] flex items-center">Monthly avg payout</p>
-          <p className="text-[10px] text-[#8a8fa8] leading-snug">The average of what you actually paid out over the last {cfg.lookback} — the baseline for this forecast.</p>
-          <p className="text-3xl font-bold text-[#1a1e35] tracking-tight mt-2">{fmt0(baseline)}</p>
-          <div className="flex items-center gap-x-2 gap-y-1 mt-2 flex-wrap text-[10px] text-[#8a8fa8]">
-            <div className="flex items-center gap-1 border-r border-[#e8eaf0] pr-2 mr-1">
-              <UserCircle2 size={13} className="text-[#1a1e35]" /><span className="font-semibold text-[#1a1e35]">{v1CurrMembers}</span>
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6b7280] mb-1 h-[21px] flex items-center">Monthly avg payout</p>
+          <p className="text-[10px] text-[#6b7280] leading-snug">The average of what you actually paid out over the last {cfg.lookback} — the baseline for this forecast.</p>
+          <p className="text-3xl font-bold text-[#111827] tracking-tight mt-2">{fmt0(baseline)}</p>
+          <div className="flex items-center gap-x-2 gap-y-1 mt-2 flex-wrap text-[10px] text-[#6b7280]">
+            <div className="flex items-center gap-1 border-r border-[#e5e7eb] pr-2 mr-1">
+              <UserCircle2 size={13} className="text-[#111827]" /><span className="font-semibold text-[#111827]">{v1CurrMembers}</span>
             </div>
             {v1PayTypes.map((pt, i) => (
               <div key={pt.key} className="flex items-center gap-1">
-                {i > 0 && <span className="text-[#c8cad4]">·</span>}
-                <span className="font-semibold text-[#1a1e35]">{pt.count}</span><span>{pt.label}</span>
+                {i > 0 && <span className="text-[#d1d5db]">·</span>}
+                <span className="font-semibold text-[#111827]">{pt.count}</span><span>{pt.label}</span>
               </div>
             ))}
           </div>
@@ -3093,42 +3328,42 @@ function V1ePredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
         {/* Card 2 — adjustments */}
         <div className="px-5 py-4">
           <div className="flex items-center justify-between mb-1">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] h-[21px] flex items-center">Adjustments</p>
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6b7280] h-[21px] flex items-center">Adjustments</p>
             <button onClick={() => { setEditingAdj(null); setShowAddDialog(true); }}
               className="flex items-center gap-0.5 text-[10px] font-medium text-[#0168dd] border border-[#0168dd]/40 rounded-md px-2 py-0.5 hover:bg-[#0168dd]/5 transition-colors select-none">
               <Plus size={10} /> Add adjustment
             </button>
           </div>
-          <p className="text-[10px] text-[#8a8fa8] leading-snug mb-2">Applied on top of your baseline (member changes, seasonality, and manual adjustments).</p>
+          <p className="text-[10px] text-[#6b7280] leading-snug mb-2">Applied on top of your baseline (member changes, seasonality, and manual adjustments).</p>
           <div className="flex items-baseline gap-2">
             <span className={`text-3xl font-bold tracking-tight ${adjPct >= 0 ? "text-emerald-600" : "text-red-500"}`}>{adjPct >= 0 ? "+" : ""}{adjPct}%</span>
             {adjPct >= 0 ? <TrendingUp size={16} className="text-emerald-500" /> : <TrendingDown size={16} className="text-red-400" />}
           </div>
-          <p className="text-[10px] text-[#8a8fa8] mb-1">{adjCompare}</p>
-          <div className="mt-2 divide-y divide-[#f0f1f5]">
+          <p className="text-[10px] text-[#6b7280] mb-1">{adjCompare}</p>
+          <div className="mt-2 divide-y divide-[#f3f4f6]">
             {([
               { label: "Headcount change", pct: memberPct, note: memberNote, positive: true },
               { label: "Seasonality",   pct: seasonPct, note: "May is typically above avg.", positive: true },
             ] as const).map(({ label, pct, note, positive }) => {
               if (label === "Seasonality" && seasonPct === 0) return null;
               return (
-                <div key={label} className="flex items-center gap-1.5 text-[11px] py-1.5 min-w-0">
+                <div key={label} className="flex items-center gap-1.5 text-xs py-1.5 min-w-0">
                   <span className={`font-semibold flex-shrink-0 ${positive ? "text-emerald-600" : "text-red-500"}`}>{positive ? "+" : ""}{pct}%</span>
-                  <span className="text-[#1a1e35] font-medium flex-shrink-0">{label}</span>
-                  <span className="text-[#d0d3de] flex-shrink-0">—</span>
-                  <span className="text-[#8a8fa8] truncate">{note}</span>
+                  <span className="text-[#111827] font-medium flex-shrink-0">{label}</span>
+                  <span className="text-[#d1d5db] flex-shrink-0">—</span>
+                  <span className="text-[#6b7280] truncate">{note}</span>
                 </div>
               );
             })}
             {manualAdjustments.map(adj => (
-              <div key={adj.id} className="flex items-center gap-1.5 text-[11px] py-1.5 min-w-0">
+              <div key={adj.id} className="flex items-center gap-1.5 text-xs py-1.5 min-w-0">
                 <span className={`font-semibold flex-shrink-0 ${adj.type === "add" ? "text-emerald-600" : "text-red-500"}`}>{adj.type === "add" ? "+" : "−"}{adj.unit === "pct" ? `${adj.value}%` : `≈${Math.round(adj.pct)}%`}</span>
-                <span className="text-[#1a1e35] font-medium flex-shrink-0">{adj.label}</span>
-                <span className="text-[#d0d3de] flex-shrink-0">—</span>
-                <span className="text-[#8a8fa8] flex-shrink-0">{adj.unit === "dollar" ? fmt0(Math.round(adj.dollars)) : `≈${fmt0(Math.round(adj.dollars))}`}</span>
-                <span className="text-[9px] font-medium bg-[#f0f1f5] text-[#8a8fa8] rounded px-1.5 py-0.5 flex-shrink-0">Added by you</span>
-                <button onClick={() => { setEditingAdj(adj); setShowAddDialog(true); }} className="ml-auto flex-shrink-0 p-0.5 rounded text-[#8a8fa8] hover:text-[#0168dd] hover:bg-[#f0f1f5] transition-colors"><Pencil size={11} /></button>
-                <button onClick={() => setManualAdjustments(prev => prev.filter(a => a.id !== adj.id))} className="flex-shrink-0 p-0.5 rounded text-[#8a8fa8] hover:text-red-500 hover:bg-red-50 transition-colors"><X size={11} /></button>
+                <span className="text-[#111827] font-medium flex-shrink-0">{adj.label}</span>
+                <span className="text-[#d1d5db] flex-shrink-0">—</span>
+                <span className="text-[#6b7280] flex-shrink-0">{adj.unit === "dollar" ? fmt0(Math.round(adj.dollars)) : `≈${fmt0(Math.round(adj.dollars))}`}</span>
+                <span className="text-[9px] font-medium bg-[#f3f4f6] text-[#6b7280] rounded px-1.5 py-0.5 flex-shrink-0">Added by you</span>
+                <button onClick={() => { setEditingAdj(adj); setShowAddDialog(true); }} className="ml-auto flex-shrink-0 p-0.5 rounded text-[#6b7280] hover:text-[#0168dd] hover:bg-[#f3f4f6] transition-colors"><Pencil size={11} /></button>
+                <button onClick={() => setManualAdjustments(prev => prev.filter(a => a.id !== adj.id))} className="flex-shrink-0 p-0.5 rounded text-[#6b7280] hover:text-red-500 hover:bg-red-50 transition-colors"><X size={11} /></button>
               </div>
             ))}
           </div>
@@ -3136,8 +3371,8 @@ function V1ePredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
 
         {/* Card 3 — projection */}
         <div className="px-5 py-4">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-1 h-[21px] flex items-center">Recommended projection</p>
-          <p className="text-[10px] text-[#8a8fa8] leading-snug">An estimate from your payment history — not a guaranteed figure. Add a buffer, or <a href="#" onClick={e => e.preventDefault()} className="font-medium text-[#5b607a] underline decoration-dotted decoration-[#b0b4c5] underline-offset-2 hover:text-[#1a1e35] transition-colors">see how to improve accuracy</a>.</p>
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6b7280] mb-1 h-[21px] flex items-center">Recommended projection</p>
+          <p className="text-[10px] text-[#6b7280] leading-snug">An estimate from your payment history — not a guaranteed figure. Add a buffer, or <a href="#" onClick={e => e.preventDefault()} className="font-medium text-[#4b5563] underline decoration-dotted decoration-[#9ca3af] underline-offset-2 hover:text-[#111827] transition-colors">see how to improve accuracy</a>.</p>
           <p className="text-3xl font-bold text-[#0168dd] tracking-tight mt-2">{fmt0(is1M ? adjProj : (windowTotal ?? adjProj))}</p>
           <V1cBreakdownPopover />
           <div className="relative group mt-3 cursor-default">
@@ -3148,17 +3383,17 @@ function V1ePredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
                 <div className="h-full flex-1 bg-[#85baf5]" />
               </div>
             </div>
-            <div className="flex justify-between text-[10px] text-[#8a8fa8] mt-0.5">
+            <div className="flex justify-between text-[10px] text-[#6b7280] mt-0.5">
               <span>{fmt0(baseline)}/mo avg</span>
               <span>{fmt0(adjProj)}/mo{is1M ? "" : " avg"}</span>
             </div>
             <div className="absolute top-full left-0 mt-2 hidden group-hover:block z-20 pointer-events-none">
-              <div className="bg-white border border-[#e8eaf0] rounded-lg shadow-lg p-3 w-48">
+              <div className="bg-white border border-[#e5e7eb] rounded-lg shadow-lg p-3 w-48">
                 {v1cBarHoverRows.map(({ label, color, value, pct }) => {
                   const k = value / 1000;
                   const fmtK = `${k % 1 === 0 ? k.toFixed(0) : k.toFixed(1)}k`;
                   return (
-                    <div key={label} className="flex items-center justify-between text-[11px] font-semibold mb-1 last:mb-0 text-[#8a8fa8]">
+                    <div key={label} className="flex items-center justify-between text-[11px] font-semibold mb-1 last:mb-0 text-[#6b7280]">
                       <div className="flex items-center gap-1.5">
                         <div className="w-2 h-2 rounded-sm flex-shrink-0" style={{ background: color }} />
                         <span>{label}</span>
@@ -3178,15 +3413,15 @@ function V1ePredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
         {/* Row 1 — distribution title (left) + segmentation tabs (right, segmented-pill style) */}
         <div className="flex items-start justify-between mb-3 gap-4">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-0.5">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6b7280] mb-0.5">
               {isWeekly ? "Week-by-week distribution" : "Month-by-month distribution"}
             </p>
-            <p className="text-[11px] text-[#8a8fa8]">{chartCaption}</p>
+            <p className="text-[11px] text-[#6b7280]">{chartCaption}</p>
           </div>
-          <div className="flex items-center bg-[#f0f1f5] rounded-md p-0.5 flex-shrink-0">
-            {([["source","Confirmed vs. projected"],["channel","Payout method"],["type","Payroll breakdown"]] as const).map(([id, label]) => (
+          <div className="flex items-center bg-[#f3f4f6] rounded-md p-0.5 flex-shrink-0">
+            {([["source","Tracked vs. projected"],["channel","Payout method"],["type","Payroll breakdown"]] as const).map(([id, label]) => (
               <button key={id} onClick={() => setSegTab(id)}
-                className={`px-2.5 py-1 rounded text-[10px] font-medium transition-all whitespace-nowrap ${segTab === id ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>
+                className={`px-2.5 py-1 rounded text-[10px] font-medium transition-all whitespace-nowrap ${segTab === id ? "bg-white text-[#0168dd] shadow-sm" : "text-[#6b7280] hover:text-[#111827]"}`}>
                 {label}
               </button>
             ))}
@@ -3197,10 +3432,10 @@ function V1ePredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
         {range === "12M" && (
           <div className="flex items-center justify-end my-3">
             <button onClick={() => setShowYoY(p => !p)} className="flex items-center gap-1.5 text-[10px] select-none cursor-pointer">
-              <span className={`relative w-6 h-3.5 rounded-full transition-colors flex-shrink-0 ${showYoY ? "bg-[#0168dd]" : "bg-[#c8cad4]"}`}>
+              <span className={`relative w-6 h-3.5 rounded-full transition-colors flex-shrink-0 ${showYoY ? "bg-[#0168dd]" : "bg-[#d1d5db]"}`}>
                 <span className={`absolute top-0.5 w-2.5 h-2.5 rounded-full bg-white shadow-sm transition-transform ${showYoY ? "translate-x-2.5" : "translate-x-0.5"}`} />
               </span>
-              <span className="text-[#8a8fa8]">vs last year</span>
+              <span className="text-[#6b7280]">vs last year</span>
             </button>
           </div>
         )}
@@ -3234,10 +3469,10 @@ function V1ePredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
         ) : isWeekly ? (
           <ResponsiveContainer width="100%" height={180}>
             <BarChart data={weekRows} barCategoryGap="30%" margin={{ top: 20, right: 4, left: 0, bottom: 4 }}>
-              <CartesianGrid vertical={false} stroke="#f0f1f5" />
-              <XAxis dataKey="dateLabel" tick={{ fontSize: 9, fill: "#8a8fa8" }} tickLine={false} axisLine={false} interval={0} />
-              <YAxis tick={{ fontSize: 10, fill: "#8a8fa8" }} tickFormatter={(v: number) => `$${Math.round(v/1000)}k`} axisLine={false} tickLine={false} width={36} />
-              <Tooltip content={renderTip(weekSegBars)} cursor={{ fill: "#f5f6fa" }} />
+              <CartesianGrid vertical={false} stroke="#f3f4f6" />
+              <XAxis dataKey="dateLabel" tick={{ fontSize: 9, fill: "#6b7280" }} tickLine={false} axisLine={false} interval={0} />
+              <YAxis tick={{ fontSize: 10, fill: "#6b7280" }} tickFormatter={(v: number) => `$${Math.round(v/1000)}k`} axisLine={false} tickLine={false} width={36} />
+              <Tooltip content={renderTip(weekSegBars)} cursor={{ fill: "#f9fafb" }} />
               {weekMonthIsCurrent && (
                 <ReferenceLine x={weekRows[1]?.dateLabel} stroke="#0168dd" strokeDasharray="3 3"
                   label={{ value: "Today", position: "insideTopRight", fontSize: 8, fill: "#0168dd" }} />
@@ -3248,7 +3483,7 @@ function V1ePredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
                   {idx === weekSegBars.length - 1 && (
                     <LabelList dataKey="total" position="top" offset={6}
                       formatter={(v: number) => `$${Math.round(v / 1000)}k`}
-                      style={{ fontSize: 10, fontWeight: 600, fill: "#5b607a" }} />
+                      fill="#6b7280" style={{ fontSize: 10, fontWeight: 600 }} />
                   )}
                 </Bar>
               ))}
@@ -3257,32 +3492,32 @@ function V1ePredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
         ) : (
           <ResponsiveContainer width="100%" height={180}>
             <ComposedChart data={monthlyRows} barCategoryGap="28%" margin={{ top: 20, right: 4, left: 0, bottom: 4 }}>
-              <CartesianGrid vertical={false} stroke="#f0f1f5" />
-              <XAxis dataKey="label" tick={{ fontSize: range === "12M" ? 9 : 10, fill: "#8a8fa8" }} tickLine={false} axisLine={false} interval={0} />
-              <YAxis tick={{ fontSize: 10, fill: "#8a8fa8" }} tickFormatter={(v: number) => `$${Math.round(v/1000)}k`} axisLine={false} tickLine={false} width={36} />
-              <Tooltip cursor={{ fill: "#f5f6fa" }} content={({ active, payload }: any) => {
+              <CartesianGrid vertical={false} stroke="#f3f4f6" />
+              <XAxis dataKey="label" tick={{ fontSize: range === "12M" ? 9 : 10, fill: "#6b7280" }} tickLine={false} axisLine={false} interval={0} />
+              <YAxis tick={{ fontSize: 10, fill: "#6b7280" }} tickFormatter={(v: number) => `$${Math.round(v/1000)}k`} axisLine={false} tickLine={false} width={36} />
+              <Tooltip cursor={{ fill: "#f9fafb" }} content={({ active, payload }: any) => {
                 if (!active || !payload?.length) return null;
                 const d = payload[0]?.payload;
                 if (!d) return null;
                 const items = monthSegBars.map(sb => ({ ...sb, value: (d[sb.key] ?? 0) as number })).filter(i => i.value > 0);
                 const total = items.reduce((s, i) => s + i.value, 0);
                 return (
-                  <div className="bg-white border border-[#e8eaf0] rounded-lg shadow-lg p-3 text-xs min-w-[180px]">
-                    <p className="font-semibold text-[#1a1e35] mb-1.5">{d.label}</p>
+                  <div className="bg-white border border-[#e5e7eb] rounded-lg shadow-lg p-3 text-xs min-w-[180px]">
+                    <p className="font-semibold text-[#111827] mb-1.5">{d.label}</p>
                     {items.map(i => (
                       <div key={i.key} className="flex justify-between gap-4 py-0.5">
-                        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm inline-block flex-shrink-0" style={{ background: i.color }} /><span className="text-[#8a8fa8]">{i.label}</span></span>
-                        <span className="font-medium text-[#1a1e35]">{fmt0(i.value)}</span>
+                        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm inline-block flex-shrink-0" style={{ background: i.color }} /><span className="text-[#6b7280]">{i.label}</span></span>
+                        <span className="font-medium text-[#111827]">{fmt0(i.value)}</span>
                       </div>
                     ))}
-                    <div className="flex justify-between gap-4 py-0.5 mt-1 pt-1.5 border-t border-[#e8eaf0]">
-                      <span className="text-[#8a8fa8]">Total</span>
-                      <span className="font-semibold text-[#1a1e35]">{fmt0(total)}</span>
+                    <div className="flex justify-between gap-4 py-0.5 mt-1 pt-1.5 border-t border-[#e5e7eb]">
+                      <span className="text-[#6b7280]">Total</span>
+                      <span className="font-semibold text-[#111827]">{fmt0(total)}</span>
                     </div>
                     {showYoY && (d.yoy ?? 0) > 0 && (
-                      <div className="flex justify-between gap-4 py-0.5 mt-1 pt-1.5 border-t border-[#e8eaf0]">
-                        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm inline-block flex-shrink-0" style={{ background: "#c8cad4" }} /><span className="text-[#8a8fa8]">Last year · {v1ePrevYearLabel(d.label)}</span></span>
-                        <span className="font-medium text-[#1a1e35]">{fmt0(d.yoy)}</span>
+                      <div className="flex justify-between gap-4 py-0.5 mt-1 pt-1.5 border-t border-[#e5e7eb]">
+                        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm inline-block flex-shrink-0" style={{ background: "#d1d5db" }} /><span className="text-[#6b7280]">Last year · {v1ePrevYearLabel(d.label)}</span></span>
+                        <span className="font-medium text-[#111827]">{fmt0(d.yoy)}</span>
                       </div>
                     )}
                   </div>
@@ -3301,12 +3536,12 @@ function V1ePredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
                   {idx === monthSegBars.length - 1 && (
                     <LabelList dataKey="total" position="top" offset={6}
                       formatter={(v: number) => `$${Math.round(v / 1000)}k`}
-                      style={{ fontSize: 10, fontWeight: 600, fill: "#5b607a" }} />
+                      fill="#6b7280" style={{ fontSize: 10, fontWeight: 600 }} />
                   )}
                 </Bar>
               ))}
               {showYoY && range === "12M" && (
-                <Bar dataKey="yoy" stackId="prev" fill="#c8cad4" name="Last year" radius={[3, 3, 0, 0]} isAnimationActive={false} />
+                <Bar dataKey="yoy" stackId="prev" fill="#d1d5db" name="Last year" radius={[3, 3, 0, 0]} isAnimationActive={false} />
               )}
             </ComposedChart>
           </ResponsiveContainer>
@@ -3315,20 +3550,20 @@ function V1ePredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
         {/* Legend */}
         <div className="flex items-center gap-x-3 gap-y-1 mt-1.5 flex-wrap">
           {activeSegBars.map(sb => (
-            <span key={sb.key} className="flex items-center gap-1 text-[10px] text-[#8a8fa8]">
+            <span key={sb.key} className="flex items-center gap-1 text-[10px] text-[#6b7280]">
               <span className="w-2 h-2 rounded-sm flex-shrink-0" style={{ background: sb.color }} />
               {sb.label}
               {v1SegLegendInfo[sb.label] && <InfoTip text={v1SegLegendInfo[sb.label]} />}
             </span>
           ))}
           {showYoY && !isWeekly && range === "12M" && (
-            <span className="flex items-center gap-1 text-[10px] text-[#8a8fa8]">
-              <span className="w-2 h-2 rounded-sm flex-shrink-0" style={{ background: "#c8cad4" }} />
+            <span className="flex items-center gap-1 text-[10px] text-[#6b7280]">
+              <span className="w-2 h-2 rounded-sm flex-shrink-0" style={{ background: "#d1d5db" }} />
               Last year (same month)
             </span>
           )}
           {!isWeekly && (range === "6M" || range === "12M") && (
-            <span className="text-[9px] text-[#c0c3d3] italic ml-auto">Confidence fades on projected months</span>
+            <span className="text-[9px] text-[#d1d5db] italic ml-auto">Confidence fades on projected months</span>
           )}
         </div>
       </div>
@@ -3355,16 +3590,16 @@ function Version1E({ showStatusBreakdown, seasonalityOn }: { showStatusBreakdown
   const [bottomTab, setBottomTab] = useState<"history"|"future">("history");
   return (
     <div className="flex-1 overflow-y-auto px-6 py-5 space-y-8">
-      <h1 className="text-xl font-semibold text-[#1a1e35]">Payments report</h1>
-      <div className="bg-white rounded-lg border border-[#e8eaf0] overflow-hidden">
+      <h1 className="text-xl font-semibold text-[#111827]">Payments report</h1>
+      <div className="bg-white rounded-lg border border-[#e5e7eb] overflow-hidden">
         <V1ePredictivePanel showStatusBreakdown={showStatusBreakdown} seasonalityOn={seasonalityOn} />
       </div>
       <FundYourAccountsPanel />
       <div>
-        <p className="text-base font-semibold text-[#1a1e35] mb-3">Payment Activity</p>
-        <div className="flex items-center gap-0 mb-3 border-b border-[#e8eaf0]">
+        <p className="text-base font-semibold text-[#111827] mb-3">Payment Activity</p>
+        <div className="flex items-center gap-0 mb-3 border-b border-[#e5e7eb]">
           {([["history","Payment History"],["future","Future Tracked So Far"]] as const).map(([id, label]) => (
-            <button key={id} onClick={() => setBottomTab(id)} className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${bottomTab === id ? "border-[#0168dd] text-[#0168dd]" : "border-transparent text-[#8a8fa8] hover:text-[#1a1e35]"}`}>{label}</button>
+            <button key={id} onClick={() => setBottomTab(id)} className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${bottomTab === id ? "border-[#0168dd] text-[#0168dd]" : "border-transparent text-[#6b7280] hover:text-[#111827]"}`}>{label}</button>
           ))}
         </div>
         {bottomTab === "history" ? <V1PaymentHistory /> : <V1FutureTracked />}
@@ -3456,24 +3691,24 @@ function V1fPredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
     segTab === "source"
       ? (showStatusBreakdown
           ? [
-              { key: "paid",      label: "Paid",      color: "#10b981" },
+              { key: "paid",      label: "Paid",      color: "#0e9f6e" },
               { key: "pending",   label: "Pending",   color: "#f59e0b" },
               { key: "failed",    label: "Failed",    color: "#ef4444" },
               { key: "tracked",   label: "Planned",   color: "#0168dd" },
               { key: "projected", label: "Projected", color: "#85baf5" },
             ]
           : [
-              { key: "factual",   label: "Confirmed", color: "#10b981" },
+              { key: "factual",   label: "Confirmed", color: "#0e9f6e" },
               { key: "tracked",   label: "Planned",   color: "#0168dd" },
               { key: "projected", label: "Projected", color: "#85baf5" },
             ])
       : segTab === "channel"
-      ? [{ key: "chFactual", label: "Confirmed", color: "#10b981" }, ...v1eChannelSeg.map(s => ({ key: s.key, label: s.label, color: s.color }))]
+      ? [{ key: "chFactual", label: "Confirmed", color: "#0e9f6e" }, ...v1eChannelSeg.map(s => ({ key: s.key, label: s.label, color: s.color }))]
       : v1eEarningSeg.map(s => ({ key: s.key, label: s.label, color: s.color }));
 
   const monthSegBars: SegBar[] =
     segTab === "source"
-      ? [{ key: "actual", label: "Actuals", color: "#10b981" }, { key: "projected", label: "Projected", color: "#85baf5" }]
+      ? [{ key: "actual", label: "Actuals", color: "#0e9f6e" }, { key: "projected", label: "Projected", color: "#85baf5" }]
       : segTab === "channel"
       ? v1eChannelSeg.map(s => ({ key: s.key, label: s.label, color: s.color }))
       : v1eEarningSeg.map(s => ({ key: s.key, label: s.label, color: s.color }));
@@ -3488,18 +3723,18 @@ function V1fPredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
     const items = segBars.map(sb => ({ ...sb, value: (d[sb.key] ?? 0) as number })).filter(i => i.value > 0);
     const total = items.reduce((s, i) => s + i.value, 0);
     return (
-      <div className="bg-white border border-[#e8eaf0] rounded-lg shadow-lg p-3 text-xs min-w-[170px]">
-        <p className="font-semibold text-[#1a1e35] mb-1.5">{header}</p>
+      <div className="bg-white border border-[#e5e7eb] rounded-lg shadow-lg p-3 text-xs min-w-[170px]">
+        <p className="font-semibold text-[#111827] mb-1.5">{header}</p>
         {items.map(i => (
           <div key={i.key} className="flex justify-between gap-4 py-0.5">
-            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm inline-block flex-shrink-0" style={{ background: i.color }} /><span className="text-[#8a8fa8]">{i.label}</span></span>
-            <span className="font-medium text-[#1a1e35]">{fmt0(i.value)}</span>
+            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm inline-block flex-shrink-0" style={{ background: i.color }} /><span className="text-[#6b7280]">{i.label}</span></span>
+            <span className="font-medium text-[#111827]">{fmt0(i.value)}</span>
           </div>
         ))}
         {items.length > 1 && (
-          <div className="flex justify-between gap-4 py-0.5 mt-1 pt-1.5 border-t border-[#e8eaf0]">
-            <span className="text-[#8a8fa8]">Total</span>
-            <span className="font-semibold text-[#1a1e35]">{fmt0(total)}</span>
+          <div className="flex justify-between gap-4 py-0.5 mt-1 pt-1.5 border-t border-[#e5e7eb]">
+            <span className="text-[#6b7280]">Total</span>
+            <span className="font-semibold text-[#111827]">{fmt0(total)}</span>
           </div>
         )}
       </div>
@@ -3520,28 +3755,28 @@ function V1fPredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
   return (
     <>
       {/* ══ SUMMARY CARD — fixed to the current month ══════════════════════ */}
-      <div className="bg-white rounded-lg border border-[#e8eaf0] overflow-hidden">
-        <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-[#e8eaf0] bg-[#f9f9fc]">
+      <div className="bg-white rounded-lg border border-[#e5e7eb] overflow-hidden">
+        <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-[#e5e7eb] bg-[#f9fafb]">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-[#1a1e35]">Predictable Cash Flow</span>
-            <span className="text-xs text-[#8a8fa8]">· <span className="font-semibold text-[#0168dd]">{v1eFullMonthLabel("Jun '26")}</span> · this month</span>
+            <span className="text-sm font-semibold text-[#111827]">Predictable Cash Flow</span>
+            <span className="text-xs text-[#6b7280]">· <span className="font-semibold text-[#0168dd]">{v1eFullMonthLabel("Jun '26")}</span> · this month</span>
           </div>
           <ExportDropdown />
         </div>
-      <div className="grid grid-cols-3 divide-x divide-[#e8eaf0]">
+      <div className="grid grid-cols-3 divide-x divide-[#e5e7eb]">
         {/* Card 1 — base */}
         <div className="px-5 py-4">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-1 h-[21px] flex items-center">Monthly avg payout</p>
-          <p className="text-[10px] text-[#8a8fa8] leading-snug">The average of what you actually paid out over the last 5 months — the baseline for this forecast.</p>
-          <p className="text-3xl font-bold text-[#1a1e35] tracking-tight mt-2">{fmt0(v1AvgMonthly)}</p>
-          <div className="flex items-center gap-x-2 gap-y-1 mt-2 flex-wrap text-[10px] text-[#8a8fa8]">
-            <div className="flex items-center gap-1 border-r border-[#e8eaf0] pr-2 mr-1">
-              <UserCircle2 size={13} className="text-[#1a1e35]" /><span className="font-semibold text-[#1a1e35]">{v1CurrMembers}</span>
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6b7280] mb-1 h-[21px] flex items-center">Monthly avg payout</p>
+          <p className="text-[10px] text-[#6b7280] leading-snug">The average of what you actually paid out over the last 5 months — the baseline for this forecast.</p>
+          <p className="text-3xl font-bold text-[#111827] tracking-tight mt-2">{fmt0(v1AvgMonthly)}</p>
+          <div className="flex items-center gap-x-2 gap-y-1 mt-2 flex-wrap text-[10px] text-[#6b7280]">
+            <div className="flex items-center gap-1 border-r border-[#e5e7eb] pr-2 mr-1">
+              <UserCircle2 size={13} className="text-[#111827]" /><span className="font-semibold text-[#111827]">{v1CurrMembers}</span>
             </div>
             {v1PayTypes.map((pt, i) => (
               <div key={pt.key} className="flex items-center gap-1">
-                {i > 0 && <span className="text-[#c8cad4]">·</span>}
-                <span className="font-semibold text-[#1a1e35]">{pt.count}</span><span>{pt.label}</span>
+                {i > 0 && <span className="text-[#d1d5db]">·</span>}
+                <span className="font-semibold text-[#111827]">{pt.count}</span><span>{pt.label}</span>
               </div>
             ))}
           </div>
@@ -3550,41 +3785,41 @@ function V1fPredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
         {/* Card 2 — adjustments */}
         <div className="px-5 py-4">
           <div className="flex items-center justify-between mb-1">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] h-[21px] flex items-center">Adjustments</p>
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6b7280] h-[21px] flex items-center">Adjustments</p>
             <button onClick={() => { setEditingAdj(null); setShowAddDialog(true); }}
               className="flex items-center gap-0.5 text-[10px] font-medium text-[#0168dd] border border-[#0168dd]/40 rounded-md px-2 py-0.5 hover:bg-[#0168dd]/5 transition-colors select-none">
               <Plus size={10} /> Add adjustment
             </button>
           </div>
-          <p className="text-[10px] text-[#8a8fa8] leading-snug mb-2">Applied on top of your baseline (member changes, seasonality, and manual adjustments).</p>
+          <p className="text-[10px] text-[#6b7280] leading-snug mb-2">Applied on top of your baseline (member changes, seasonality, and manual adjustments).</p>
           <div className="flex items-baseline gap-2">
             <span className={`text-3xl font-bold tracking-tight ${adjPct >= 0 ? "text-emerald-600" : "text-red-500"}`}>{adjPct >= 0 ? "+" : ""}{adjPct}%</span>
             {adjPct >= 0 ? <TrendingUp size={16} className="text-emerald-500" /> : <TrendingDown size={16} className="text-red-400" />}
           </div>
-          <div className="mt-2 divide-y divide-[#f0f1f5]">
+          <div className="mt-2 divide-y divide-[#f3f4f6]">
             {([
               { label: "Headcount change", pct: memberPct, note: memberNote, positive: true },
               { label: "Seasonality",   pct: seasonPct, note: "May is typically above avg.", positive: true },
             ] as const).map(({ label, pct, note, positive }) => {
               if (label === "Seasonality" && seasonPct === 0) return null;
               return (
-                <div key={label} className="flex items-center gap-1.5 text-[11px] py-1.5 min-w-0">
+                <div key={label} className="flex items-center gap-1.5 text-xs py-1.5 min-w-0">
                   <span className={`font-semibold flex-shrink-0 ${positive ? "text-emerald-600" : "text-red-500"}`}>{positive ? "+" : ""}{pct}%</span>
-                  <span className="text-[#1a1e35] font-medium flex-shrink-0">{label}</span>
-                  <span className="text-[#d0d3de] flex-shrink-0">—</span>
-                  <span className="text-[#8a8fa8] truncate">{note}</span>
+                  <span className="text-[#111827] font-medium flex-shrink-0">{label}</span>
+                  <span className="text-[#d1d5db] flex-shrink-0">—</span>
+                  <span className="text-[#6b7280] truncate">{note}</span>
                 </div>
               );
             })}
             {manualAdjustments.map(adj => (
-              <div key={adj.id} className="flex items-center gap-1.5 text-[11px] py-1.5 min-w-0">
+              <div key={adj.id} className="flex items-center gap-1.5 text-xs py-1.5 min-w-0">
                 <span className={`font-semibold flex-shrink-0 ${adj.type === "add" ? "text-emerald-600" : "text-red-500"}`}>{adj.type === "add" ? "+" : "−"}{adj.unit === "pct" ? `${adj.value}%` : `≈${Math.round(adj.pct)}%`}</span>
-                <span className="text-[#1a1e35] font-medium flex-shrink-0">{adj.label}</span>
-                <span className="text-[#d0d3de] flex-shrink-0">—</span>
-                <span className="text-[#8a8fa8] flex-shrink-0">{adj.unit === "dollar" ? fmt0(Math.round(adj.dollars)) : `≈${fmt0(Math.round(adj.dollars))}`}</span>
-                <span className="text-[9px] font-medium bg-[#f0f1f5] text-[#8a8fa8] rounded px-1.5 py-0.5 flex-shrink-0">Added by you</span>
-                <button onClick={() => { setEditingAdj(adj); setShowAddDialog(true); }} className="ml-auto flex-shrink-0 p-0.5 rounded text-[#8a8fa8] hover:text-[#0168dd] hover:bg-[#f0f1f5] transition-colors"><Pencil size={11} /></button>
-                <button onClick={() => setManualAdjustments(prev => prev.filter(a => a.id !== adj.id))} className="flex-shrink-0 p-0.5 rounded text-[#8a8fa8] hover:text-red-500 hover:bg-red-50 transition-colors"><X size={11} /></button>
+                <span className="text-[#111827] font-medium flex-shrink-0">{adj.label}</span>
+                <span className="text-[#d1d5db] flex-shrink-0">—</span>
+                <span className="text-[#6b7280] flex-shrink-0">{adj.unit === "dollar" ? fmt0(Math.round(adj.dollars)) : `≈${fmt0(Math.round(adj.dollars))}`}</span>
+                <span className="text-[9px] font-medium bg-[#f3f4f6] text-[#6b7280] rounded px-1.5 py-0.5 flex-shrink-0">Added by you</span>
+                <button onClick={() => { setEditingAdj(adj); setShowAddDialog(true); }} className="ml-auto flex-shrink-0 p-0.5 rounded text-[#6b7280] hover:text-[#0168dd] hover:bg-[#f3f4f6] transition-colors"><Pencil size={11} /></button>
+                <button onClick={() => setManualAdjustments(prev => prev.filter(a => a.id !== adj.id))} className="flex-shrink-0 p-0.5 rounded text-[#6b7280] hover:text-red-500 hover:bg-red-50 transition-colors"><X size={11} /></button>
               </div>
             ))}
           </div>
@@ -3592,8 +3827,8 @@ function V1fPredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
 
         {/* Card 3 — projection */}
         <div className="px-5 py-4">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-1 h-[21px] flex items-center">Recommended projection</p>
-          <p className="text-[10px] text-[#8a8fa8] leading-snug">An estimate from your payment history — not a guaranteed figure. Add a buffer, or <a href="#" onClick={e => e.preventDefault()} className="font-medium text-[#5b607a] underline decoration-dotted decoration-[#b0b4c5] underline-offset-2 hover:text-[#1a1e35] transition-colors">see how to improve accuracy</a>.</p>
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6b7280] mb-1 h-[21px] flex items-center">Recommended projection</p>
+          <p className="text-[10px] text-[#6b7280] leading-snug">An estimate from your payment history — not a guaranteed figure. Add a buffer, or <a href="#" onClick={e => e.preventDefault()} className="font-medium text-[#4b5563] underline decoration-dotted decoration-[#9ca3af] underline-offset-2 hover:text-[#111827] transition-colors">see how to improve accuracy</a>.</p>
           <p className="text-3xl font-bold text-[#0168dd] tracking-tight mt-2">{fmt0(adjProj)}</p>
           <V1cBreakdownPopover />
           <div className="relative group mt-3 cursor-default">
@@ -3604,17 +3839,17 @@ function V1fPredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
                 <div className="h-full flex-1 bg-[#85baf5]" />
               </div>
             </div>
-            <div className="flex justify-between text-[10px] text-[#8a8fa8] mt-0.5">
+            <div className="flex justify-between text-[10px] text-[#6b7280] mt-0.5">
               <span>{fmt0(v1AvgMonthly)} avg</span>
               <span>{fmt0(adjProj)} total</span>
             </div>
             <div className="absolute top-full left-0 mt-2 hidden group-hover:block z-20 pointer-events-none">
-              <div className="bg-white border border-[#e8eaf0] rounded-lg shadow-lg p-3 w-48">
+              <div className="bg-white border border-[#e5e7eb] rounded-lg shadow-lg p-3 w-48">
                 {v1cBarHoverRows.map(({ label, color, value, pct }) => {
                   const k = value / 1000;
                   const fmtK = `${k % 1 === 0 ? k.toFixed(0) : k.toFixed(1)}k`;
                   return (
-                    <div key={label} className="flex items-center justify-between text-[11px] font-semibold mb-1 last:mb-0 text-[#8a8fa8]">
+                    <div key={label} className="flex items-center justify-between text-[11px] font-semibold mb-1 last:mb-0 text-[#6b7280]">
                       <div className="flex items-center gap-1.5">
                         <div className="w-2 h-2 rounded-sm flex-shrink-0" style={{ background: color }} />
                         <span>{label}</span>
@@ -3628,9 +3863,9 @@ function V1fPredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
           </div>
           {windowTotal && (
             <p className="text-[10px] mt-2">
-              <span className="font-medium text-[#1a1e35]">{fmt0(windowTotal)}</span>
-              <span className="text-[#8a8fa8]"> {range.toLowerCase()} total · </span>
-              <span className="text-[9px] text-[#c0c3d3]">for planning</span>
+              <span className="font-medium text-[#111827]">{fmt0(windowTotal)}</span>
+              <span className="text-[#6b7280]"> {range.toLowerCase()} total · </span>
+              <span className="text-[9px] text-[#d1d5db]">for planning</span>
             </p>
           )}
         </div>
@@ -3639,17 +3874,17 @@ function V1fPredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
       </div>{/* ══ end SUMMARY CARD ══ */}
 
       {/* ══ CHART CARD — separate explorer with its own range control ══════ */}
-      <div className="bg-white rounded-lg border border-[#e8eaf0] overflow-hidden">
-        <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-[#e8eaf0] bg-[#f9f9fc] flex-wrap">
+      <div className="bg-white rounded-lg border border-[#e5e7eb] overflow-hidden">
+        <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-[#e5e7eb] bg-[#f9fafb] flex-wrap">
           <div>
-            <p className="text-sm font-semibold text-[#1a1e35]">Explore your payments over time</p>
-            <p className="text-[11px] text-[#8a8fa8]">Projected payouts ahead — browsing here doesn't change the numbers above.</p>
+            <p className="text-sm font-semibold text-[#111827]">Explore your payments over time</p>
+            <p className="text-[11px] text-[#6b7280]">Projected payouts ahead — browsing here doesn't change the numbers above.</p>
           </div>
           <div className="flex items-center gap-3">
-            <div className="flex items-center bg-[#f0f1f5] rounded-md p-0.5">
+            <div className="flex items-center bg-[#f3f4f6] rounded-md p-0.5">
               {(["1M","3M","6M","12M"] as V1eRange[]).map(r => (
                 <button key={r} onClick={() => applyRange(r)}
-                  className={`px-2.5 py-0.5 rounded text-[11px] font-medium transition-all ${range === r ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>
+                  className={`px-2.5 py-0.5 rounded text-[11px] font-medium transition-all ${range === r ? "bg-white text-[#0168dd] shadow-sm" : "text-[#6b7280] hover:text-[#111827]"}`}>
                   {r}
                 </button>
               ))}
@@ -3657,28 +3892,28 @@ function V1fPredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
             <div className="relative flex items-center gap-1 text-[11px]">
               <button onClick={() => { if (is1M && !drillMonth) stepMonth(-1); }}
                 disabled={is1M && !drillMonth && oneMonthIdx <= 0}
-                className="p-0.5 rounded text-[#8a8fa8] hover:text-[#1a1e35] hover:bg-[#eef0f4] transition-colors disabled:opacity-30 disabled:hover:bg-transparent">{chevLeft}</button>
+                className="p-0.5 rounded text-[#6b7280] hover:text-[#111827] hover:bg-[#f3f4f6] transition-colors disabled:opacity-30 disabled:hover:bg-transparent">{chevLeft}</button>
               {drillMonth ? (
-                <span className="font-medium text-[#1a1e35] min-w-[130px] text-center">{drillMonth} — weekly</span>
+                <span className="font-medium text-[#111827] min-w-[130px] text-center">{drillMonth} — weekly</span>
               ) : is1M ? (
                 <button onClick={() => setMonthPickerOpen(o => !o)}
-                  className="text-[11px] font-medium text-[#1a1e35] min-w-[130px] text-center hover:bg-[#eef0f4] rounded px-2 py-0.5 flex items-center justify-center gap-1 transition-colors">
+                  className="text-[11px] font-medium text-[#111827] min-w-[130px] text-center hover:bg-[#f3f4f6] rounded px-2 py-0.5 flex items-center justify-center gap-1 transition-colors">
                   {v1eFullMonthLabel(oneMonth)}
-                  <ChevronDown size={11} className={`text-[#8a8fa8] transition-transform ${monthPickerOpen ? "rotate-180" : ""}`} />
+                  <ChevronDown size={11} className={`text-[#6b7280] transition-transform ${monthPickerOpen ? "rotate-180" : ""}`} />
                 </button>
               ) : (
-                <span className="font-medium text-[#1a1e35] min-w-[130px] text-center">{cfg.periodLabel}</span>
+                <span className="font-medium text-[#111827] min-w-[130px] text-center">{cfg.periodLabel}</span>
               )}
               <button onClick={() => { if (is1M && !drillMonth) stepMonth(1); }}
                 disabled={is1M && !drillMonth && oneMonthIdx >= v1eMonthNav.length - 1}
-                className="p-0.5 rounded text-[#8a8fa8] hover:text-[#1a1e35] hover:bg-[#eef0f4] transition-colors disabled:opacity-30 disabled:hover:bg-transparent">{chevRight}</button>
+                className="p-0.5 rounded text-[#6b7280] hover:text-[#111827] hover:bg-[#f3f4f6] transition-colors disabled:opacity-30 disabled:hover:bg-transparent">{chevRight}</button>
               {monthPickerOpen && is1M && !drillMonth && (
                 <>
                   <div className="fixed inset-0 z-20" onClick={() => setMonthPickerOpen(false)} />
-                  <div className="absolute top-8 left-7 z-30 bg-white rounded-lg border border-[#e8eaf0] shadow-xl py-1 w-40 max-h-56 overflow-y-auto">
+                  <div className="absolute top-8 left-7 z-30 bg-white rounded-lg border border-[#e5e7eb] shadow-xl py-1 w-40 max-h-56 overflow-y-auto">
                     {v1eMonthNav.map(b => (
                       <button key={b.label} onClick={() => { setOneMonth(b.label); setMonthPickerOpen(false); setLoading(true); setTimeout(() => setLoading(false), 550); }}
-                        className={`w-full text-left px-3 py-1.5 text-[11px] transition-colors ${b.label === oneMonth ? "bg-[#eef3ff] text-[#0168dd] font-medium" : "text-[#1a1e35] hover:bg-[#f5f6fa]"}`}>
+                        className={`w-full text-left px-3 py-1.5 text-[11px] transition-colors ${b.label === oneMonth ? "bg-[#eef3ff] text-[#0168dd] font-medium" : "text-[#111827] hover:bg-[#f9fafb]"}`}>
                         {v1eFullMonthLabel(b.label)}
                       </button>
                     ))}
@@ -3693,12 +3928,12 @@ function V1fPredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
         {/* Row 1 — distribution title (left) + segmentation tabs (right, segmented-pill style) */}
         <div className="flex items-start justify-between mb-3 gap-4">
           <div>
-            <p className="text-[11px] text-[#8a8fa8]">{chartCaption}</p>
+            <p className="text-[11px] text-[#6b7280]">{chartCaption}</p>
           </div>
-          <div className="flex items-center bg-[#f0f1f5] rounded-md p-0.5 flex-shrink-0">
-            {([["source","Confirmed vs. projected"],["channel","Payout method"],["type","Payroll breakdown"]] as const).map(([id, label]) => (
+          <div className="flex items-center bg-[#f3f4f6] rounded-md p-0.5 flex-shrink-0">
+            {([["source","Tracked vs. projected"],["channel","Payout method"],["type","Payroll breakdown"]] as const).map(([id, label]) => (
               <button key={id} onClick={() => setSegTab(id)}
-                className={`px-2.5 py-1 rounded text-[10px] font-medium transition-all whitespace-nowrap ${segTab === id ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>
+                className={`px-2.5 py-1 rounded text-[10px] font-medium transition-all whitespace-nowrap ${segTab === id ? "bg-white text-[#0168dd] shadow-sm" : "text-[#6b7280] hover:text-[#111827]"}`}>
                 {label}
               </button>
             ))}
@@ -3709,10 +3944,10 @@ function V1fPredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
         {range === "12M" && (
           <div className="flex items-center justify-end my-3">
             <button onClick={() => setShowYoY(p => !p)} className="flex items-center gap-1.5 text-[10px] select-none cursor-pointer">
-              <span className={`relative w-6 h-3.5 rounded-full transition-colors flex-shrink-0 ${showYoY ? "bg-[#0168dd]" : "bg-[#c8cad4]"}`}>
+              <span className={`relative w-6 h-3.5 rounded-full transition-colors flex-shrink-0 ${showYoY ? "bg-[#0168dd]" : "bg-[#d1d5db]"}`}>
                 <span className={`absolute top-0.5 w-2.5 h-2.5 rounded-full bg-white shadow-sm transition-transform ${showYoY ? "translate-x-2.5" : "translate-x-0.5"}`} />
               </span>
-              <span className="text-[#8a8fa8]">vs last year</span>
+              <span className="text-[#6b7280]">vs last year</span>
             </button>
           </div>
         )}
@@ -3746,10 +3981,10 @@ function V1fPredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
         ) : isWeekly ? (
           <ResponsiveContainer width="100%" height={180}>
             <BarChart data={weekRows} barCategoryGap="30%" margin={{ top: 20, right: 4, left: 0, bottom: 4 }}>
-              <CartesianGrid vertical={false} stroke="#f0f1f5" />
-              <XAxis dataKey="dateLabel" tick={{ fontSize: 9, fill: "#8a8fa8" }} tickLine={false} axisLine={false} interval={0} />
-              <YAxis tick={{ fontSize: 10, fill: "#8a8fa8" }} tickFormatter={(v: number) => `$${Math.round(v/1000)}k`} axisLine={false} tickLine={false} width={36} />
-              <Tooltip content={renderTip(weekSegBars)} cursor={{ fill: "#f5f6fa" }} />
+              <CartesianGrid vertical={false} stroke="#f3f4f6" />
+              <XAxis dataKey="dateLabel" tick={{ fontSize: 9, fill: "#6b7280" }} tickLine={false} axisLine={false} interval={0} />
+              <YAxis tick={{ fontSize: 10, fill: "#6b7280" }} tickFormatter={(v: number) => `$${Math.round(v/1000)}k`} axisLine={false} tickLine={false} width={36} />
+              <Tooltip content={renderTip(weekSegBars)} cursor={{ fill: "#f9fafb" }} />
               {weekMonthIsCurrent && (
                 <ReferenceLine x={weekRows[1]?.dateLabel} stroke="#0168dd" strokeDasharray="3 3"
                   label={{ value: "Today", position: "insideTopRight", fontSize: 8, fill: "#0168dd" }} />
@@ -3760,7 +3995,7 @@ function V1fPredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
                   {idx === weekSegBars.length - 1 && (
                     <LabelList dataKey="total" position="top" offset={6}
                       formatter={(v: number) => `$${Math.round(v / 1000)}k`}
-                      style={{ fontSize: 10, fontWeight: 600, fill: "#5b607a" }} />
+                      fill="#6b7280" style={{ fontSize: 10, fontWeight: 600 }} />
                   )}
                 </Bar>
               ))}
@@ -3769,32 +4004,32 @@ function V1fPredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
         ) : (
           <ResponsiveContainer width="100%" height={180}>
             <ComposedChart data={monthlyRows} barCategoryGap="28%" margin={{ top: 20, right: 4, left: 0, bottom: 4 }}>
-              <CartesianGrid vertical={false} stroke="#f0f1f5" />
-              <XAxis dataKey="label" tick={{ fontSize: range === "12M" ? 9 : 10, fill: "#8a8fa8" }} tickLine={false} axisLine={false} interval={0} />
-              <YAxis tick={{ fontSize: 10, fill: "#8a8fa8" }} tickFormatter={(v: number) => `$${Math.round(v/1000)}k`} axisLine={false} tickLine={false} width={36} />
-              <Tooltip cursor={{ fill: "#f5f6fa" }} content={({ active, payload }: any) => {
+              <CartesianGrid vertical={false} stroke="#f3f4f6" />
+              <XAxis dataKey="label" tick={{ fontSize: range === "12M" ? 9 : 10, fill: "#6b7280" }} tickLine={false} axisLine={false} interval={0} />
+              <YAxis tick={{ fontSize: 10, fill: "#6b7280" }} tickFormatter={(v: number) => `$${Math.round(v/1000)}k`} axisLine={false} tickLine={false} width={36} />
+              <Tooltip cursor={{ fill: "#f9fafb" }} content={({ active, payload }: any) => {
                 if (!active || !payload?.length) return null;
                 const d = payload[0]?.payload;
                 if (!d) return null;
                 const items = monthSegBars.map(sb => ({ ...sb, value: (d[sb.key] ?? 0) as number })).filter(i => i.value > 0);
                 const total = items.reduce((s, i) => s + i.value, 0);
                 return (
-                  <div className="bg-white border border-[#e8eaf0] rounded-lg shadow-lg p-3 text-xs min-w-[180px]">
-                    <p className="font-semibold text-[#1a1e35] mb-1.5">{d.label}</p>
+                  <div className="bg-white border border-[#e5e7eb] rounded-lg shadow-lg p-3 text-xs min-w-[180px]">
+                    <p className="font-semibold text-[#111827] mb-1.5">{d.label}</p>
                     {items.map(i => (
                       <div key={i.key} className="flex justify-between gap-4 py-0.5">
-                        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm inline-block flex-shrink-0" style={{ background: i.color }} /><span className="text-[#8a8fa8]">{i.label}</span></span>
-                        <span className="font-medium text-[#1a1e35]">{fmt0(i.value)}</span>
+                        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm inline-block flex-shrink-0" style={{ background: i.color }} /><span className="text-[#6b7280]">{i.label}</span></span>
+                        <span className="font-medium text-[#111827]">{fmt0(i.value)}</span>
                       </div>
                     ))}
-                    <div className="flex justify-between gap-4 py-0.5 mt-1 pt-1.5 border-t border-[#e8eaf0]">
-                      <span className="text-[#8a8fa8]">Total</span>
-                      <span className="font-semibold text-[#1a1e35]">{fmt0(total)}</span>
+                    <div className="flex justify-between gap-4 py-0.5 mt-1 pt-1.5 border-t border-[#e5e7eb]">
+                      <span className="text-[#6b7280]">Total</span>
+                      <span className="font-semibold text-[#111827]">{fmt0(total)}</span>
                     </div>
                     {showYoY && (d.yoy ?? 0) > 0 && (
-                      <div className="flex justify-between gap-4 py-0.5 mt-1 pt-1.5 border-t border-[#e8eaf0]">
-                        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm inline-block flex-shrink-0" style={{ background: "#c8cad4" }} /><span className="text-[#8a8fa8]">Last year · {v1ePrevYearLabel(d.label)}</span></span>
-                        <span className="font-medium text-[#1a1e35]">{fmt0(d.yoy)}</span>
+                      <div className="flex justify-between gap-4 py-0.5 mt-1 pt-1.5 border-t border-[#e5e7eb]">
+                        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm inline-block flex-shrink-0" style={{ background: "#d1d5db" }} /><span className="text-[#6b7280]">Last year · {v1ePrevYearLabel(d.label)}</span></span>
+                        <span className="font-medium text-[#111827]">{fmt0(d.yoy)}</span>
                       </div>
                     )}
                   </div>
@@ -3813,12 +4048,12 @@ function V1fPredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
                   {idx === monthSegBars.length - 1 && (
                     <LabelList dataKey="total" position="top" offset={6}
                       formatter={(v: number) => `$${Math.round(v / 1000)}k`}
-                      style={{ fontSize: 10, fontWeight: 600, fill: "#5b607a" }} />
+                      fill="#6b7280" style={{ fontSize: 10, fontWeight: 600 }} />
                   )}
                 </Bar>
               ))}
               {showYoY && range === "12M" && (
-                <Bar dataKey="yoy" stackId="prev" fill="#c8cad4" name="Last year" radius={[3, 3, 0, 0]} isAnimationActive={false} />
+                <Bar dataKey="yoy" stackId="prev" fill="#d1d5db" name="Last year" radius={[3, 3, 0, 0]} isAnimationActive={false} />
               )}
             </ComposedChart>
           </ResponsiveContainer>
@@ -3827,20 +4062,20 @@ function V1fPredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
         {/* Legend */}
         <div className="flex items-center gap-x-3 gap-y-1 mt-1.5 flex-wrap">
           {activeSegBars.map(sb => (
-            <span key={sb.key} className="flex items-center gap-1 text-[10px] text-[#8a8fa8]">
+            <span key={sb.key} className="flex items-center gap-1 text-[10px] text-[#6b7280]">
               <span className="w-2 h-2 rounded-sm flex-shrink-0" style={{ background: sb.color }} />
               {sb.label}
               {v1SegLegendInfo[sb.label] && <InfoTip text={v1SegLegendInfo[sb.label]} />}
             </span>
           ))}
           {showYoY && !isWeekly && range === "12M" && (
-            <span className="flex items-center gap-1 text-[10px] text-[#8a8fa8]">
-              <span className="w-2 h-2 rounded-sm flex-shrink-0" style={{ background: "#c8cad4" }} />
+            <span className="flex items-center gap-1 text-[10px] text-[#6b7280]">
+              <span className="w-2 h-2 rounded-sm flex-shrink-0" style={{ background: "#d1d5db" }} />
               Last year (same month)
             </span>
           )}
           {!isWeekly && (range === "6M" || range === "12M") && (
-            <span className="text-[9px] text-[#c0c3d3] italic ml-auto">Confidence fades on projected months</span>
+            <span className="text-[9px] text-[#d1d5db] italic ml-auto">Confidence fades on projected months</span>
           )}
         </div>
       </div>
@@ -3868,14 +4103,14 @@ function Version1F({ showStatusBreakdown, seasonalityOn }: { showStatusBreakdown
   const [bottomTab, setBottomTab] = useState<"history"|"future">("history");
   return (
     <div className="flex-1 overflow-y-auto px-6 py-5 space-y-8">
-      <h1 className="text-xl font-semibold text-[#1a1e35]">Payments report</h1>
+      <h1 className="text-xl font-semibold text-[#111827]">Payments report</h1>
       <V1fPredictivePanel showStatusBreakdown={showStatusBreakdown} seasonalityOn={seasonalityOn} />
       <FundYourAccountsPanel />
       <div>
-        <p className="text-base font-semibold text-[#1a1e35] mb-3">Payment Activity</p>
-        <div className="flex items-center gap-0 mb-3 border-b border-[#e8eaf0]">
+        <p className="text-base font-semibold text-[#111827] mb-3">Payment Activity</p>
+        <div className="flex items-center gap-0 mb-3 border-b border-[#e5e7eb]">
           {([["history","Payment History"],["future","Future Tracked So Far"]] as const).map(([id, label]) => (
-            <button key={id} onClick={() => setBottomTab(id)} className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${bottomTab === id ? "border-[#0168dd] text-[#0168dd]" : "border-transparent text-[#8a8fa8] hover:text-[#1a1e35]"}`}>{label}</button>
+            <button key={id} onClick={() => setBottomTab(id)} className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${bottomTab === id ? "border-[#0168dd] text-[#0168dd]" : "border-transparent text-[#6b7280] hover:text-[#111827]"}`}>{label}</button>
           ))}
         </div>
         {bottomTab === "history" ? <V1PaymentHistory /> : <V1FutureTracked />}
@@ -3933,58 +4168,58 @@ function V1gManageAdjustmentsDialog({
   const remove = (id: string) => setManualAdjustments(prev => prev.filter(a => a.id !== id));
 
   const editRow = (key: string) => (
-    <tr key={key} className="bg-[#f7f9fc]">
+    <tr key={key} className="bg-[#f9fafb]">
       <td className="py-2 px-3">
         <input value={dLabel} onChange={e => setDLabel(e.target.value)} placeholder="Label"
-          className="w-full border border-[#e8eaf0] rounded-md px-2 py-1 text-[12px] text-[#1a1e35] focus:outline-none focus:ring-2 focus:ring-[#0168dd]/20 focus:border-[#0168dd] transition-colors" />
+          className="w-full border border-[#e5e7eb] rounded-md px-2 py-1 text-[12px] text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#0168dd]/20 focus:border-[#0168dd] transition-colors" />
       </td>
       <td className="py-2 px-3">
-        <div className="flex bg-[#f0f1f5] rounded-md p-0.5 w-fit">
+        <div className="flex bg-[#f3f4f6] rounded-md p-0.5 w-fit">
           {(["add", "reduce"] as const).map(t => (
-            <button key={t} onClick={() => setDType(t)} className={`px-2 py-0.5 rounded text-[11px] font-semibold transition-all ${dType === t ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8]"}`}>{t === "add" ? "Add" : "Reduce"}</button>
+            <button key={t} onClick={() => setDType(t)} className={`px-2 py-0.5 rounded text-[11px] font-semibold transition-all ${dType === t ? "bg-white text-[#0168dd] shadow-sm" : "text-[#6b7280]"}`}>{t === "add" ? "Add" : "Reduce"}</button>
           ))}
         </div>
       </td>
       <td className="py-2 px-3">
         <div className="flex gap-1">
-          <div className="flex bg-[#f0f1f5] rounded-md p-0.5 flex-shrink-0">
+          <div className="flex bg-[#f3f4f6] rounded-md p-0.5 flex-shrink-0">
             {(["pct", "dollar"] as const).map(u => (
-              <button key={u} onClick={() => setDUnit(u)} className={`px-1.5 py-0.5 rounded text-[11px] font-semibold transition-all ${dUnit === u ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8]"}`}>{u === "pct" ? "%" : "$"}</button>
+              <button key={u} onClick={() => setDUnit(u)} className={`px-1.5 py-0.5 rounded text-[11px] font-semibold transition-all ${dUnit === u ? "bg-white text-[#0168dd] shadow-sm" : "text-[#6b7280]"}`}>{u === "pct" ? "%" : "$"}</button>
             ))}
           </div>
           <input value={dValue} onChange={e => setDValue(e.target.value)} inputMode="decimal" placeholder={dUnit === "pct" ? "e.g. 5" : "e.g. 5000"}
-            className="w-16 border border-[#e8eaf0] rounded-md px-2 py-1 text-[12px] text-[#1a1e35] focus:outline-none focus:ring-2 focus:ring-[#0168dd]/20 focus:border-[#0168dd] transition-colors" />
+            className="w-16 border border-[#e5e7eb] rounded-md px-2 py-1 text-[12px] text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#0168dd]/20 focus:border-[#0168dd] transition-colors" />
         </div>
       </td>
-      <td className="py-2 px-3 text-right text-[12px] font-semibold text-[#1a1e35] whitespace-nowrap">{valid ? `${dType === "add" ? "+" : "−"}${fmt0(draftDollars)}` : "—"}</td>
+      <td className="py-2 px-3 text-right text-[12px] font-semibold text-[#111827] whitespace-nowrap">{valid ? `${dType === "add" ? "+" : "−"}${fmt0(draftDollars)}` : "—"}</td>
       <td className="py-2 px-3">
         <div className="flex items-center gap-1 justify-end">
-          <button onClick={commit} disabled={!valid} className={`px-2 py-1 rounded-md text-[11px] font-semibold transition-all ${valid ? "bg-[#0168dd] text-white hover:bg-[#0057bb]" : "bg-[#e8eaf0] text-[#c8cad4] cursor-not-allowed"}`}>Save</button>
-          <button onClick={cancel} className="px-2 py-1 rounded-md text-[11px] font-medium text-[#8a8fa8] hover:text-[#1a1e35] transition-colors">Cancel</button>
+          <button onClick={commit} disabled={!valid} className={`px-2 py-1 rounded-md text-[11px] font-semibold transition-all ${valid ? "bg-[#0168dd] text-white hover:bg-[#0057bb]" : "bg-[#e5e7eb] text-[#d1d5db] cursor-not-allowed"}`}>Save</button>
+          <button onClick={cancel} className="px-2 py-1 rounded-md text-[11px] font-medium text-[#6b7280] hover:text-[#111827] transition-colors">Cancel</button>
         </div>
       </td>
     </tr>
   );
 
-  const autoBadge = <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-[#f0f1f5] text-[#8a8fa8]">Auto</span>;
+  const autoBadge = <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-[#f3f4f6] text-[#6b7280]">Auto</span>;
 
   return (
     <>
       <div className="fixed inset-0 z-40 bg-black/30" onClick={onClose} />
       <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none p-4">
         <div className="bg-white rounded-xl shadow-2xl w-[600px] max-w-full pointer-events-auto">
-          <div className="flex items-start justify-between px-6 pt-5 pb-4 border-b border-[#e8eaf0]">
+          <div className="flex items-start justify-between px-6 pt-5 pb-4">
             <div>
-              <h2 className="text-[15px] font-semibold text-[#1a1e35]">Adjustments</h2>
-              <p className="text-[11px] text-[#8a8fa8] mt-0.5 max-w-[440px] leading-snug">How we get from your baseline to the recommended figure. Auto rows come from your payment history; add or remove your own below.</p>
+              <h2 className="text-lg font-semibold text-[#111827]">Adjustments</h2>
+              <p className="text-[11px] text-[#6b7280] mt-0.5 max-w-[440px] leading-snug">How we get from your baseline to the recommended figure. Auto rows come from your payment history; add or remove your own below.</p>
             </div>
-            <button onClick={onClose} className="p-1 rounded-md text-[#8a8fa8] hover:text-[#1a1e35] hover:bg-[#f0f1f5] transition-colors flex-shrink-0"><X size={16} /></button>
+            <button onClick={onClose} className="p-1 rounded-md text-[#6b7280] hover:text-[#111827] hover:bg-[#f3f4f6] transition-colors flex-shrink-0"><X size={16} /></button>
           </div>
 
           <div className="px-6 py-4">
             <table className="w-full text-[12px]">
               <thead>
-                <tr className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] border-b border-[#e8eaf0]">
+                <tr className="text-[10px] font-semibold uppercase tracking-widest text-[#6b7280] border-b border-[#e5e7eb]">
                   <th className="text-left py-2 px-3">Label</th>
                   <th className="text-left py-2 px-3">Type</th>
                   <th className="text-left py-2 px-3">Amount</th>
@@ -3992,16 +4227,16 @@ function V1gManageAdjustmentsDialog({
                   <th className="py-2 px-3 w-[92px]"></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#f0f1f5]">
+              <tbody className="divide-y divide-[#f3f4f6]">
                 <tr>
-                  <td className="py-2.5 px-3 text-[#1a1e35] font-medium">Baseline <span className="text-[#8a8fa8] font-normal">· monthly avg</span></td>
-                  <td className="py-2.5 px-3 text-[#8a8fa8]">—</td>
-                  <td className="py-2.5 px-3 text-[#8a8fa8]">—</td>
-                  <td className="py-2.5 px-3 text-right font-semibold text-[#1a1e35] whitespace-nowrap">{fmt0(base)}</td>
+                  <td className="py-2.5 px-3 text-[#111827] font-medium">Baseline <span className="text-[#6b7280] font-normal">· monthly avg</span></td>
+                  <td className="py-2.5 px-3 text-[#6b7280]">—</td>
+                  <td className="py-2.5 px-3 text-[#6b7280]">—</td>
+                  <td className="py-2.5 px-3 text-right font-semibold text-[#111827] whitespace-nowrap">{fmt0(base)}</td>
                   <td className="py-2.5 px-3"></td>
                 </tr>
                 <tr>
-                  <td className="py-2.5 px-3 text-[#1a1e35] font-medium">Headcount change <span className="text-[#8a8fa8] font-normal">· {memberNote}</span></td>
+                  <td className="py-2.5 px-3 text-[#111827] font-medium">Headcount change <span className="text-[#6b7280] font-normal">· {memberNote}</span></td>
                   <td className="py-2.5 px-3">{autoBadge}</td>
                   <td className="py-2.5 px-3 text-emerald-600 font-semibold">+{memberPct}%</td>
                   <td className="py-2.5 px-3 text-right font-semibold text-emerald-600 whitespace-nowrap">+{fmt0(memberAmt)}</td>
@@ -4009,7 +4244,7 @@ function V1gManageAdjustmentsDialog({
                 </tr>
                 {seasonPct !== 0 && (
                   <tr>
-                    <td className="py-2.5 px-3 text-[#1a1e35] font-medium">Seasonality <span className="text-[#8a8fa8] font-normal">· typically above avg</span></td>
+                    <td className="py-2.5 px-3 text-[#111827] font-medium">Seasonality <span className="text-[#6b7280] font-normal">· typically above avg</span></td>
                     <td className="py-2.5 px-3">{autoBadge}</td>
                     <td className="py-2.5 px-3 text-emerald-600 font-semibold">+{seasonPct}%</td>
                     <td className="py-2.5 px-3 text-right font-semibold text-emerald-600 whitespace-nowrap">+{fmt0(seasonAmt)}</td>
@@ -4019,14 +4254,14 @@ function V1gManageAdjustmentsDialog({
                 {manualAdjustments.map(a => (
                   draftId === a.id ? editRow(a.id) : (
                     <tr key={a.id}>
-                      <td className="py-2.5 px-3 text-[#1a1e35] font-medium">{a.label}</td>
+                      <td className="py-2.5 px-3 text-[#111827] font-medium">{a.label}</td>
                       <td className="py-2.5 px-3"><span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${a.type === "add" ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-500"}`}>{a.type === "add" ? "Add" : "Reduce"}</span></td>
                       <td className={`py-2.5 px-3 font-semibold ${a.type === "add" ? "text-emerald-600" : "text-red-500"}`}>{a.type === "add" ? "+" : "−"}{a.unit === "pct" ? `${a.value}%` : fmt0(a.dollars)}</td>
                       <td className={`py-2.5 px-3 text-right font-semibold whitespace-nowrap ${a.type === "add" ? "text-emerald-600" : "text-red-500"}`}>{a.type === "add" ? "+" : "−"}{fmt0(a.dollars)}</td>
                       <td className="py-2.5 px-3">
                         <div className="flex items-center gap-1 justify-end">
-                          <button onClick={() => startEdit(a)} className="p-1 rounded text-[#8a8fa8] hover:text-[#0168dd] hover:bg-[#f0f1f5] transition-colors"><Pencil size={12} /></button>
-                          <button onClick={() => remove(a.id)} className="p-1 rounded text-[#8a8fa8] hover:text-red-500 hover:bg-red-50 transition-colors"><X size={12} /></button>
+                          <button onClick={() => startEdit(a)} className="p-1 rounded text-[#6b7280] hover:text-[#0168dd] hover:bg-[#f3f4f6] transition-colors"><Pencil size={12} /></button>
+                          <button onClick={() => remove(a.id)} className="p-1 rounded text-[#6b7280] hover:text-red-500 hover:bg-red-50 transition-colors"><X size={12} /></button>
                         </div>
                       </td>
                     </tr>
@@ -4044,8 +4279,8 @@ function V1gManageAdjustmentsDialog({
                 )}
               </tbody>
               <tfoot>
-                <tr className="border-t-2 border-[#e8eaf0]">
-                  <td className="py-3 px-3 text-[#1a1e35] font-semibold">Estimated to fund</td>
+                <tr className="border-t-2 border-[#e5e7eb]">
+                  <td className="py-3 px-3 text-[#111827] font-semibold">Estimated to fund</td>
                   <td className="py-3 px-3"></td>
                   <td className="py-3 px-3"></td>
                   <td className="py-3 px-3 text-right text-[15px] font-bold text-[#0168dd] whitespace-nowrap">{fmt0(finalTotal)}</td>
@@ -4055,7 +4290,7 @@ function V1gManageAdjustmentsDialog({
             </table>
           </div>
 
-          <div className="flex items-center justify-end px-6 py-4 border-t border-[#e8eaf0]">
+          <div className="flex items-center justify-end px-6 py-4">
             <button onClick={onClose} className={zone ? zbtn("solidPrimary", "md") : "px-5 py-2 rounded-lg text-sm font-semibold bg-[#0168dd] text-white hover:bg-[#0057bb] transition-colors"}>Done</button>
           </div>
         </div>
@@ -4070,11 +4305,11 @@ function V1hFundCard() {
   const providers = fundInitProviders;
   const [emailProvider, setEmailProvider] = useState<FundingProvider | null>(null);
   return (
-    <div className="bg-white rounded-lg border border-[#e8eaf0] h-full flex flex-col">
-      <div className="px-4 h-[55px] flex items-center border-b border-[#e8eaf0] bg-white rounded-t-lg">
-        <p className="text-sm font-semibold text-[#1a1e35]">Fund your accounts</p>
+    <div className="bg-white rounded-lg border border-[#e5e7eb] h-full flex flex-col">
+      <div className="px-4 h-[55px] flex items-center border-b border-[#e5e7eb] bg-white rounded-t-lg">
+        <p className="text-sm font-semibold text-[#111827]">Fund your accounts</p>
       </div>
-      <div className="px-4 divide-y divide-[#e8eaf0] flex-1">
+      <div className="px-4 divide-y divide-[#e5e7eb] flex-1">
         {providers.map(p => {
           const connected = p.status !== "no-connection" && p.status !== "unavailable";
           const shortfall = p.balance !== undefined && p.needed !== undefined ? p.needed - p.balance : null;
@@ -4085,7 +4320,7 @@ function V1hFundCard() {
                   <ProviderLogo id={p.id} size={18} />
                   <button
                     onClick={() => connected ? setEmailProvider(p) : undefined}
-                    className={`text-xs font-semibold text-[#1a1e35] ${connected ? "hover:text-[#0168dd] hover:underline" : ""} transition-colors`}
+                    className={`text-xs font-semibold text-[#111827] ${connected ? "hover:text-[#0168dd] hover:underline" : ""} transition-colors`}
                   >{p.name}</button>
                 </div>
                 {p.status === "no-connection" ? (
@@ -4100,12 +4335,12 @@ function V1hFundCard() {
               {connected ? (
                 <div className="flex items-end justify-between">
                   <div>
-                    <p className="text-[10px] text-[#8a8fa8]">Balance</p>
-                    <p className="text-sm font-bold text-[#1a1e35]">{fmt0(p.balance!)}</p>
+                    <p className="text-[10px] text-[#6b7280]">Balance</p>
+                    <p className="text-sm font-bold text-[#111827]">{fmt0(p.balance!)}</p>
                   </div>
                   {p.status === "needs-funding" && shortfall !== null && (
                     <div className="text-right">
-                      <p className="text-[10px] text-[#8a8fa8]">Add to cover</p>
+                      <p className="text-[10px] text-[#6b7280]">Add to cover</p>
                       <p className="text-sm font-bold text-amber-600">+{fmt0(shortfall)}</p>
                     </div>
                   )}
@@ -4117,7 +4352,7 @@ function V1hFundCard() {
                   )}
                 </div>
               ) : (
-                <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded uppercase tracking-wide self-start bg-[#f0f1f5] text-[#c0c3d3]">not connected</span>
+                <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded uppercase tracking-wide self-start bg-[#f3f4f6] text-[#d1d5db]">not connected</span>
               )}
             </div>
           );
@@ -4171,20 +4406,20 @@ function V1jAddToCoverCard({ onViewSchedule }: { onViewSchedule: () => void }) {
   const totalAdd = upcoming.reduce((s, e) => s + e.providers.reduce((x, p) => x + v1jAddFor(p.id, p.amount).amount, 0), 0);
 
   const check = <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>;
-  const paidCheck = <svg width="13" height="13" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="#10b981"/><polyline points="16.5 9 10.6 14.8 7.5 11.8" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>;
+  const paidCheck = <svg width="13" height="13" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="#0e9f6e"/><polyline points="16.5 9 10.6 14.8 7.5 11.8" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>;
 
   return (
-    <div className="col-span-9 bg-white rounded-lg border border-[#e8eaf0] flex flex-col">
-      <div className="px-4 h-[55px] flex items-center justify-between gap-3 border-b border-[#e8eaf0] bg-white rounded-t-lg">
+    <div className="col-span-9 bg-white rounded-lg border border-[#e5e7eb] flex flex-col">
+      <div className="px-4 h-[55px] flex items-center justify-between gap-3 border-b border-[#e5e7eb] bg-white rounded-t-lg">
         <div className="flex items-center gap-2.5">
-          <p className="text-sm font-semibold text-[#1a1e35]">Add to cover</p>
-          <p className="text-[11px] text-[#8a8fa8]"><span className="text-sm font-bold text-[#1a1e35]">{fmt0(totalAdd)}</span> to add</p>
+          <p className="text-sm font-semibold text-[#111827]">Add to cover</p>
+          <p className="text-[11px] text-[#6b7280]"><span className="text-sm font-bold text-[#111827]">{fmt0(totalAdd)}</span> to add</p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="flex items-center bg-[#f0f1f5] rounded-md p-0.5">
+          <div className="flex items-center bg-[#f3f4f6] rounded-md p-0.5">
             {([7, 15, 30] as const).map(d => (
               <button key={d} onClick={() => setWindowDays(d)}
-                className={`px-2 py-0.5 rounded text-[11px] font-medium transition-all ${windowDays === d ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>{d}d</button>
+                className={`px-2 py-0.5 rounded text-[11px] font-medium transition-all ${windowDays === d ? "bg-white text-[#0168dd] shadow-sm" : "text-[#6b7280] hover:text-[#111827]"}`}>{d}d</button>
             ))}
           </div>
           <button onClick={onViewSchedule} className="text-[11px] font-medium text-[#0168dd] border border-[#0168dd]/40 rounded-md px-2.5 py-1 hover:bg-[#0168dd]/5 transition-colors select-none">View full schedule</button>
@@ -4194,7 +4429,7 @@ function V1jAddToCoverCard({ onViewSchedule }: { onViewSchedule: () => void }) {
       <div className="px-4 py-4 flex-1">
         {/* Timeline — date cards sitting on a line */}
         <div className="relative">
-          <div className="absolute left-0 right-0 top-1/2 h-0.5 rounded-full bg-[#c8cad4]" />
+          <div className="absolute left-0 right-0 top-1/2 h-0.5 rounded-full bg-[#d1d5db]" />
           <div className="relative flex gap-8">
             {visible.map(e => {
               const isSel = selected === e.date;
@@ -4202,13 +4437,13 @@ function V1jAddToCoverCard({ onViewSchedule }: { onViewSchedule: () => void }) {
               const total = v1gSum(e);
               return (
                 <button key={e.date} onClick={() => setSelected(isSel ? null : e.date)}
-                  className={`relative flex-1 min-w-0 text-left rounded-lg px-3 py-2.5 border transition-colors ${isSel ? "border-[#0168dd] bg-[#f0f7ff]" : projected ? "border-dashed border-[#e2e5ee] bg-white" : "border-[#e8eaf0] bg-white hover:border-[#c8cad4]"}`}>
+                  className={`relative flex-1 min-w-0 text-left rounded-lg px-3 py-2.5 border transition-colors ${isSel ? "border-[#0168dd] bg-[#f0f7ff]" : projected ? "border-dashed border-[#e5e7eb] bg-white" : "border-[#e5e7eb] bg-white hover:border-[#d1d5db]"}`}>
                   <div className="flex items-center gap-1.5">
-                    <span className={`text-xs font-semibold whitespace-nowrap ${projected ? "text-[#8a8fa8]" : "text-[#1a1e35]"}`}>{e.dow}, {e.date}</span>
+                    <span className={`text-xs font-semibold whitespace-nowrap ${projected ? "text-[#6b7280]" : "text-[#111827]"}`}>{e.dow}, {e.date}</span>
                     {e.tag === "next" && <span className="text-[9px] font-semibold px-1 py-0.5 rounded bg-[#e8f2fd] text-[#0168dd]">next</span>}
                     {e.funded && paidCheck}
                   </div>
-                  <p className={`text-sm font-bold mt-1 ${e.funded || projected ? "text-[#8a8fa8]" : "text-[#5b607a]"}`}>{fmt0(total)}</p>
+                  <p className={`text-sm font-bold mt-1 ${e.funded || projected ? "text-[#6b7280]" : "text-[#4b5563]"}`}>{fmt0(total)}</p>
                 </button>
               );
             })}
@@ -4217,8 +4452,8 @@ function V1jAddToCoverCard({ onViewSchedule }: { onViewSchedule: () => void }) {
 
         {/* Detail — per-provider anatomy for the selected date */}
         {sel && (
-          <div className="mt-4 bg-[#f9f9fc] border border-[#e8eaf0] rounded-lg px-3 py-1">
-            <div className="divide-y divide-[#e8eaf0]">
+          <div className="mt-4 bg-[#f9fafb] border border-[#e5e7eb] rounded-lg px-3 py-1">
+            <div className="divide-y divide-[#e5e7eb]">
               {sel.providers.map(p => {
                 const meta = v1gProviderMeta[p.id];
                 const bal = v1jBalances[p.id];
@@ -4226,19 +4461,19 @@ function V1jAddToCoverCard({ onViewSchedule }: { onViewSchedule: () => void }) {
                 return (
                   <div key={p.id} className="py-2 flex items-center gap-2">
                     <ProviderLogo id={p.id} size={18} />
-                    <span className="text-xs font-medium text-[#1a1e35] w-20 flex-shrink-0">{meta.name}</span>
+                    <span className="text-xs font-medium text-[#111827] w-20 flex-shrink-0">{meta.name}</span>
                     {sel.funded ? (
                       <>
-                        <span className="text-[11px] text-[#8a8fa8] flex-1 min-w-0"></span>
-                        <span className="text-[11px] text-[#8a8fa8] w-24 text-right flex-shrink-0"><span className="font-semibold text-[#1a1e35]">{fmt0(p.amount)}</span> sent</span>
+                        <span className="text-[11px] text-[#6b7280] flex-1 min-w-0"></span>
+                        <span className="text-[11px] text-[#6b7280] w-24 text-right flex-shrink-0"><span className="font-semibold text-[#111827]">{fmt0(p.amount)}</span> sent</span>
                         <span className="w-28 text-right flex-shrink-0">
                           <span className="text-xs font-semibold text-emerald-600 inline-flex items-center gap-1 justify-end">{paidCheck} paid</span>
                         </span>
                       </>
                     ) : (
                       <>
-                        <span className="text-[11px] text-[#8a8fa8] flex-1 min-w-0">{bal !== undefined && <>balance <span className="font-semibold text-[#1a1e35]">{fmt0(bal)}</span></>}</span>
-                        <span className="text-[11px] text-[#8a8fa8] w-24 text-right flex-shrink-0"><span className="font-semibold text-[#1a1e35]">{fmt0(p.amount)}</span> due</span>
+                        <span className="text-[11px] text-[#6b7280] flex-1 min-w-0">{bal !== undefined && <>balance <span className="font-semibold text-[#111827]">{fmt0(bal)}</span></>}</span>
+                        <span className="text-[11px] text-[#6b7280] w-24 text-right flex-shrink-0"><span className="font-semibold text-[#111827]">{fmt0(p.amount)}</span> due</span>
                         <span className="w-28 text-right flex-shrink-0">
                           {res.kind === "covered" ? (
                             <span className="text-xs font-semibold text-emerald-600 inline-flex items-center gap-1 justify-end">{check} covered</span>
@@ -4271,7 +4506,7 @@ const v1kDowFull: Record<string, string> = { Sun: "Sunday", Mon: "Monday", Tue: 
 // ── Zone button recipes ──────────────────────────────────────────────────
 // Faithful to hubstaff-server button.rb (base + size + variant+color), verified
 // against the live Zone button docs. Primary = primary-500 (#2aa7ff), hovers use
-// primary-600 (#2f8af4) / primary-100 (#d4edff); gray uses gray-600/300/100/black.
+// primary-600 (#2f8af4) / primary-100 (#eaf6ff); gray uses gray-600/300/100/black.
 // Used only under the `zone` flag (Final UI) so 1G–1N keep their original styling.
 const ZBTN_BASE = "relative inline-flex items-center justify-center font-normal rounded-[6px] transition-colors select-none";
 // Zone's real button sizes (h-8/10/12, verified 32/40/48px in the docs). sm is
@@ -4279,9 +4514,9 @@ const ZBTN_BASE = "relative inline-flex items-center justify-center font-normal 
 const ZBTN_SIZE = { sm: "text-sm h-8 px-3 gap-2", md: "text-sm h-10 px-5 gap-2", lg: "text-base h-12 px-5 gap-2" } as const;
 const ZBTN_VARIANT = {
   solidPrimary: "text-white bg-[#2aa7ff] hover:bg-[#2f8af4] border border-[#2aa7ff] hover:border-[#2f8af4]",
-  outlinePrimary: "text-[#2aa7ff] bg-transparent hover:bg-[#d4edff] border border-[#2aa7ff]",
-  ghostPrimary: "text-[#2aa7ff] bg-transparent hover:bg-[#d4edff]",
-  outlineGray: "text-[#4b5563] bg-white hover:bg-[#f3f4f6] border border-[#d1d5db]",
+  outlinePrimary: "text-[#2aa7ff] bg-transparent hover:bg-[#eaf6ff] border border-[#2aa7ff]",
+  ghostPrimary: "text-[#2aa7ff] bg-transparent hover:bg-[#eaf6ff]",
+  outlineGray: "text-[#4b5563] bg-transparent hover:bg-[#f3f4f6] border border-[#d1d5db]",
   ghostGray: "text-[#4b5563] bg-transparent hover:bg-[#f3f4f6]",
   solidGray: "text-black bg-[#e5e7eb] hover:bg-[#d1d5db] border border-[#e5e7eb] hover:border-[#d1d5db]",
 } as const;
@@ -4293,7 +4528,7 @@ const zbtn = (variant: keyof typeof ZBTN_VARIANT, size: keyof typeof ZBTN_SIZE =
 const ZPILL_BASE = "inline-flex items-center gap-1 select-none font-normal whitespace-nowrap rounded-full";
 const ZPILL_SIZE = { sm: "text-xs px-2 py-0", md: "text-xs px-2 py-1", lg: "text-sm px-3 py-2" } as const;
 const ZPILL_COLOR = {
-  primary: "bg-[#d4edff] text-[#0a4b96]",
+  primary: "bg-[#eaf6ff] text-[#0168dd]",
   gray: "bg-[#f3f4f6] text-[#4b5563]",
   green: "bg-[#def7ec] text-[#03543f]",
 } as const;
@@ -4332,9 +4567,9 @@ const ZONE_CHART_TRACKED_LABEL = "Tracked";
 function InfoTip({ text, width = 200 }: { text: string; width?: number }) {
   return (
     <span className="group relative inline-flex align-middle leading-none">
-      <Info size={11} className="text-[#b0b4c4] hover:text-[#5b607a] transition-colors cursor-help" />
+      <Info size={11} className="text-[#9ca3af] hover:text-[#4b5563] transition-colors cursor-help" />
       <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1.5 hidden group-hover:block z-30 pointer-events-none" style={{ width }}>
-        <span className="block bg-[#1a1e35] text-white text-[11px] font-normal normal-case tracking-normal whitespace-normal leading-snug text-left rounded-md px-2.5 py-1.5 shadow-lg">{text}</span>
+        <span className="block bg-[#111827] text-white text-[11px] font-normal normal-case tracking-normal whitespace-normal leading-snug text-left rounded-md px-2.5 py-1.5 shadow-lg">{text}</span>
       </span>
     </span>
   );
@@ -4350,17 +4585,22 @@ const v1InfoText = {
 const v1SegLegendInfo: Record<string, string> = { Actuals: v1InfoText.actuals, Confirmed: v1InfoText.actuals, Tracked: v1InfoText.actuals, Projected: v1InfoText.projected };
 const v1SourceLegendInfo: Record<string, string> = { Confirmed: v1InfoText.confirmed, Tracked: v1InfoText.confirmed, Planned: v1InfoText.planned, "~Projected": v1InfoText.projAgg };
 
+// Payout methods you send yourself (manual — no scheduled trigger) vs. ones Hubstaff auto-triggers on a schedule.
+const v1gManualProviders = new Set(["bitwage", "gusto", "export"]);
+const v1gTriggerTime = "9:00 AM PST"; // scheduled auto-trigger time (adjustable via the pencil)
+
 function V1kFundDateCard({ e, v1l = false, zone = false, condensed = false, onProviderClick }: { e: V1gFundDate; v1l?: boolean; zone?: boolean; condensed?: boolean; onProviderClick?: (providerId: string) => void }) {
+  const wiseVer = useContext(WiseVerContext);
   // Zone typography (from app.hubstaff.com/zone/docs/typography + real staging table):
   // body text = 14px (text-sm), labels = 12px (text-xs), Roboto, gray-900/700/500.
   const zt = {
     name:      zone ? "text-sm" : "text-xs",              // provider name: 14 vs 12
-    nameColor: zone ? "text-[#111827]" : "text-[#1a1e35]", // gray-900
-    cadence:   zone ? "text-[12px] text-[#6b7280]" : "text-[11px] text-[#8a8fa8]", // 12/gray-500
-    num:       zone ? "text-[12px] text-[#6b7280]" : "text-[12px] text-[#5b607a]", // Balance/Due: gray-500 (lighter than Fund)
-    numStrong: zone ? "text-[12px] text-[#111827]" : "text-[12px] text-[#1a1e35]", // Fund/Total: gray-900 (strongest)
-    head:      zone ? "text-[11px] text-[#6b7280]" : "text-[9px] text-[#8a8fa8]",   // headers 11 vs 9
-    unknown:   zone ? "text-[12px] text-[#9ca3af]" : "text-[12px] text-[#a8adbf]",  // gray-400
+    nameColor: zone ? "text-[#111827]" : "text-[#111827]", // gray-900
+    cadence:   zone ? "text-[12px] text-[#6b7280]" : "text-[11px] text-[#6b7280]", // 12/gray-500
+    num:       zone ? "text-[12px] text-[#6b7280]" : "text-[12px] text-[#4b5563]", // Balance/Due: gray-500 (lighter than Fund)
+    numStrong: zone ? "text-[12px] text-[#111827]" : "text-[12px] text-[#111827]", // Fund/Total: gray-900 (strongest)
+    head:      zone ? "text-[11px] text-[#6b7280]" : "text-[9px] text-[#6b7280]",   // headers 11 vs 9
+    unknown:   zone ? "text-[12px] text-[#9ca3af]" : "text-[12px] text-[#9ca3af]",  // gray-400
   };
   // Zone gets a touch more breathing room in the table (rows 8→10px, header 6→8px).
   const rowPad = zone ? "py-2" : "py-2";
@@ -4380,10 +4620,10 @@ function V1kFundDateCard({ e, v1l = false, zone = false, condensed = false, onPr
     <table className="w-full">
       <thead>
         <tr className={`${zt.head} font-semibold uppercase tracking-wide`}>
-          <th className={`text-left font-semibold ${headPad} border-b border-[#e8eaf0]`}>Payout method</th>
-          <th className={`text-right font-semibold ${headPad} pl-4 border-b border-[#e8eaf0]`}>Balance</th>
-          <th className={`text-right font-semibold ${headPad} pl-4 border-b border-[#e8eaf0]`}>Due</th>
-          <th className={`text-right font-semibold ${headPad} pl-4 border-b border-[#e8eaf0]`}>{e.funded ? "Status" : "Fund"}</th>
+          <th className={`text-left font-semibold ${headPad} border-b border-[#e5e7eb]`}>Payout method</th>
+          <th className={`text-right font-semibold ${headPad} pl-4 border-b border-[#e5e7eb]`}>Balance</th>
+          <th className={`text-right font-semibold ${headPad} pl-4 border-b border-[#e5e7eb]`}>Due</th>
+          <th className={`text-right font-semibold ${headPad} pl-4 border-b border-[#e5e7eb]`}>{e.funded ? "Status" : "Fund"}</th>
         </tr>
       </thead>
       <tbody>
@@ -4393,22 +4633,31 @@ function V1kFundDateCard({ e, v1l = false, zone = false, condensed = false, onPr
           const res = v1jAddFor(p.id, p.amount);
           const cadence = v1mProviderCycles[p.id]?.cycle ?? "Monthly";
           return (
-            <tr key={p.id} className={`border-b last:border-0 ${zone ? "border-[#f3f4f6]" : "border-[#f0f1f5]"}`}>
+            <tr key={p.id} className={`border-b last:border-0 ${zone ? "border-[#f3f4f6]" : "border-[#f3f4f6]"}`}>
               <td className={`${rowPad} pr-2`}>
                 <div className="flex items-center gap-1.5 min-w-0">
                   <ProviderLogo id={p.id} size={16} />
                   {p.id === "export" ? (
                     <span className={`${zt.name} font-medium ${zt.nameColor} truncate`}>{meta.name}</span>
                   ) : (
-                    <a href="#" onClick={ev => { ev.preventDefault(); onProviderClick?.(p.id); }} className={`${zt.name} font-medium ${zt.nameColor} underline decoration-[#9aa0b4] decoration-[1.5px] underline-offset-2 hover:decoration-[#1a1e35] truncate min-w-0`}>
+                    <a href="#" onClick={ev => { ev.preventDefault(); onProviderClick?.(p.id); }} className={`${zt.name} font-medium ${zt.nameColor} underline decoration-[#9ca3af] decoration-[1.5px] underline-offset-2 hover:decoration-[#111827] truncate min-w-0`}>
                       {meta.name}
                     </a>
                   )}
-                  {v1l && <span className={`${zt.cadence} whitespace-nowrap flex-shrink-0`}><span className="text-[#c8cad4] mx-1">·</span>{cadence}</span>}
+                  {v1l && <span className={`${zt.cadence} whitespace-nowrap flex-shrink-0`}><span className="text-[#d1d5db] mx-1">·</span>{cadence}</span>}
                 </div>
+                {/* v1 — subtle inline Wise-interest link under the Wise row */}
+                {wiseVer === 1 && p.id === "wise" && (
+                  <a href={WISE_INTEREST_URL} target="_blank" rel="noopener noreferrer" className="mt-0.5 flex items-center gap-1 text-[11px] text-[#0168dd] hover:text-[#0057bb] transition-colors whitespace-nowrap w-fit">
+                    <TrendingUp size={12} aria-hidden="true" className="flex-shrink-0" />
+                    <span>Earn interest on your Wise balance</span>
+                    <span className="text-[#93c5fd]" aria-hidden="true">·</span>
+                    <span className="font-medium underline underline-offset-2">Learn how</span>
+                  </a>
+                )}
               </td>
-              <td className={`${rowPad} pl-4 text-right whitespace-nowrap tabular-nums ${v1l ? zt.num : "text-[11px] font-semibold text-[#5b607a]"}`}>{bal !== undefined ? fmt0(bal) : (v1l ? <span className={`inline-flex items-center gap-1 justify-end ${zone ? "text-[#9ca3af]" : "text-[#a8adbf]"}`}>Unknown <InfoTip text={v1InfoText.unknown} /></span> : "—")}</td>
-              <td className={`${rowPad} pl-4 text-right whitespace-nowrap tabular-nums ${v1l ? zt.num : "text-[11px] font-semibold text-[#5b607a]"}`}>{fmt0(p.amount)}</td>
+              <td className={`${rowPad} pl-4 text-right whitespace-nowrap tabular-nums ${v1l ? zt.num : "text-[11px] font-semibold text-[#4b5563]"}`}>{/* v3 — balance-anchored Wise-interest tag (icon-only, left of the number so the amount stays column-aligned) */}{wiseVer === 3 && p.id === "wise" && bal !== undefined && (<span title="This balance earns interest" aria-label="This balance earns interest" className="mr-1.5 inline-flex items-center align-middle text-[#0e9f6e]"><Gift size={13} aria-hidden="true" /></span>)}{bal !== undefined ? fmt0(bal) : (v1l ? <span className={`inline-flex items-center gap-1 justify-end ${zone ? "text-[#9ca3af]" : "text-[#9ca3af]"}`}>Unknown <InfoTip text={v1InfoText.unknown} /></span> : "—")}</td>
+              <td className={`${rowPad} pl-4 text-right whitespace-nowrap tabular-nums ${v1l ? zt.num : "text-[11px] font-semibold text-[#4b5563]"}`}>{fmt0(p.amount)}</td>
               <td className={`${rowPad} pl-4 text-right whitespace-nowrap`}>
                 {e.funded ? (
                   <span className="text-[11px] font-semibold text-emerald-600 inline-flex items-center gap-1 justify-end">{check} paid</span>
@@ -4426,41 +4675,56 @@ function V1kFundDateCard({ e, v1l = false, zone = false, condensed = false, onPr
   );
 
   return (
-    <div data-component={zone ? "Fund-by card" : undefined} className={`rounded-lg border bg-white ${zone ? "p-4" : "px-4 py-3"} flex flex-col h-full ${zone ? "border-[#e5e7eb]" : (isNext ? "border-[#c0c3d3]" : "border-[#e8eaf0]")}`}>
+    <div data-component={zone ? "Fund-by card" : undefined} className={`rounded-lg border bg-white ${zone ? "p-4" : "px-4 py-3"} flex flex-col h-full ${zone ? "border-[#e5e7eb]" : (isNext ? "border-[#d1d5db]" : "border-[#e5e7eb]")}`}>
       {zone ? (
         /* Final UI — title + cycle caption stacked on the left, pill on the right */
         <div className="flex justify-between items-start gap-2 mb-4">
           <div className="min-w-0">
             <p>
-              <span className="text-base whitespace-nowrap text-[#1a1e35]">Fund by </span>
-              <span className={`text-base font-bold whitespace-nowrap ${projected ? "text-[#8a8fa8]" : "text-[#111827]"}`}>{monthDay}</span>
-              <span className="text-base text-[#8a8fa8] whitespace-nowrap"> · {shortDay}</span>
+              <span className="text-base whitespace-nowrap text-[#111827]">Fund by </span>
+              <span className={`text-base font-bold whitespace-nowrap ${projected ? "text-[#6b7280]" : "text-[#111827]"}`}>{monthDay}</span>
+              <span className="text-base text-[#6b7280] whitespace-nowrap"> · {shortDay}</span>
             </p>
-            <p className={zt.cadence}>Cycle ends {monthDay} · triggers {e.date}</p>
+            {e.providers.every(p => v1gManualProviders.has(p.id)) ? (
+              <p className={`${zt.cadence} flex items-center flex-wrap gap-x-2.5`}>
+                <span>Cycle ends {monthDay}</span>
+                <span className="text-[#d1d5db]">·</span>
+                <span>Triggered by you <span className="text-[#9ca3af]">(no set time)</span></span>
+              </p>
+            ) : (
+              <p className={`${zt.cadence} flex items-center flex-wrap gap-x-2.5`}>
+                <span>Cycle ends {monthDay}</span>
+                <span className="text-[#d1d5db]">·</span>
+                <span className="inline-flex items-center gap-1">
+                  Triggers {e.date} <span className="text-[#9ca3af]">({v1gTriggerTime})</span>
+                  <button onClick={ev => ev.preventDefault()} title="Adjust trigger time" aria-label="Adjust trigger time" className="p-0.5 rounded text-[#6b7280] hover:text-[#0168dd] hover:bg-[#f3f4f6] transition-colors flex-shrink-0"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>
+                </span>
+              </p>
+            )}
           </div>
           {isNext ? (
             <span className={zpill("primary", "md", "flex-shrink-0")}><span className="material-symbols-rounded leading-none" style={{ fontSize: 16, marginRight: 2 }}>event_upcoming</span> Next</span>
           ) : projected ? (
-            <span className="text-[10px] text-[#c0c3d3] flex-shrink-0">projected</span>
+            <span className="text-[10px] text-[#d1d5db] flex-shrink-0">projected</span>
           ) : null}
         </div>
       ) : (
         <>
           <div className="flex justify-between gap-2 items-start">
             <p className={condensed ? "whitespace-nowrap min-w-0" : "min-w-0"}>
-              {v1l && <span className="text-sm whitespace-nowrap text-[#8a8fa8]">Fund by </span>}
-              <span className={`text-sm font-bold whitespace-nowrap ${projected ? "text-[#8a8fa8]" : "text-[#1a1e35]"}`}>{monthDay}</span>
-              <span className="text-sm text-[#8a8fa8] whitespace-nowrap">{v1l ? ` · ${shortDay}` : `, ${weekday}`}</span>
+              {v1l && <span className="text-sm whitespace-nowrap text-[#6b7280]">Fund by </span>}
+              <span className={`text-sm font-bold whitespace-nowrap ${projected ? "text-[#6b7280]" : "text-[#111827]"}`}>{monthDay}</span>
+              <span className="text-sm text-[#6b7280] whitespace-nowrap">{v1l ? ` · ${shortDay}` : `, ${weekday}`}</span>
               {condensed && isNext && <>{" "}<span className="inline-flex items-center gap-1 align-middle text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#e8f2fd] text-[#0168dd]"><CalendarDays size={10} /> next</span></>}
-              {condensed && projected && <>{" "}<span className="align-middle text-[10px] text-[#c0c3d3]">projected</span></>}
-              {!v1l && <>{" "}<span className="whitespace-nowrap"><span className="text-[#c8cad4] mr-1.5">·</span><span className={`text-[11px] ${e.funded ? "text-emerald-600 font-medium" : "text-[#8a8fa8]"}`}>{e.funded ? "Paid" : "Fund deadline"}</span></span></>}
+              {condensed && projected && <>{" "}<span className="align-middle text-[10px] text-[#d1d5db]">projected</span></>}
+              {!v1l && <>{" "}<span className="whitespace-nowrap"><span className="text-[#d1d5db] mr-1.5">·</span><span className={`text-[11px] ${e.funded ? "text-emerald-600 font-medium" : "text-[#6b7280]"}`}>{e.funded ? "Paid" : "Fund deadline"}</span></span></>}
             </p>
             {condensed ? (
               <button onClick={() => setShowDialog(true)} className="text-[11px] font-medium text-[#0168dd] hover:text-[#0057bb] transition-colors select-none flex-shrink-0">View details</button>
             ) : isNext ? (
               <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#e8f2fd] text-[#0168dd] flex-shrink-0"><CalendarDays size={10} /> next</span>
             ) : projected ? (
-              <span className="text-[10px] text-[#c0c3d3] flex-shrink-0 mt-0.5">projected</span>
+              <span className="text-[10px] text-[#d1d5db] flex-shrink-0 mt-0.5">projected</span>
             ) : null}
           </div>
           <p className={zt.cadence}>{v1l ? <>Cycle ends {monthDay} · triggers {e.date}</> : <>Payroll runs {e.date} · paid ~{e.paidOn}</>}</p>
@@ -4469,9 +4733,9 @@ function V1kFundDateCard({ e, v1l = false, zone = false, condensed = false, onPr
 
       {showTable && <div className={zone ? "" : "mt-3"}>{providerTable}</div>}
 
-      <div className={`${showTable ? "mt-auto" : "mt-4"} pt-2 border-t border-[#e8eaf0] flex items-center justify-between gap-2`}>
-        <span className={v1l ? `${zt.numStrong} font-medium` : "text-[#1a1e35] text-[11px] font-semibold"}>{e.funded ? "Total paid" : "Total to fund"}{condensed && <span className="font-normal text-[#8a8fa8]"> · {e.providers.length} payment method{e.providers.length > 1 ? "s" : ""}</span>}</span>
-        <span className={v1l ? `${zt.numStrong} font-semibold tabular-nums` : `text-xs font-bold ${e.funded ? "text-emerald-600" : "text-[#1a1e35]"}`}>{fmt0(e.funded ? dueTotal : fundTotal)}</span>
+      <div className={`${showTable ? "mt-auto" : "mt-4"} pt-2 border-t border-[#e5e7eb] flex items-center justify-between gap-2`}>
+        <span className={v1l ? `${zt.numStrong} font-medium` : "text-[#111827] text-[11px] font-semibold"}>{e.funded ? "Total paid" : "Total to fund"}{condensed && <span className="font-normal text-[#6b7280]"> · {e.providers.length} payment method{e.providers.length > 1 ? "s" : ""}</span>}</span>
+        <span className={v1l ? `${zt.numStrong} font-semibold tabular-nums` : `text-xs font-bold ${e.funded ? "text-emerald-600" : "text-[#111827]"}`}>{fmt0(e.funded ? dueTotal : fundTotal)}</span>
       </div>
 
       {showDialog && (
@@ -4479,25 +4743,25 @@ function V1kFundDateCard({ e, v1l = false, zone = false, condensed = false, onPr
           <div className="fixed inset-0 z-40 bg-black/30" onClick={() => setShowDialog(false)} />
           <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none p-4">
             <div className="bg-white rounded-xl shadow-2xl w-[420px] max-w-full pointer-events-auto">
-              <div className="flex items-start justify-between px-5 pt-4 pb-3 border-b border-[#e8eaf0]">
+              <div className="flex items-start justify-between px-5 pt-4 pb-3 border-b border-[#e5e7eb]">
                 <div>
                   <p>
-                    <span className="text-sm font-bold text-[#1a1e35]">{monthDay}</span>
-                    <span className="text-sm text-[#8a8fa8]">, {weekday}</span>
+                    <span className="text-sm font-bold text-[#111827]">{monthDay}</span>
+                    <span className="text-sm text-[#6b7280]">, {weekday}</span>
                     {isNext && <>{" "}<span className="inline-flex items-center gap-1 align-middle text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#e8f2fd] text-[#0168dd]"><CalendarDays size={10} /> next</span></>}
                   </p>
-                  <p className="text-[11px] text-[#8a8fa8] mt-0.5">Cycle ends {monthDay} · triggers {e.date}</p>
+                  <p className="text-[11px] text-[#6b7280] mt-0.5">Cycle ends {monthDay} · triggers {e.date}</p>
                 </div>
-                <button onClick={() => setShowDialog(false)} className="p-1 rounded-md text-[#8a8fa8] hover:text-[#1a1e35] hover:bg-[#f0f1f5] transition-colors flex-shrink-0"><X size={16} /></button>
+                <button onClick={() => setShowDialog(false)} className="p-1 rounded-md text-[#6b7280] hover:text-[#111827] hover:bg-[#f3f4f6] transition-colors flex-shrink-0"><X size={16} /></button>
               </div>
               <div className="px-5 py-3">
                 {providerTable}
-                <div className="mt-2 pt-2 border-t border-[#e8eaf0] flex items-center justify-between">
-                  <span className="text-[12px] font-medium text-[#1a1e35]">{e.funded ? "Total paid" : "Total to fund"}</span>
-                  <span className="text-sm font-bold text-[#1a1e35] tabular-nums">{fmt0(e.funded ? dueTotal : fundTotal)}</span>
+                <div className="mt-2 pt-2 border-t border-[#e5e7eb] flex items-center justify-between">
+                  <span className="text-[12px] font-medium text-[#111827]">{e.funded ? "Total paid" : "Total to fund"}</span>
+                  <span className="text-sm font-bold text-[#111827] tabular-nums">{fmt0(e.funded ? dueTotal : fundTotal)}</span>
                 </div>
               </div>
-              <div className="flex items-center justify-end px-5 py-3 border-t border-[#e8eaf0]">
+              <div className="flex items-center justify-end px-5 py-3">
                 <button onClick={() => setShowDialog(false)} className="px-5 py-2 rounded-lg text-sm font-semibold bg-[#0168dd] text-white hover:bg-[#0057bb] transition-colors">Done</button>
               </div>
             </div>
@@ -4524,22 +4788,16 @@ function V1kLearnMoreDialog({ open, onClose, v1l = false, zone = false }: { open
         { label: "Payroll runs", date: triggerDay, desc: "The payment is triggered" },
         { label: "Paid", date: `~${nx?.paidOn ?? "—"}`, desc: "Employees receive it" },
       ];
-  const gapDef = <>What you still need to add <span className="text-[#1a1e35] font-medium">after</span> the balance. “Covered” means the balance already handles it.</>;
-  const terms: [string, React.ReactNode][] = v1l
-    ? [
-        ["Due", "The total going out on that date (the gross payment)."],
-        ["Gap to fund", gapDef],
-        ["Total gap to fund", "The sum to add across all accounts for that date."],
-      ]
-    : [
-        ["Balance", "What's in the account right now."],
-        ["Due", "The total going out on that date (the gross payment)."],
-        ["Fund", gapDef],
-        ["Total to fund", "The sum to add across all accounts for that date."],
-      ];
+  const gapDef = <>What you still need to add <span className="text-[#111827] font-medium">after</span> the balance. “Covered” means the balance already handles it.</>;
+  const terms: [string, React.ReactNode][] = [
+    ["Balance", "What's in the account right now."],
+    ["Due", "The total going out on that date (the gross payment)."],
+    ["Fund", gapDef],
+    ["Total to fund", "The sum to add across all accounts for that date."],
+  ];
   const goodToKnow: React.ReactNode[] = v1l
     ? [
-        "Funding transfers can take 1–3 days — add money in advance so it lands by the trigger date.",
+        "Funding transfers can take 1–3 days.",
         "Actual payment timing is an estimate and varies by provider.",
         <>When we can’t read an account’s balance, we show the full payout as the gap to fund — not a confirmed gap.</>,
       ]
@@ -4553,58 +4811,56 @@ function V1kLearnMoreDialog({ open, onClose, v1l = false, zone = false }: { open
       <div className="fixed inset-0 z-40 bg-black/30" onClick={onClose} />
       <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none p-4">
         <div className="bg-white rounded-xl shadow-2xl w-[520px] max-w-full max-h-[85vh] flex flex-col pointer-events-auto">
-          <div className="flex items-start justify-between px-6 pt-5 pb-4 border-b border-[#e8eaf0] flex-shrink-0">
+          <div className="flex items-start justify-between px-5 py-5 flex-shrink-0">
             <div>
-              <h2 className="text-[15px] font-semibold text-[#1a1e35]">How funding works</h2>
-              <p className="text-[11px] text-[#8a8fa8] mt-0.5">A quick guide to the dates and amounts on this card.</p>
+              <h2 className="text-lg font-semibold text-[#111827]">How funding works</h2>
             </div>
-            <button onClick={onClose} className="p-1 rounded-md text-[#8a8fa8] hover:text-[#1a1e35] hover:bg-[#f0f1f5] transition-colors flex-shrink-0"><X size={16} /></button>
+            <button onClick={onClose} className="p-1 rounded-md text-[#6b7280] hover:text-[#111827] hover:bg-[#f3f4f6] transition-colors flex-shrink-0"><X size={16} /></button>
           </div>
 
-          <div className="px-6 py-4 overflow-y-auto space-y-5">
+          <div className="px-5 py-2.5 overflow-y-auto space-y-5">
             {/* Timing lifecycle */}
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-2">Timing</p>
-              {v1l && <p className="text-[11px] text-[#8a8fa8] mb-2.5 leading-snug">For the cycle ending on <span className="font-medium text-[#1a1e35]">{fundByDay}</span>, payments will be triggered on <span className="font-medium text-[#1a1e35]">{triggerDay}</span>.</p>}
+              <p className="text-xs font-semibold uppercase tracking-wider text-[#6b7280] mb-2">Timing</p>
               <div className="flex items-stretch gap-1.5">
                 {steps.map((s, i) => (
                   <Fragment key={s.label}>
-                    <div className="flex-1 rounded-lg border border-[#e8eaf0] bg-[#f9f9fc] px-2.5 py-2">
-                      <p className={`text-[9px] font-semibold uppercase tracking-wide ${s.accent ? "text-amber-600" : "text-[#8a8fa8]"}`}>{s.label}</p>
-                      <p className="text-sm font-bold text-[#1a1e35] mt-0.5">{s.date}</p>
-                      <p className="text-[10px] text-[#8a8fa8] mt-1 leading-snug">{s.desc}</p>
+                    <div className="flex-1 rounded-lg border border-[#e5e7eb] bg-[#f9fafb] px-2.5 py-2">
+                      <p className={`text-xs font-semibold uppercase tracking-wider ${s.accent ? "text-amber-600" : "text-[#6b7280]"}`}>{s.label}</p>
+                      <p className="text-base font-bold text-[#111827] mt-0.5">{s.date}</p>
+                      <p className="text-xs text-[#6b7280] mt-1 leading-snug">{s.desc}</p>
                     </div>
-                    {i < steps.length - 1 && <div className="flex items-center text-[#c0c3d3] flex-shrink-0"><ChevronRight size={14} /></div>}
+                    {i < steps.length - 1 && <div className="flex items-center text-[#9ca3af] flex-shrink-0"><ChevronRight size={14} /></div>}
                   </Fragment>
                 ))}
               </div>
             </div>
 
             {/* Column glossary */}
-            <div className="pt-4 border-t border-[#f0f1f5]">
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-2">What the columns mean</p>
-              <div className="space-y-2">
+            <div className="pt-4 border-t border-[#e5e7eb]">
+              <p className="text-xs font-semibold uppercase tracking-wider text-[#6b7280] mb-2">What the columns mean</p>
+              <ul className="space-y-4 text-sm leading-relaxed">
                 {terms.map(([term, def]) => (
-                  <div key={term} className="flex gap-3">
-                    <span className={`${v1l ? "w-28" : "w-24"} flex-shrink-0 text-xs font-semibold ${term === "Fund" || term === "Gap to fund" ? "text-amber-600" : "text-[#1a1e35]"}`}>{term}</span>
-                    <span className="text-[11px] text-[#8a8fa8] leading-snug">{def}</span>
-                  </div>
+                  <li key={term} className="text-[#6b7280]">
+                    <span className="font-semibold text-[#111827] block mb-0.5">{term}</span>
+                    {def}
+                  </li>
                 ))}
-              </div>
+              </ul>
             </div>
 
             {/* Caveats */}
-            <div className="pt-4 border-t border-[#f0f1f5]">
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-2">Good to know</p>
-              <ul className="space-y-1.5 text-[11px] text-[#8a8fa8] leading-snug">
+            <div className="pt-4 border-t border-[#e5e7eb]">
+              <p className="text-xs font-semibold uppercase tracking-wider text-[#6b7280] mb-2">Good to know</p>
+              <ul className="space-y-1.5 text-sm text-[#6b7280] leading-snug">
                 {goodToKnow.map((t, i) => (
-                  <li key={i} className="flex gap-2"><span className="text-[#c0c3d3]">•</span><span>{t}</span></li>
+                  <li key={i} className="flex gap-2"><span className="text-[#9ca3af]">•</span><span>{t}</span></li>
                 ))}
               </ul>
             </div>
           </div>
 
-          <div className="flex items-center justify-end px-6 py-4 border-t border-[#e8eaf0] flex-shrink-0">
+          <div className="flex items-center justify-end px-5 py-5 flex-shrink-0">
             <button onClick={onClose} className={zone ? zbtn("solidPrimary", "md") : "px-5 py-2 rounded-lg text-sm font-semibold bg-[#0168dd] text-white hover:bg-[#0057bb] transition-colors"}>Got it</button>
           </div>
         </div>
@@ -4615,33 +4871,73 @@ function V1kLearnMoreDialog({ open, onClose, v1l = false, zone = false }: { open
 
 function V1kNextPaymentsCard({ onViewSchedule, v1l = false, zone = false, condensed = false, onProviderClick }: { onViewSchedule: () => void; v1l?: boolean; zone?: boolean; condensed?: boolean; onProviderClick?: (providerId: string) => void }) {
   const upcoming = v1gFundSchedule.filter(e => !e.funded && e.daysOut > 0).slice(0, 2);
+  const wiseVer = useContext(WiseVerContext);
   const [showLearn, setShowLearn] = useState(false);
+  const [wiseBannerDismissed, setWiseBannerDismissed] = useState(false); // v2 dismiss (session-only in the prototype)
   const learnMoreBtn = (
-    <button onClick={() => setShowLearn(true)} className={zone ? zbtn("ghostGray", "sm") : "inline-flex items-center gap-1 text-[11px] font-medium text-[#5b607a] rounded-md px-2.5 py-1 hover:bg-[#f0f1f5] hover:text-[#1a1e35] transition-colors select-none"}><Info size={zone ? 16 : 12} /> Learn more</button>
+    <button onClick={() => setShowLearn(true)} className={zone ? zbtn("ghostGray", "sm") : "inline-flex items-center gap-1 text-[11px] font-medium text-[#4b5563] rounded-md px-2.5 py-1 hover:bg-[#f3f4f6] hover:text-[#111827] transition-colors select-none"}><Info size={zone ? 16 : 12} /> Learn more</button>
   );
   return (
-    <div className={`col-span-9 bg-white rounded-lg border ${zone ? "border-[#e5e7eb]" : "border-[#e8eaf0]"} flex flex-col`}>
-      {v1l ? (
-        /* 1L — Learn more sits next to the title; no full-schedule link */
-        <div className={`px-4 flex items-center gap-3 border-b bg-white rounded-t-lg ${zone ? "h-[60px] border-[#e5e7eb]" : "h-[55px] border-[#e8eaf0]"}`}>
-          <p className={zone ? "text-lg font-medium text-[#111827]" : "text-sm font-semibold text-[#1a1e35]"}>Funding schedule</p>
-          {learnMoreBtn}
+    <div className="col-span-9 flex flex-col gap-3">
+      {/* v2 — prominent, dismissible Wise-interest banner above the schedule */}
+      {wiseVer === 2 && !wiseBannerDismissed && (
+        <div className="rounded-lg border border-[#bcd4f2] bg-[#f0f6ff] px-4 py-3 flex items-start gap-3">
+          <TrendingUp size={18} aria-hidden="true" className="text-[#0168dd] flex-shrink-0 mt-0.5" />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-[#0168dd]">You're paying with Wise — earn interest on your balance</p>
+            <p className="text-[13px] text-[#4b5563] leading-snug mt-0.5">Money you keep in Wise for payouts can earn interest. <a href={WISE_INTEREST_URL} target="_blank" rel="noopener noreferrer" className="font-medium text-[#0168dd] underline underline-offset-2 hover:text-[#0057bb]">See how to opt in</a> <span className="text-[#93c5fd]" aria-hidden="true">·</span> <a href={WISE_INTEREST_URL} target="_blank" rel="noopener noreferrer" className="font-medium text-[#0168dd] underline underline-offset-2 hover:text-[#0057bb]">terms</a>. Availability and rates vary by country.</p>
+          </div>
+          <button onClick={() => setWiseBannerDismissed(true)} aria-label="Dismiss Wise interest banner" className="flex-shrink-0 p-1 rounded-md text-[#9ca3af] hover:text-[#4b5563] hover:bg-white/60 transition-colors"><X size={16} aria-hidden="true" /></button>
         </div>
-      ) : (
-        <div className="px-4 h-[55px] flex items-center justify-between gap-3 border-b border-[#e8eaf0] bg-white rounded-t-lg">
-          <p className={zone ? "text-lg font-medium text-[#111827]" : "text-sm font-semibold text-[#1a1e35]"}>Funding schedule</p>
-          <div className="flex items-center gap-2">
+      )}
+      <div className="flex-1 bg-white rounded-lg border border-[#e5e7eb] flex flex-col">
+        {v1l ? (
+          /* 1L — Learn more sits next to the title; no full-schedule link */
+          <div className={`px-4 flex items-center gap-3 border-b bg-white rounded-t-lg ${zone ? "h-[60px] border-[#e5e7eb]" : "h-[55px] border-[#e5e7eb]"}`}>
+            <p className={zone ? "text-lg font-medium text-[#111827]" : "text-sm font-semibold text-[#111827]"}>Funding schedule</p>
             {learnMoreBtn}
-            <button onClick={onViewSchedule} className="text-[11px] font-medium text-[#0168dd] border border-[#0168dd]/40 rounded-md px-2.5 py-1 hover:bg-[#0168dd]/5 transition-colors select-none">View full schedule</button>
+            {/* v4 — green Wise-interest pill using the empty right side of the schedule header */}
+            {wiseVer === 4 && (
+              <a href={WISE_INTEREST_URL} target="_blank" rel="noopener noreferrer" title="Availability and rates vary by country" className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-[#a7d3b8] bg-[#e6f6ee] px-2.5 py-1 text-[12px] font-medium text-[#0e9f6e] hover:bg-[#d7f0e2] transition-colors">
+                <ProviderLogo id="wise" size={14} />
+                Earn interest on your balance
+                <ExternalLink size={12} aria-hidden="true" className="flex-shrink-0" />
+              </a>
+            )}
+          </div>
+        ) : (
+          <div className="px-4 h-[55px] flex items-center justify-between gap-3 border-b border-[#e5e7eb] bg-white rounded-t-lg">
+            <p className={zone ? "text-lg font-medium text-[#111827]" : "text-sm font-semibold text-[#111827]"}>Funding schedule</p>
+            <div className="flex items-center gap-2">
+              {learnMoreBtn}
+              <button onClick={onViewSchedule} className="text-[11px] font-medium text-[#0168dd] border border-[#0168dd]/40 rounded-md px-2.5 py-1 hover:bg-[#0168dd]/5 transition-colors select-none">View full schedule</button>
+            </div>
+          </div>
+        )}
+        <V1kLearnMoreDialog open={showLearn} onClose={() => setShowLearn(false)} v1l={v1l} zone={zone} />
+        <div className="px-4 py-4 flex-1">
+          <div className="grid grid-cols-2 gap-4 items-stretch">
+            {upcoming.map(e => <V1kFundDateCard key={e.date} e={e} v1l={v1l} zone={zone} condensed={condensed} onProviderClick={onProviderClick} />)}
+          </div>
+          {/* v3 — one-line tip below the table */}
+          {wiseVer === 3 && (
+            <div className="mt-3 rounded-lg border border-[#e5e7eb] bg-[#f9fafb] px-3.5 py-2.5 flex items-start gap-2">
+              <Gift size={15} aria-hidden="true" className="text-[#0e9f6e] flex-shrink-0 mt-0.5" />
+              <p className="text-[12px] text-[#4b5563] leading-snug">The balance you keep in Wise can earn interest (USD, EUR, GBP). <a href={WISE_INTEREST_URL} target="_blank" rel="noopener noreferrer" className="font-medium text-[#0168dd] underline underline-offset-2 hover:text-[#0057bb]">See how to opt in</a> <span className="text-[#d1d5db]" aria-hidden="true">·</span> rates vary, terms apply.</p>
+            </div>
+          )}
+        </div>
+      </div>
+      {/* v5 — persistent, contained opportunity card below the schedule */}
+      {wiseVer === 5 && (
+        <div className="rounded-lg border border-[#a7d3b8] bg-[#e6f6ee] px-4 py-3 flex items-start gap-3">
+          <TrendingUp size={18} aria-hidden="true" className="text-[#0e9f6e] flex-shrink-0 mt-0.5" />
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-[#0e9f6e]">Put your idle Wise balance to work</p>
+            <p className="text-[13px] text-[#4b5563] leading-snug mt-0.5">You're paying with Wise — the balance you hold for payouts can earn interest. <a href={WISE_INTEREST_URL} target="_blank" rel="noopener noreferrer" className="font-medium text-[#0168dd] underline underline-offset-2 hover:text-[#0057bb]">See how to set it up</a> <span className="text-[#a7d3b8]" aria-hidden="true">·</span> <a href={WISE_INTEREST_URL} target="_blank" rel="noopener noreferrer" className="font-medium text-[#0168dd] underline underline-offset-2 hover:text-[#0057bb]">terms</a>. Availability varies by country.</p>
           </div>
         </div>
       )}
-      <V1kLearnMoreDialog open={showLearn} onClose={() => setShowLearn(false)} v1l={v1l} zone={zone} />
-      <div className="px-4 py-4 flex-1">
-        <div className="grid grid-cols-2 gap-4 items-stretch">
-          {upcoming.map(e => <V1kFundDateCard key={e.date} e={e} v1l={v1l} zone={zone} condensed={condensed} onProviderClick={onProviderClick} />)}
-        </div>
-      </div>
     </div>
   );
 }
@@ -4664,28 +4960,28 @@ function V1kFundingScheduleDialog({ open, onClose }: { open: boolean; onClose: (
       <div className="fixed inset-0 z-40 bg-black/30" onClick={onClose} />
       <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none p-4">
         <div className="bg-white rounded-xl shadow-2xl w-[560px] max-w-full max-h-[82vh] flex flex-col pointer-events-auto">
-          <div className="px-6 pt-5 pb-3 border-b border-[#e8eaf0] flex-shrink-0">
+          <div className="px-6 pt-5 pb-3 border-b border-[#e5e7eb] flex-shrink-0">
             <div className="flex items-start justify-between">
               <div>
-                <h2 className="text-[15px] font-semibold text-[#1a1e35]">Funding schedule</h2>
-                <p className="text-[11px] text-[#8a8fa8] mt-0.5">When to fund each account · dates reflect payout delay</p>
+                <h2 className="text-lg font-semibold text-[#111827]">Funding schedule</h2>
+                <p className="text-[11px] text-[#6b7280] mt-0.5">When to fund each account · dates reflect payout delay</p>
               </div>
-              <button onClick={onClose} className="p-1 rounded-md text-[#8a8fa8] hover:text-[#1a1e35] hover:bg-[#f0f1f5] transition-colors flex-shrink-0"><X size={16} /></button>
+              <button onClick={onClose} className="p-1 rounded-md text-[#6b7280] hover:text-[#111827] hover:bg-[#f3f4f6] transition-colors flex-shrink-0"><X size={16} /></button>
             </div>
             <div className="flex items-start gap-6 mt-3">
               <div>
-                <span className="block text-[10px] font-semibold uppercase tracking-wide text-[#8a8fa8] mb-1">Account</span>
-                <div className="flex bg-[#f0f1f5] rounded-md p-0.5 w-fit">
+                <span className="block text-[10px] font-semibold uppercase tracking-wide text-[#6b7280] mb-1">Account</span>
+                <div className="flex bg-[#f3f4f6] rounded-md p-0.5 w-fit">
                   {([["all","All"],["wise","Wise"],["paypal","PayPal"],["bitwage","Bitwage"]] as const).map(([k,label]) => (
-                    <button key={k} onClick={() => setFProvider(k)} className={`px-2 py-0.5 rounded text-[11px] font-medium transition-all ${fProvider===k?"bg-white text-[#0168dd] shadow-sm":"text-[#8a8fa8] hover:text-[#1a1e35]"}`}>{label}</button>
+                    <button key={k} onClick={() => setFProvider(k)} className={`px-2 py-0.5 rounded text-[11px] font-medium transition-all ${fProvider===k?"bg-white text-[#0168dd] shadow-sm":"text-[#6b7280] hover:text-[#111827]"}`}>{label}</button>
                   ))}
                 </div>
               </div>
               <div>
-                <span className="block text-[10px] font-semibold uppercase tracking-wide text-[#8a8fa8] mb-1">Status</span>
-                <div className="flex bg-[#f0f1f5] rounded-md p-0.5 w-fit">
+                <span className="block text-[10px] font-semibold uppercase tracking-wide text-[#6b7280] mb-1">Status</span>
+                <div className="flex bg-[#f3f4f6] rounded-md p-0.5 w-fit">
                   {([["upcoming","All upcoming"],["unfunded","Unfunded only"]] as const).map(([k,label]) => (
-                    <button key={k} onClick={() => setFStatus(k)} className={`px-2 py-0.5 rounded text-[11px] font-medium transition-all ${fStatus===k?"bg-white text-[#0168dd] shadow-sm":"text-[#8a8fa8] hover:text-[#1a1e35]"}`}>{label}</button>
+                    <button key={k} onClick={() => setFStatus(k)} className={`px-2 py-0.5 rounded text-[11px] font-medium transition-all ${fStatus===k?"bg-white text-[#0168dd] shadow-sm":"text-[#6b7280] hover:text-[#111827]"}`}>{label}</button>
                   ))}
                 </div>
               </div>
@@ -4694,13 +4990,13 @@ function V1kFundingScheduleDialog({ open, onClose }: { open: boolean; onClose: (
 
           <div className="flex-1 overflow-y-auto px-6 py-4">
             {rows.length === 0 ? (
-              <p className="text-center text-[12px] text-[#8a8fa8] py-10">No funding dates match these filters.</p>
+              <p className="text-center text-[12px] text-[#6b7280] py-10">No funding dates match these filters.</p>
             ) : (
               <div className="relative">
-                <div className="absolute left-[4px] top-3 bottom-3 w-px bg-[#e8eaf0]" />
+                <div className="absolute left-[4px] top-3 bottom-3 w-px bg-[#e5e7eb]" />
                 <div className="space-y-4">
                   {rows.map(e => {
-                    const dot = e.funded ? "bg-emerald-400" : e.tag === "next" ? "bg-[#0168dd]" : e.tag === "projected" ? "bg-[#c0c3d3]" : "bg-amber-400";
+                    const dot = e.funded ? "bg-emerald-400" : e.tag === "next" ? "bg-[#0168dd]" : e.tag === "projected" ? "bg-[#d1d5db]" : "bg-amber-400";
                     return (
                       <div key={e.date} className="relative pl-6">
                         <div className={`absolute left-0 top-4 w-[9px] h-[9px] rounded-full ring-2 ring-white ${dot}`} />
@@ -4709,14 +5005,14 @@ function V1kFundingScheduleDialog({ open, onClose }: { open: boolean; onClose: (
                     );
                   })}
                 </div>
-                {anyEst && <p className="text-[10px] text-[#a0a4b8] leading-snug mt-4">PayPal balance is unavailable, so its figure is the payout routed to it, not a confirmed gap.</p>}
+                {anyEst && <p className="text-[10px] text-[#9ca3af] leading-snug mt-4">PayPal balance is unavailable, so its figure is the payout routed to it, not a confirmed gap.</p>}
               </div>
             )}
           </div>
 
-          <div className="px-6 py-3 border-t border-[#e8eaf0] flex items-center justify-between flex-shrink-0">
-            <span className="text-[11px] text-[#8a8fa8]">Showing June + next payday · follows your range</span>
-            <button className="flex items-center gap-1.5 text-xs font-semibold border border-[#e8eaf0] rounded-lg px-3 py-1.5 text-[#1a1e35] hover:bg-[#f5f6fa] transition-colors"><Download size={13} /> Export</button>
+          <div className="px-6 py-3 flex items-center justify-between flex-shrink-0">
+            <span className="text-[11px] text-[#6b7280]">Showing June + next payday · follows your range</span>
+            <button className="flex items-center gap-1.5 text-xs font-semibold border border-[#e5e7eb] rounded-lg px-3 py-1.5 text-[#111827] hover:bg-[#f9fafb] transition-colors"><Download size={13} /> Export</button>
           </div>
         </div>
       </div>
@@ -4743,67 +5039,65 @@ function V1iHowWeGetThereDialog({
       <div className="fixed inset-0 z-40 bg-black/30" onClick={onClose} />
       <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none p-4">
         <div className="bg-white rounded-xl shadow-2xl w-[440px] max-w-full pointer-events-auto">
-          <div className="flex items-start justify-between px-6 pt-5 pb-4 border-b border-[#e8eaf0]">
+          <div className="flex items-start justify-between px-5 py-5">
             <div>
-              <h2 className="text-[15px] font-semibold text-[#1a1e35]">How we get there</h2>
-              <p className="text-[11px] text-[#8a8fa8] mt-0.5">How your June estimate is built from your payment history.</p>
+              <h2 className="text-lg font-semibold text-[#111827]">How we get there</h2>
             </div>
-            <button onClick={onClose} className="p-1 rounded-md text-[#8a8fa8] hover:text-[#1a1e35] hover:bg-[#f0f1f5] transition-colors flex-shrink-0"><X size={16} /></button>
+            <button onClick={onClose} className="p-1 rounded-md text-[#6b7280] hover:text-[#111827] hover:bg-[#f3f4f6] transition-colors flex-shrink-0"><X size={16} /></button>
           </div>
 
-          <div className="px-6 py-4 space-y-4">
+          <div className="px-5 py-2.5 space-y-4">
             {/* At-a-glance math: monthly average + adjustments = payout */}
             <div className="flex items-stretch gap-1.5">
-              <div className="flex-1 rounded-lg border border-[#e8eaf0] bg-[#f9f9fc] px-2.5 py-2">
-                <p className="text-[9px] font-semibold uppercase tracking-wider text-[#8a8fa8] leading-tight">Monthly avg</p>
-                <p className="text-[15px] font-bold text-[#1a1e35] mt-1.5 leading-none tracking-tight">{fmt0(base)}</p>
-                <p className="text-[10px] text-[#a0a4b8] mt-1.5 leading-tight">Last 5 months</p>
+              <div className="flex-1 rounded-lg border border-[#e5e7eb] bg-[#f9fafb] px-2.5 py-2">
+                <p className="text-xs font-semibold uppercase tracking-wider text-[#6b7280] leading-tight">Monthly avg</p>
+                <p className="text-base font-bold text-[#111827] mt-1.5 leading-none tracking-tight">{fmt0(base)}</p>
+                <p className="text-xs text-[#6b7280] mt-1.5 leading-tight">Last 5 months</p>
               </div>
-              <span className="flex items-center text-[#b0b3c5] font-semibold text-sm flex-shrink-0 px-0.5">+</span>
-              <div className="flex-1 rounded-lg border border-[#e8eaf0] bg-[#f9f9fc] px-2.5 py-2">
-                <p className="text-[9px] font-semibold uppercase tracking-wider text-[#8a8fa8] leading-tight">Adjustments</p>
-                <p className={`text-[15px] font-bold mt-1.5 leading-none tracking-tight ${adjPct >= 0 ? "text-emerald-600" : "text-red-500"}`}>{adjPct >= 0 ? "+" : ""}{adjPct}%</p>
-                <p className="text-[10px] text-[#a0a4b8] mt-1.5 leading-tight">Headcount + season</p>
+              <span className="flex items-center text-[#9ca3af] font-semibold text-sm flex-shrink-0 px-0.5">+</span>
+              <div className="flex-1 rounded-lg border border-[#e5e7eb] bg-[#f9fafb] px-2.5 py-2">
+                <p className="text-xs font-semibold uppercase tracking-wider text-[#6b7280] leading-tight">Adjustments</p>
+                <p className={`text-base font-bold mt-1.5 leading-none tracking-tight ${adjPct >= 0 ? "text-[#0e9f6e]" : "text-red-500"}`}>{adjPct >= 0 ? "+" : ""}{adjPct}%</p>
+                <p className="text-xs text-[#6b7280] mt-1.5 leading-tight">Headcount + season</p>
               </div>
-              <span className="flex items-center text-[#b0b3c5] font-semibold text-sm flex-shrink-0 px-0.5">=</span>
-              <div className="flex-1 rounded-lg border border-[#bcd4f2] bg-[#f0f6ff] px-2.5 py-2">
-                <p className="text-[9px] font-semibold uppercase tracking-wider text-[#0168dd] leading-tight">Est. payout</p>
-                <p className="text-[15px] font-bold text-[#1a1e35] mt-1.5 leading-none tracking-tight">{fmt0(total)}</p>
-                <p className="text-[10px] text-[#a0a4b8] mt-1.5 leading-tight">To fund in June</p>
+              <span className="flex items-center text-[#9ca3af] font-semibold text-sm flex-shrink-0 px-0.5">=</span>
+              <div className="flex-1 rounded-lg border border-[#a7d9fc] bg-[#eaf6ff] px-2.5 py-2">
+                <p className="text-xs font-semibold uppercase tracking-wider text-[#0168dd] leading-tight">Est. payroll</p>
+                <p className="text-base font-bold text-[#111827] mt-1.5 leading-none tracking-tight">{fmt0(total)}</p>
+                <p className="text-xs text-[#6b7280] mt-1.5 leading-tight">To fund in June</p>
               </div>
             </div>
 
-            {/* Adjustment detail */}
-            <div className="pt-4 border-t border-[#f0f1f5]">
-              <p className="text-[11px] text-[#8a8fa8] leading-snug">The <span className="font-semibold text-emerald-600">+{adjPct}%</span> comes from trends in your payment history:</p>
-              <div className="mt-2 space-y-1.5">
-                <div className="flex items-baseline gap-2 text-[12px]">
-                  <span className="font-semibold text-emerald-600 w-10 flex-shrink-0">+{memberPct}%</span>
-                  <span className="text-[#1a1e35] font-medium flex-shrink-0">Headcount change</span>
-                  <span className="text-[#8a8fa8] truncate">· {memberNote}</span>
+            {/* Adjustment detail — sits directly under the cards (same group) */}
+            <div>
+              <p className="text-sm text-[#6b7280] leading-snug"><span className="font-semibold text-[#0e9f6e]">+{adjPct}%</span> comes from trends in your payment history:</p>
+              <div className="mt-2 space-y-1.5 text-sm">
+                <div className="flex items-baseline gap-1.5">
+                  <span className="font-semibold text-[#0e9f6e] w-[34px] flex-shrink-0">+{memberPct}%</span>
+                  <span className="text-[#111827] font-medium flex-shrink-0">Headcount change</span>
+                  <span className="text-[#6b7280] truncate">· {memberNote}</span>
                 </div>
                 {seasonPct !== 0 && (
-                  <div className="flex items-baseline gap-2 text-[12px]">
-                    <span className="font-semibold text-emerald-600 w-10 flex-shrink-0">+{seasonPct}%</span>
-                    <span className="text-[#1a1e35] font-medium flex-shrink-0">Seasonality</span>
-                    <span className="text-[#8a8fa8] truncate">· May is typically above average</span>
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="font-semibold text-[#0e9f6e] w-[34px] flex-shrink-0">+{seasonPct}%</span>
+                    <span className="text-[#111827] font-medium flex-shrink-0">Seasonality</span>
+                    <span className="text-[#6b7280] truncate">· June is typically above average</span>
                   </div>
                 )}
                 {manualAdjustments.map(adj => (
-                  <div key={adj.id} className="flex items-baseline gap-2 text-[12px]">
-                    <span className={`font-semibold w-10 flex-shrink-0 ${adj.type === "add" ? "text-emerald-600" : "text-red-500"}`}>{adj.type === "add" ? "+" : "−"}{adj.unit === "pct" ? `${adj.value}%` : `≈${Math.round(adj.pct)}%`}</span>
-                    <span className="text-[#1a1e35] font-medium truncate">{adj.label}</span>
+                  <div key={adj.id} className="flex items-baseline gap-1.5">
+                    <span className={`font-semibold w-[34px] flex-shrink-0 ${adj.type === "add" ? "text-[#0e9f6e]" : "text-red-500"}`}>{adj.type === "add" ? "+" : "−"}{adj.unit === "pct" ? `${adj.value}%` : `≈${Math.round(adj.pct)}%`}</span>
+                    <span className="text-[#111827] font-medium truncate">{adj.label}</span>
                   </div>
                 ))}
               </div>
-              <p className="text-[11px] text-[#8a8fa8] mt-2 leading-snug">Applied on top of your {fmt0(base)} monthly average to reach <span className="font-semibold text-[#1a1e35]">{fmt0(total)}</span>.</p>
             </div>
 
-            {/* Caveat */}
-            <p className="text-[11px] text-[#a0a4b8] leading-snug">{fmt0(total)} is an estimate from your payment history — not a guaranteed figure. Add a buffer, or <a href="#" onClick={e => e.preventDefault()} className="font-medium text-[#8a8fa8] underline decoration-dotted decoration-[#c0c3d3] underline-offset-2 hover:text-[#1a1e35] transition-colors">see how to improve accuracy</a>.</p>
+            {/* Caveat — separated from the math by a divider, with room before the footer */}
+            <p className="text-sm text-[#6b7280] leading-snug border-t border-[#e5e7eb] pt-4 mb-2">{fmt0(total)} is an estimate from your payment history — not a guaranteed figure. Add a buffer, or <a href="#" onClick={e => e.preventDefault()} className="font-medium text-[#6b7280] underline decoration-dotted decoration-[#d1d5db] underline-offset-2 hover:text-[#111827] transition-colors">see how to improve accuracy</a>.</p>
           </div>
 
-          <div className="flex items-center justify-end px-6 py-4 border-t border-[#e8eaf0]">
+          <div className="flex items-center justify-end px-5 py-5">
             <button onClick={onClose} className={zone ? zbtn("solidPrimary", "md") : "px-5 py-2 rounded-lg text-sm font-semibold bg-[#0168dd] text-white hover:bg-[#0057bb] transition-colors"}>Done</button>
           </div>
         </div>
@@ -4816,22 +5110,22 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
   // Zone theme tokens (real Zone hexes) — applied only when `zone` is set (Final UI).
   // These map the prototype's hand-picked greys to Zone's gray/primary scale.
   const zc = {
-    border:    zone ? "border-[#e5e7eb]" : "border-[#e8eaf0]",        // gray-200 (card outline)
-    divider:   zone ? "border-[#e5e7eb]" : "border-[#f0f1f5]",        // gray-200 — same as the card outline
-    text:      zone ? "text-[#111827]"   : "text-[#1a1e35]",          // gray-900
-    muted:     zone ? "text-[#6b7280]"   : "text-[#8a8fa8]",          // gray-500
-    segTrack:  zone ? "bg-[#f3f4f6]"     : "bg-[#f0f1f5]",            // gray-100
-    hoverBg:   zone ? "hover:bg-[#f3f4f6]" : "hover:bg-[#eef0f4]",    // gray-100
-    hoverText: zone ? "hover:text-[#111827]" : "hover:text-[#1a1e35]",
+    border:    zone ? "border-[#e5e7eb]" : "border-[#e5e7eb]",        // gray-200 (card outline)
+    divider:   zone ? "border-[#e5e7eb]" : "border-[#f3f4f6]",        // gray-200 — same as the card outline
+    text:      zone ? "text-[#111827]"   : "text-[#111827]",          // gray-900
+    muted:     zone ? "text-[#6b7280]"   : "text-[#6b7280]",          // gray-500
+    segTrack:  zone ? "bg-[#f3f4f6]"     : "bg-[#f3f4f6]",            // gray-100
+    hoverBg:   zone ? "hover:bg-[#f3f4f6]" : "hover:bg-[#f3f4f6]",    // gray-100
+    hoverText: zone ? "hover:text-[#111827]" : "hover:text-[#111827]",
     active:    "bg-white text-[#0168dd] shadow-sm",                   // primary-700 (already Zone)
-    inactive:  zone ? "text-[#6b7280] hover:text-[#111827]" : "text-[#8a8fa8] hover:text-[#1a1e35]",
-    toggleOff: zone ? "bg-[#d1d5db]"     : "bg-[#c8cad4]",            // gray-300
+    inactive:  zone ? "text-[#6b7280] hover:text-[#111827]" : "text-[#6b7280] hover:text-[#111827]",
+    toggleOff: zone ? "bg-[#d1d5db]"     : "bg-[#d1d5db]",            // gray-300
     toggleOn:  zone ? "bg-[#2aa7ff]"     : "bg-[#0168dd]",            // primary-500
     // Zone SegmentedControls — connected bordered segments; active = indigo-50 / primary-700 / medium.
     segWrap: "flex w-fit",
     // sm size: h-8, 14px, active = medium + primary-700 + indigo-50, inactive = regular + gray-700.
     // overflow-hidden clips the active bg to the rounded end corners (Zone "radio corner").
-    seg: (active: boolean) => `h-8 px-3 flex items-center justify-center whitespace-nowrap text-sm overflow-hidden transition-colors border border-l-0 first:border-l border-[#d1d5db] first:rounded-l-[6px] last:rounded-r-[6px] ${active ? "bg-[#eef2ff] text-[#0168dd] font-medium" : "text-[#374151] font-normal hover:bg-[#f9fafb]"}`,
+    seg: (active: boolean) => `h-8 px-3 flex items-center justify-center whitespace-nowrap text-sm overflow-hidden transition-colors border border-l-0 first:border-l border-[#d1d5db] first:rounded-l-[6px] last:rounded-r-[6px] ${active ? "bg-[#f0f5ff] text-[#0168dd] font-medium" : "text-[#374151] font-normal hover:bg-[#f9fafb]"}`,
   };
   const [range, setRange]           = useState<V1eRange>(v1l || v1m ? "3M" : "1M"); // 1L/1M drop the 1M view
   const [showYoY, setShowYoY]       = useState(false);
@@ -4943,7 +5237,7 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
     });
   };
   const statusSourceSegs: SegBar[] = [
-    { key: "paid",       label: "Paid",      color: "#10b981" },
+    { key: "paid",       label: "Paid",      color: "#0e9f6e" },
     { key: "pending",    label: "Pending",   color: "#f59e0b" },
     { key: "failed",     label: "Failed",    color: "#ef4444" },
     { key: "tracked",    label: "Planned",   color: "#0168dd" },
@@ -4954,25 +5248,25 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
       ? (showStatusBreakdown
           ? statusSourceSegs
           : [
-              { key: "factual",   label: "Confirmed", color: "#10b981" },
+              { key: "factual",   label: "Confirmed", color: "#0e9f6e" },
               { key: "tracked",   label: "Planned",   color: "#0168dd" },
               { key: "projected", label: "Projected", color: "#85baf5" },
             ])
       : segTab === "channel"
-      ? [{ key: "chFactual", label: "Confirmed", color: "#10b981" }, ...v1eChannelSeg.map(s => ({ key: s.key, label: s.label, color: s.color }))]
+      ? [{ key: "chFactual", label: "Confirmed", color: "#0e9f6e" }, ...v1eChannelSeg.map(s => ({ key: s.key, label: s.label, color: s.color }))]
       : v1eEarningSeg.map(s => ({ key: s.key, label: s.label, color: s.color })));
 
   const monthSegBars: SegBar[] = zoneRecolor(
     segTab === "source"
       ? (v1m && showStatusBreakdown
           ? [
-              { key: "paid",       label: "Paid",      color: "#10b981" },
+              { key: "paid",       label: "Paid",      color: "#0e9f6e" },
               { key: "pending",    label: "Pending",   color: "#f59e0b" },
               { key: "failed",     label: "Failed",    color: "#ef4444" },
               { key: "planned",    label: "Planned",   color: "#0168dd" },
               { key: "projRemain", label: "Projected", color: "#85baf5" },
             ]
-          : [{ key: "actual", label: "Confirmed", color: "#10b981" }, { key: "projected", label: "Projected", color: "#85baf5" }])
+          : [{ key: "actual", label: "Confirmed", color: "#0e9f6e" }, { key: "projected", label: "Projected", color: "#85baf5" }])
       : segTab === "channel"
       ? v1eChannelSeg.map(s => ({ key: s.key, label: s.label, color: s.color }))
       : v1eEarningSeg.map(s => ({ key: s.key, label: s.label, color: s.color })));
@@ -4987,18 +5281,18 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
     const items = segBars.map(sb => ({ ...sb, value: (d[sb.key] ?? 0) as number })).filter(i => i.value > 0);
     const total = items.reduce((s, i) => s + i.value, 0);
     return (
-      <div className="bg-white border border-[#e8eaf0] rounded-lg shadow-lg p-3 text-xs min-w-[170px]">
-        <p className="font-semibold text-[#1a1e35] mb-1.5">{header}</p>
+      <div className="bg-white border border-[#e5e7eb] rounded-lg shadow-lg p-3 text-xs min-w-[170px]">
+        <p className="font-semibold text-[#111827] mb-1.5">{header}</p>
         {items.map(i => (
           <div key={i.key} className="flex justify-between gap-4 py-0.5">
-            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm inline-block flex-shrink-0" style={{ background: i.color }} /><span className="text-[#8a8fa8]">{i.label}</span></span>
-            <span className="font-medium text-[#1a1e35]">{fmt0(i.value)}</span>
+            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm inline-block flex-shrink-0" style={{ background: i.color }} /><span className="text-[#6b7280]">{i.label}</span></span>
+            <span className="font-medium text-[#111827]">{fmt0(i.value)}</span>
           </div>
         ))}
         {items.length > 1 && (
-          <div className="flex justify-between gap-4 py-0.5 mt-1 pt-1.5 border-t border-[#e8eaf0]">
-            <span className="text-[#8a8fa8]">Total</span>
-            <span className="font-semibold text-[#1a1e35]">{fmt0(total)}</span>
+          <div className="flex justify-between gap-4 py-0.5 mt-1 pt-1.5 border-t border-[#e5e7eb]">
+            <span className="text-[#6b7280]">Total</span>
+            <span className="font-semibold text-[#111827]">{fmt0(total)}</span>
           </div>
         )}
       </div>
@@ -5022,52 +5316,52 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
       /* ══ 1J TOP ROW — Estimated-to-fund as its own narrow card + brief card ══ */
       <div className="grid grid-cols-12 gap-6 items-stretch">
         {/* Left — Estimated to fund, sized like the old Fund-your-accounts card */}
-        <div data-component={zone ? "Estimated payout card" : undefined} className={`col-span-3 bg-white rounded-lg border ${zc.border} flex flex-col`}>
-          <div className={`px-4 flex items-center border-b bg-white rounded-t-lg ${zone ? "h-[60px] border-[#e5e7eb]" : "h-[55px] border-[#e8eaf0]"}`}>
-            <p className={zone ? "text-lg font-medium text-[#111827]" : "text-sm font-semibold text-[#1a1e35]"}>Estimated payout <span className="text-[#8a8fa8] font-normal whitespace-nowrap">· June 2026</span></p>
+        <div data-component={zone ? "Estimated payroll card" : undefined} className={`col-span-3 bg-white rounded-lg border ${zc.border} flex flex-col`}>
+          <div className={`px-4 flex items-center border-b bg-white rounded-t-lg ${zone ? "h-[60px] border-[#e5e7eb]" : "h-[55px] border-[#e5e7eb]"}`}>
+            <p className={zone ? "text-lg font-medium text-[#111827]" : "text-sm font-semibold text-[#111827]"}>{zone ? "Estimated Payroll" : "Estimated payout"} <span className="text-[#6b7280] font-normal whitespace-nowrap">· June 2026</span></p>
           </div>
           <div className={`px-4 py-4 flex-1 ${v1l ? "flex flex-col" : ""}`}>
             {/* non-1L keeps the explainer at the top; 1L moves it to the bottom */}
-            {!v1l && <p className="text-[11px] text-[#8a8fa8] leading-snug mb-2.5">Estimated from your payment history. Gets more accurate as the month fills with real data.</p>}
+            {!v1l && <p className="text-[11px] text-[#6b7280] leading-snug mb-2.5">Estimated from your payment history. Gets more accurate as the month fills with real data.</p>}
             {/* number + trend chip — chip opens the drivers popover */}
             <div className={`flex items-center min-w-0 ${v1l ? "gap-4" : "gap-2"}`}>
-              <p className="text-3xl font-bold text-[#1a1e35] tracking-tight leading-none">{fmt0(adjProj)}</p>
+              <p className="text-3xl font-bold text-[#111827] tracking-tight leading-none">{fmt0(adjProj)}</p>
               {v1l ? (
                 /* 1L — Adjust sits to the right of the number */
                 <button onClick={() => { setEditingAdj(null); setShowAddDialog(true); }} className={zone ? zbtn("outlinePrimary", "sm", "flex-shrink-0") : "flex-shrink-0 flex items-center gap-1 text-[11px] font-medium text-[#0168dd] border border-[#0168dd]/40 rounded-md px-2.5 py-1 hover:bg-[#0168dd]/5 transition-colors select-none"}><SlidersHorizontal size={zone ? 16 : 12} /> Adjust</button>
               ) : (
                 <div className="relative flex-shrink-0">
                   <button onClick={() => setDriversOpen(o => !o)} title="See details"
-                    className="flex items-center gap-1 rounded-md px-1.5 py-1 hover:bg-[#f5f6fa] transition-colors select-none">
+                    className="flex items-center gap-1 rounded-md px-1.5 py-1 hover:bg-[#f9fafb] transition-colors select-none">
                     <span className={`text-sm font-semibold ${adjPct >= 0 ? "text-emerald-600" : "text-red-500"}`}>{adjPct >= 0 ? "+" : ""}{adjPct}%</span>
                     {adjPct >= 0 ? <TrendingUp size={14} className="text-emerald-500" /> : <TrendingDown size={14} className="text-red-500" />}
-                    <ChevronDown size={11} className={`text-[#8a8fa8] transition-transform duration-150 ${driversOpen ? "rotate-180" : ""}`} />
+                    <ChevronDown size={11} className={`text-[#6b7280] transition-transform duration-150 ${driversOpen ? "rotate-180" : ""}`} />
                   </button>
                   {driversOpen && (
                     <>
                       <div className="fixed inset-0 z-20" onClick={() => setDriversOpen(false)} />
-                      <div className="absolute top-8 left-0 z-30 bg-white rounded-lg border border-[#e8eaf0] shadow-xl w-72 p-3">
-                        <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8]">{adjPct >= 0 ? "+" : ""}{adjPct}% vs a typical month</p>
+                      <div className="absolute top-8 left-0 z-30 bg-white rounded-lg border border-[#e5e7eb] shadow-xl w-72 p-3">
+                        <p className="text-xs font-semibold uppercase tracking-widest text-[#6b7280]">{adjPct >= 0 ? "+" : ""}{adjPct}% vs a typical month</p>
                         {/* driver rows — live list, updates when adjustments are added/removed */}
-                        <div className="mt-1 divide-y divide-[#f0f1f5]">
+                        <div className="mt-1 divide-y divide-[#f3f4f6]">
                           {([
                             { label: "Headcount change", pct: memberPct, note: memberNote },
                             { label: "Seasonality",   pct: seasonPct, note: "May is typically above avg." },
                           ] as const).map(({ label, pct, note }) => {
                             if (label === "Seasonality" && seasonPct === 0) return null;
                             return (
-                              <div key={label} className="flex items-center gap-1.5 text-[11px] py-1.5 min-w-0">
+                              <div key={label} className="flex items-center gap-1.5 text-xs py-1.5 min-w-0">
                                 <span className="font-semibold flex-shrink-0 text-emerald-600">+{pct}%</span>
-                                <span className="text-[#1a1e35] font-medium flex-shrink-0">{label}</span>
-                                <span className="text-[#d0d3de] flex-shrink-0">—</span>
-                                <span className="text-[#8a8fa8] truncate">{note}</span>
+                                <span className="text-[#111827] font-medium flex-shrink-0">{label}</span>
+                                <span className="text-[#d1d5db] flex-shrink-0">—</span>
+                                <span className="text-[#6b7280] truncate">{note}</span>
                               </div>
                             );
                           })}
                           {manualAdjustments.map(adj => (
-                            <div key={adj.id} className="flex items-center gap-1.5 text-[11px] py-1.5 min-w-0">
+                            <div key={adj.id} className="flex items-center gap-1.5 text-xs py-1.5 min-w-0">
                               <span className={`font-semibold flex-shrink-0 ${adj.type === "add" ? "text-emerald-600" : "text-red-500"}`}>{adj.type === "add" ? "+" : "−"}{adj.unit === "pct" ? `${adj.value}%` : `≈${Math.round(adj.pct)}%`}</span>
-                              <span className="text-[#1a1e35] font-medium truncate">{adj.label}</span>
+                              <span className="text-[#111827] font-medium truncate">{adj.label}</span>
                             </div>
                           ))}
                         </div>
@@ -5086,60 +5380,61 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
                 <SlidersHorizontal size={12} /> Adjust
               </button>
               <button onClick={() => setShowMathDialog(true)}
-                className="flex items-center gap-1 text-[11px] font-medium text-[#5b607a] border border-[#e8eaf0] rounded-md px-2.5 py-1 hover:bg-[#f5f6fa] hover:text-[#1a1e35] transition-colors select-none">
+                className="flex items-center gap-1 text-[11px] font-medium text-[#4b5563] border border-[#e5e7eb] rounded-md px-2.5 py-1 hover:bg-[#f9fafb] hover:text-[#111827] transition-colors select-none">
                 <Info size={12} /> How we get there
               </button>
             </div>
             )}
             {v1l && !condensed && (
               /* 1L — the math, on-screen: base → auto adjustments → estimate → manual → total */
-              <div className={`mt-4 pt-3 border-t border-[#f0f1f5] ${zone ? "space-y-2.5" : "space-y-1.5"}`}>
+              <div className={`mt-4 pt-3 border-t border-[#f3f4f6] ${zone ? "space-y-2.5" : "space-y-1.5"}`}>
                 <div className="flex items-center justify-between gap-2 mb-3">
-                  <p className={zone ? "text-[11px] font-semibold uppercase tracking-wide text-[#6b7280]" : "text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8]"}>How this adds up</p>
-                  <button onClick={() => setShowMathDialog(true)} className={zone ? "text-[12px] font-medium text-[#8a8fa8] underline underline-offset-2 hover:text-[#1a1e35] transition-colors select-none" : "inline-flex items-center gap-1 text-[10px] font-medium text-[#5b607a] hover:text-[#1a1e35] transition-colors select-none"}>{zone ? "Details" : <><Info size={11} /> Details</>}</button>
+                  <p className={zone ? "text-[11px] font-semibold uppercase tracking-wide text-[#6b7280]" : "text-[10px] font-semibold uppercase tracking-widest text-[#6b7280]"}>How this adds up</p>
+                  <button onClick={() => setShowMathDialog(true)} className={zone ? "inline-flex items-center gap-1 text-[12px] font-medium text-[#6b7280] hover:text-[#111827] transition-colors select-none" : "inline-flex items-center gap-1 text-[10px] font-medium text-[#4b5563] hover:text-[#111827] transition-colors select-none"}>{zone ? <><Info size={14} /> Learn more</> : <><Info size={11} /> Details</>}</button>
                 </div>
                 <div className="flex items-baseline gap-3 text-[12px]">
-                  <span className="w-16 flex-shrink-0 font-medium text-[#1a1e35] tabular-nums">{fmt0(v1AvgMonthly)}</span>
-                  <span className="text-[#8a8fa8]">Monthly average</span>
+                  <span className="w-16 flex-shrink-0 font-medium text-[#111827] tabular-nums">{fmt0(v1AvgMonthly)}</span>
+                  <span className="text-[#6b7280]">Monthly average</span>
                 </div>
                 <div className="flex items-baseline gap-3 text-[12px]">
                   <span className="w-16 flex-shrink-0 font-medium text-emerald-600 tabular-nums">+{v1lAutoPct}%</span>
-                  <span className="flex items-baseline gap-2">
-                    <span className="text-[#8a8fa8]">Auto adjustments</span>
-                    <span className="relative inline-flex self-center">
-                      <button onClick={() => setShowAutoPop(o => !o)} className="text-[12px] font-medium text-[#8a8fa8] underline underline-offset-2 hover:text-[#1a1e35] transition-colors select-none">Details</button>
-                      {showAutoPop && (<>
-                        <div className="fixed inset-0 z-20" onClick={() => setShowAutoPop(false)} />
-                        <div className="absolute top-6 left-0 z-30 bg-white rounded-lg border border-[#e8eaf0] shadow-xl w-64 p-3">
-                          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8]">+{v1lAutoPct}% vs a typical month</p>
-                          <div className="mt-1 divide-y divide-[#f0f1f5]">
-                            <div className="flex items-center gap-1.5 text-[11px] py-1.5 min-w-0"><span className="font-semibold flex-shrink-0 text-emerald-600">+{memberPct}%</span><span className="text-[#1a1e35] font-medium flex-shrink-0">Headcount change</span><span className="text-[#d0d3de] flex-shrink-0">—</span><span className="text-[#8a8fa8] truncate">{memberNote}</span></div>
-                            {seasonPct > 0 && <div className="flex items-center gap-1.5 text-[11px] py-1.5 min-w-0"><span className="font-semibold flex-shrink-0 text-emerald-600">+{seasonPct}%</span><span className="text-[#1a1e35] font-medium flex-shrink-0">Seasonality</span><span className="text-[#d0d3de] flex-shrink-0">—</span><span className="text-[#8a8fa8] truncate">May is typically above avg.</span></div>}
-                          </div>
+                  <span className="relative inline-flex self-center">
+                    <button onClick={() => setShowAutoPop(o => !o)} className="text-[12px] font-normal text-[#6b7280] underline underline-offset-2 hover:text-[#111827] transition-colors select-none">Auto adjustments</button>
+                    {showAutoPop && (<>
+                      <div className="fixed inset-0 z-20" onClick={() => setShowAutoPop(false)} />
+                      <div className="absolute top-6 left-0 z-30 bg-white rounded-lg border border-[#e5e7eb] shadow-xl w-96 p-3.5">
+                        <p className="text-xs font-semibold uppercase tracking-widest text-[#6b7280]">+{v1lAutoPct}% vs a typical month</p>
+                        <div className="mt-1 divide-y divide-[#f3f4f6]">
+                          <div className="flex items-center gap-1.5 text-xs py-1.5"><span className="font-semibold flex-shrink-0 text-emerald-600">+{memberPct}%</span><span className="text-[#111827] font-medium flex-shrink-0">Headcount change</span><span className="text-[#d1d5db] flex-shrink-0">—</span><span className="text-[#6b7280] whitespace-nowrap">{memberNote}</span></div>
+                          {seasonPct > 0 && <div className="flex items-center gap-1.5 text-xs py-1.5"><span className="font-semibold flex-shrink-0 text-emerald-600">+{seasonPct}%</span><span className="text-[#111827] font-medium flex-shrink-0">Seasonality</span><span className="text-[#d1d5db] flex-shrink-0">—</span><span className="text-[#6b7280] whitespace-nowrap">June is typically above average</span></div>}
                         </div>
-                      </>)}
-                    </span>
+                      </div>
+                    </>)}
                   </span>
                 </div>
-                <div className="flex items-baseline gap-3 text-[12px] pt-1.5 border-t border-[#f0f1f5]">
-                  <span className="w-16 flex-shrink-0 font-semibold text-[#1a1e35] tabular-nums">{fmt0(v1lEstimate)}</span>
+                <div className="flex items-baseline gap-3 text-[12px] pt-1.5 border-t border-[#f3f4f6]">
+                  <span className="w-16 flex-shrink-0 font-semibold text-[#111827] tabular-nums">{fmt0(v1lEstimate)}</span>
                 </div>
                 {manualAdjustments.map(adj => (
-                  <div key={adj.id} className="flex items-baseline gap-3 text-[12px]">
+                  <div key={adj.id} className="flex items-center gap-3 text-[12px]">
                     <span className={`w-16 flex-shrink-0 font-medium tabular-nums ${adj.type === "add" ? "text-emerald-600" : "text-red-500"}`}>{adj.type === "add" ? "+" : "−"}{adj.unit === "pct" ? `${adj.value}%` : `≈${Math.round(adj.pct)}%`}</span>
-                    <span className="text-[#8a8fa8] truncate">{adj.label}</span>
+                    <span className="text-[#6b7280] truncate flex-1">{adj.label}</span>
+                    <span className="flex items-center gap-0.5 flex-shrink-0">
+                      <button onClick={() => { setEditingAdj(adj); setShowAddDialog(true); }} title="Edit name or amount" className="p-1 rounded-md text-[#9ca3af] hover:text-[#111827] hover:bg-[#f3f4f6] transition-colors"><Pencil size={13} /></button>
+                      <button onClick={() => setManualAdjustments(prev => prev.filter(a => a.id !== adj.id))} title="Remove" className="p-1 rounded-md text-[#9ca3af] hover:text-red-600 hover:bg-[#f3f4f6] transition-colors"><X size={13} /></button>
+                    </span>
                   </div>
                 ))}
                 {manualAdjustments.length > 0 && (
-                  <div className="flex items-baseline gap-3 text-[13px] pt-1.5 border-t border-[#e8eaf0]">
-                    <span className="w-16 flex-shrink-0 font-bold text-[#1a1e35] tabular-nums">{fmt0(adjProj)}</span>
-                    <span className="font-bold text-[#1a1e35]">Total to fund</span>
+                  <div className="flex items-baseline gap-3 text-[13px] pt-1.5 border-t border-[#e5e7eb]">
+                    <span className="w-16 flex-shrink-0 font-bold text-[#111827] tabular-nums">{fmt0(adjProj)}</span>
+                    <span className="font-bold text-[#111827]">Total to fund</span>
                   </div>
                 )}
               </div>
             )}
             {v1l && (
-              <p className="mt-auto pt-3 border-t border-[#f0f1f5] text-[11px] text-[#8a8fa8] leading-snug">Estimated from your payment history. Gets more accurate as the month fills with real data.</p>
+              <p className="mt-auto pt-3 border-t border-[#f3f4f6] text-[11px] text-[#6b7280] leading-snug">Estimated from your payment history. Gets more accurate as the month fills with real data.</p>
             )}
           </div>
         </div>
@@ -5154,23 +5449,23 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
       <div className={sideFund ? "grid grid-cols-12 gap-6 items-stretch" : "contents"}>
       {/* ══ SUMMARY CARD — fixed to the current month ══════════════════════ */}
       <div data-component={zone ? "Funding schedule card" : undefined} className={`bg-white rounded-lg border ${zc.border} ${sideFund ? "col-span-9" : ""}`}>
-        <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-[#e8eaf0] bg-white rounded-t-lg">
+        <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-[#e5e7eb] bg-white rounded-t-lg">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-[#1a1e35]">Predictable Cash Flow</span>
-            <span className="text-xs text-[#8a8fa8]">· <span className="font-semibold text-[#0168dd]">{v1eFullMonthLabel("Jun '26")}</span> · this month</span>
+            <span className="text-sm font-semibold text-[#111827]">Predictable Cash Flow</span>
+            <span className="text-xs text-[#6b7280]">· <span className="font-semibold text-[#0168dd]">{v1eFullMonthLabel("Jun '26")}</span> · this month</span>
           </div>
           <ExportDropdown />
         </div>
-      <div className="grid grid-cols-2 divide-x divide-[#e8eaf0]">
+      <div className="grid grid-cols-2 divide-x divide-[#e5e7eb]">
         {/* Left — HERO: recommended projection for this month */}
         <div className="px-5 py-4">
           {/* ZONE 1 — the number + composition bar */}
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-1 h-[21px] flex items-center">Estimated payout · June 2026</p>
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6b7280] mb-1 h-[21px] flex items-center">Estimated payout · June 2026</p>
           {v1i ? (
             <>
               {/* 1I — number + View breakdown (black), then an action row of buttons */}
               <div className="flex items-end gap-2.5 mt-4 min-w-0">
-                <p className="text-3xl font-bold text-[#1a1e35] tracking-tight leading-none">{fmt0(adjProj)}</p>
+                <p className="text-3xl font-bold text-[#111827] tracking-tight leading-none">{fmt0(adjProj)}</p>
                 <V1cBreakdownPopover dark />
               </div>
               <div className="flex items-center gap-2 mt-6">
@@ -5179,7 +5474,7 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
                   <SlidersHorizontal size={12} /> Adjust
                 </button>
                 <button onClick={() => setShowMathDialog(true)}
-                  className="flex items-center gap-1 text-[11px] font-medium text-[#5b607a] border border-[#e8eaf0] rounded-md px-2.5 py-1 hover:bg-[#f5f6fa] hover:text-[#1a1e35] transition-colors select-none">
+                  className="flex items-center gap-1 text-[11px] font-medium text-[#4b5563] border border-[#e5e7eb] rounded-md px-2.5 py-1 hover:bg-[#f9fafb] hover:text-[#111827] transition-colors select-none">
                   <Info size={12} /> How we get there
                 </button>
               </div>
@@ -5199,46 +5494,46 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
 
           {/* The math, inline — reads as an equation: = baseline + adjustments */}
           <div className="relative mt-2 flex items-center gap-1 text-[11px] flex-wrap">
-            <span className="text-[#8a8fa8]">=</span>
-            <span className="font-semibold text-[#1a1e35]">{fmt0(v1AvgMonthly)}</span>
-            <span className="text-[#8a8fa8]">monthly avg</span>
-            <span className="text-[#8a8fa8]">{adjPct >= 0 ? "+" : "−"}</span>
+            <span className="text-[#6b7280]">=</span>
+            <span className="font-semibold text-[#111827]">{fmt0(v1AvgMonthly)}</span>
+            <span className="text-[#6b7280]">monthly avg</span>
+            <span className="text-[#6b7280]">{adjPct >= 0 ? "+" : "−"}</span>
             <button onClick={() => setMathOpen(o => !o)}
-              className="inline-flex items-center gap-0.5 text-[11px] border-b border-dotted border-[#c0c3d3] hover:border-[#8a8fa8] transition-colors select-none">
+              className="inline-flex items-center gap-0.5 text-[11px] border-b border-dotted border-[#d1d5db] hover:border-[#6b7280] transition-colors select-none">
               <span className={`font-semibold ${adjPct >= 0 ? "text-emerald-600" : "text-red-500"}`}>{Math.abs(adjPct)}%</span>
               {adjPct >= 0 ? <TrendingUp size={11} className="text-emerald-600" /> : <TrendingDown size={11} className="text-red-500" />}
-              <span className="text-[#8a8fa8]">adjustments</span>
-              <ChevronDown size={10} className={`text-[#8a8fa8] transition-transform ${mathOpen ? "rotate-180" : ""}`} />
+              <span className="text-[#6b7280]">adjustments</span>
+              <ChevronDown size={10} className={`text-[#6b7280] transition-transform ${mathOpen ? "rotate-180" : ""}`} />
             </button>
             {mathOpen && (
               <>
                 <div className="fixed inset-0 z-20" onClick={() => setMathOpen(false)} />
-                <div className="absolute left-0 top-6 z-30 w-64 bg-white rounded-lg border border-[#e8eaf0] shadow-xl p-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-1.5">Adjustments · {adjPct >= 0 ? "+" : ""}{adjPct}%</p>
-                  <div className="divide-y divide-[#f0f1f5]">
+                <div className="absolute left-0 top-6 z-30 w-64 bg-white rounded-lg border border-[#e5e7eb] shadow-xl p-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6b7280] mb-1.5">Adjustments · {adjPct >= 0 ? "+" : ""}{adjPct}%</p>
+                  <div className="divide-y divide-[#f3f4f6]">
                     {([
                       { label: "Headcount change", pct: memberPct, note: memberNote },
                       { label: "Seasonality",   pct: seasonPct, note: "May is typically above avg." },
                     ] as const).map(({ label, pct, note }) => {
                       if (label === "Seasonality" && seasonPct === 0) return null;
                       return (
-                        <div key={label} className="flex items-center gap-1.5 text-[11px] py-1.5 min-w-0">
+                        <div key={label} className="flex items-center gap-1.5 text-xs py-1.5 min-w-0">
                           <span className="font-semibold flex-shrink-0 text-emerald-600">+{pct}%</span>
-                          <span className="text-[#1a1e35] font-medium flex-shrink-0">{label}</span>
-                          <span className="text-[#d0d3de] flex-shrink-0">—</span>
-                          <span className="text-[#8a8fa8] truncate">{note}</span>
+                          <span className="text-[#111827] font-medium flex-shrink-0">{label}</span>
+                          <span className="text-[#d1d5db] flex-shrink-0">—</span>
+                          <span className="text-[#6b7280] truncate">{note}</span>
                         </div>
                       );
                     })}
                     {manualAdjustments.map(adj => (
-                      <div key={adj.id} className="flex items-center gap-1.5 text-[11px] py-1.5 min-w-0">
+                      <div key={adj.id} className="flex items-center gap-1.5 text-xs py-1.5 min-w-0">
                         <span className={`font-semibold flex-shrink-0 ${adj.type === "add" ? "text-emerald-600" : "text-red-500"}`}>{adj.type === "add" ? "+" : "−"}{adj.unit === "pct" ? `${adj.value}%` : `≈${Math.round(adj.pct)}%`}</span>
-                        <span className="text-[#1a1e35] font-medium flex-shrink-0">{adj.label}</span>
+                        <span className="text-[#111827] font-medium flex-shrink-0">{adj.label}</span>
                       </div>
                     ))}
                   </div>
                   <button onClick={() => { setMathOpen(false); setShowManageDialog(true); }}
-                    className="mt-1.5 w-full text-center text-[11px] font-medium text-[#0168dd] hover:text-[#0057bb] transition-colors select-none py-1 border-t border-[#f0f1f5]">
+                    className="mt-1.5 w-full text-center text-[11px] font-medium text-[#0168dd] hover:text-[#0057bb] transition-colors select-none py-1 border-t border-[#f3f4f6]">
                     Manage adjustments
                   </button>
                 </div>
@@ -5254,17 +5549,17 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
                 <div className="h-full flex-1 bg-[#85baf5]" />
               </div>
             </div>
-            <div className="flex justify-between text-[10px] text-[#8a8fa8] mt-0.5">
+            <div className="flex justify-between text-[10px] text-[#6b7280] mt-0.5">
               <span>{fmt0(v1AvgMonthly)} avg</span>
               <span>{fmt0(adjProj)} total</span>
             </div>
             <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block z-20 pointer-events-none">
-              <div className="bg-white border border-[#e8eaf0] rounded-lg shadow-lg p-3 w-48">
+              <div className="bg-white border border-[#e5e7eb] rounded-lg shadow-lg p-3 w-48">
                 {v1cBarHoverRows.map(({ label, color, value, pct }) => {
                   const k = value / 1000;
                   const fmtK = `${k % 1 === 0 ? k.toFixed(0) : k.toFixed(1)}k`;
                   return (
-                    <div key={label} className="flex items-center justify-between text-[11px] font-semibold mb-1 last:mb-0 text-[#8a8fa8]">
+                    <div key={label} className="flex items-center justify-between text-[11px] font-semibold mb-1 last:mb-0 text-[#6b7280]">
                       <div className="flex items-center gap-1.5">
                         <div className="w-2 h-2 rounded-sm flex-shrink-0" style={{ background: color }} />
                         <span>{label}</span>
@@ -5278,7 +5573,7 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
           </div>
 
           {/* ZONE 3 — caveat */}
-          <p className="mt-4 pt-4 border-t border-[#f0f1f5] text-[10px] text-[#a0a4b8] leading-snug">{fmt0(adjProj)} is an estimate from your payment history — not a guaranteed figure. Add a buffer, or <a href="#" onClick={e => e.preventDefault()} className="font-medium text-[#8a8fa8] underline decoration-dotted decoration-[#c0c3d3] underline-offset-2 hover:text-[#1a1e35] transition-colors">see how to improve accuracy</a>.</p>
+          <p className="mt-4 pt-4 border-t border-[#f3f4f6] text-[10px] text-[#9ca3af] leading-snug">{fmt0(adjProj)} is an estimate from your payment history — not a guaranteed figure. Add a buffer, or <a href="#" onClick={e => e.preventDefault()} className="font-medium text-[#6b7280] underline decoration-dotted decoration-[#d1d5db] underline-offset-2 hover:text-[#111827] transition-colors">see how to improve accuracy</a>.</p>
             </>
           )}
         </div>
@@ -5304,7 +5599,7 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
             {/* Final UI — one control row in the header: view segmented · ranges · YoY toggle (last) */}
             {zone && (
               <div className={zc.segWrap}>
-                {([["source","Confirmed vs. projected"],["channel","Payout method"],["type","Payroll breakdown"]] as const).map(([id, label]) => (
+                {([["source","Tracked vs. projected"],["channel","Payout method"],["type","Payroll breakdown"]] as const).map(([id, label]) => (
                   <button key={id} onClick={() => setSegTab(id)} className={zc.seg(segTab === id)}>{label}</button>
                 ))}
               </div>
@@ -5356,7 +5651,7 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
                   <div className={`absolute top-8 left-7 z-30 bg-white rounded-lg border ${zc.border} shadow-xl py-1 w-40 max-h-56 overflow-y-auto`}>
                     {v1eMonthNav.map(b => (
                       <button key={b.label} onClick={() => { setOneMonth(b.label); setMonthPickerOpen(false); setLoading(true); setTimeout(() => setLoading(false), 550); }}
-                        className={`w-full text-left px-3 py-1.5 text-[11px] transition-colors ${b.label === oneMonth ? "bg-[#eef3ff] text-[#0168dd] font-medium" : `${zc.text} hover:bg-[#f5f6fa]`}`}>
+                        className={`w-full text-left px-3 py-1.5 text-[11px] transition-colors ${b.label === oneMonth ? "bg-[#eef3ff] text-[#0168dd] font-medium" : `${zc.text} hover:bg-[#f9fafb]`}`}>
                         {v1eFullMonthLabel(b.label)}
                       </button>
                     ))}
@@ -5375,7 +5670,7 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
           </div>
           {!zone && (<div className="flex items-center gap-3 flex-shrink-0">
             <div className={`flex items-center ${zc.segTrack} rounded-md p-0.5`}>
-              {([["source","Confirmed vs. projected"],["channel","Payout method"],["type","Payroll breakdown"]] as const).map(([id, label]) => (
+              {([["source","Tracked vs. projected"],["channel","Payout method"],["type","Payroll breakdown"]] as const).map(([id, label]) => (
                 <button key={id} onClick={() => setSegTab(id)}
                   className={zone ? zc.seg(segTab === id) : `px-2.5 py-1 rounded text-[10px] font-medium transition-all whitespace-nowrap ${segTab === id ? zc.active : zc.inactive}`}>
                   {label}
@@ -5426,10 +5721,10 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
         ) : isWeekly ? (
           <ResponsiveContainer width="100%" height={zone ? 220 : 150}>
             <BarChart data={weekRows} barCategoryGap="30%" maxBarSize={zone ? 80 : undefined} margin={{ top: 20, right: 4, left: 0, bottom: 4 }}>
-              <CartesianGrid vertical={false} stroke={zone ? "#e5e7eb" : "#f0f1f5"} strokeDasharray={zone ? "5 5" : undefined} />
-              <XAxis dataKey="dateLabel" tick={{ fontSize: zone ? 12 : 9, fill: zone ? "#6b7280" : "#8a8fa8" }} tickLine={false} axisLine={false} interval={0} />
-              <YAxis tick={{ fontSize: zone ? 12 : 10, fill: zone ? "#6b7280" : "#8a8fa8" }} tickFormatter={(v: number) => `$${Math.round(v/1000)}k`} axisLine={false} tickLine={false} width={zone ? 40 : 36} />
-              <Tooltip content={renderTip(weekSegBars)} cursor={{ fill: "#f5f6fa" }} />
+              <CartesianGrid vertical={false} stroke={zone ? "#e5e7eb" : "#f3f4f6"} strokeDasharray={zone ? "5 5" : undefined} />
+              <XAxis dataKey="dateLabel" tick={{ fontSize: zone ? 14 : 9, fill: zone ? "#6b7280" : "#6b7280" }} tickLine={false} axisLine={false} interval={0} />
+              <YAxis tick={{ fontSize: zone ? 14 : 10, fill: zone ? "#6b7280" : "#6b7280" }} tickFormatter={(v: number) => `$${Math.round(v/1000)}k`} axisLine={false} tickLine={false} width={zone ? 40 : 36} />
+              <Tooltip content={renderTip(weekSegBars)} cursor={{ fill: "#f9fafb" }} />
               {weekSegBars.map((sb, idx) => (
                 <Bar key={sb.key} dataKey={sb.key} stackId="w" fill={sb.color} name={sb.label}
                   stroke={zone ? "#ffffff" : undefined} strokeWidth={zone ? 2 : undefined}
@@ -5439,7 +5734,7 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
                   {idx === weekSegBars.length - 1 && (
                     <LabelList dataKey="total" position="top" offset={6}
                       formatter={(v: number) => `$${Math.round(v / 1000)}k`}
-                      style={{ fontSize: 10, fontWeight: 600, fill: "#5b607a" }} />
+                      fill="#6b7280" style={{ fontSize: zone ? 12 : 10, fontWeight: 600 }} />
                   )}
                 </Bar>
               ))}
@@ -5448,32 +5743,32 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
         ) : (
           <ResponsiveContainer width="100%" height={zone ? 220 : 150}>
             <ComposedChart data={monthlyRows} barCategoryGap="28%" maxBarSize={zone ? 80 : undefined} margin={{ top: 20, right: 4, left: 0, bottom: 4 }}>
-              <CartesianGrid vertical={false} stroke={zone ? "#e5e7eb" : "#f0f1f5"} strokeDasharray={zone ? "5 5" : undefined} />
-              <XAxis dataKey="label" tick={{ fontSize: zone ? (range === "12M" ? 10 : 12) : (range === "12M" ? 9 : 10), fill: zone ? "#6b7280" : "#8a8fa8" }} tickLine={false} axisLine={false} interval={0} />
-              <YAxis tick={{ fontSize: zone ? 12 : 10, fill: zone ? "#6b7280" : "#8a8fa8" }} tickFormatter={(v: number) => `$${Math.round(v/1000)}k`} axisLine={false} tickLine={false} width={zone ? 40 : 36} />
-              <Tooltip cursor={{ fill: "#f5f6fa" }} content={({ active, payload }: any) => {
+              <CartesianGrid vertical={false} stroke={zone ? "#e5e7eb" : "#f3f4f6"} strokeDasharray={zone ? "5 5" : undefined} />
+              <XAxis dataKey="label" tick={{ fontSize: zone ? 14 : (range === "12M" ? 9 : 10), fill: zone ? "#6b7280" : "#6b7280" }} tickLine={false} axisLine={false} interval={0} />
+              <YAxis tick={{ fontSize: zone ? 14 : 10, fill: zone ? "#6b7280" : "#6b7280" }} tickFormatter={(v: number) => `$${Math.round(v/1000)}k`} axisLine={false} tickLine={false} width={zone ? 40 : 36} />
+              <Tooltip cursor={{ fill: "#f9fafb" }} content={({ active, payload }: any) => {
                 if (!active || !payload?.length) return null;
                 const d = payload[0]?.payload;
                 if (!d) return null;
                 const items = monthSegBars.map(sb => ({ ...sb, value: (d[sb.key] ?? 0) as number })).filter(i => i.value > 0);
                 const total = items.reduce((s, i) => s + i.value, 0);
                 return (
-                  <div className="bg-white border border-[#e8eaf0] rounded-lg shadow-lg p-3 text-xs min-w-[180px]">
-                    <p className="font-semibold text-[#1a1e35] mb-1.5">{d.label}</p>
+                  <div className="bg-white border border-[#e5e7eb] rounded-lg shadow-lg p-3 text-xs min-w-[180px]">
+                    <p className="font-semibold text-[#111827] mb-1.5">{d.label}</p>
                     {items.map(i => (
                       <div key={i.key} className="flex justify-between gap-4 py-0.5">
-                        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm inline-block flex-shrink-0" style={{ background: i.color }} /><span className="text-[#8a8fa8]">{i.label}</span></span>
-                        <span className="font-medium text-[#1a1e35]">{fmt0(i.value)}</span>
+                        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm inline-block flex-shrink-0" style={{ background: i.color }} /><span className="text-[#6b7280]">{i.label}</span></span>
+                        <span className="font-medium text-[#111827]">{fmt0(i.value)}</span>
                       </div>
                     ))}
-                    <div className="flex justify-between gap-4 py-0.5 mt-1 pt-1.5 border-t border-[#e8eaf0]">
-                      <span className="text-[#8a8fa8]">Total</span>
-                      <span className="font-semibold text-[#1a1e35]">{fmt0(total)}</span>
+                    <div className="flex justify-between gap-4 py-0.5 mt-1 pt-1.5 border-t border-[#e5e7eb]">
+                      <span className="text-[#6b7280]">Total</span>
+                      <span className="font-semibold text-[#111827]">{fmt0(total)}</span>
                     </div>
                     {showYoY && (d.yoy ?? 0) > 0 && (
-                      <div className="flex justify-between gap-4 py-0.5 mt-1 pt-1.5 border-t border-[#e8eaf0]">
-                        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm inline-block flex-shrink-0" style={{ background: "#c8cad4" }} /><span className="text-[#8a8fa8]">Last year · {v1ePrevYearLabel(d.label)}</span></span>
-                        <span className="font-medium text-[#1a1e35]">{fmt0(d.yoy)}</span>
+                      <div className="flex justify-between gap-4 py-0.5 mt-1 pt-1.5 border-t border-[#e5e7eb]">
+                        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm inline-block flex-shrink-0" style={{ background: "#d1d5db" }} /><span className="text-[#6b7280]">Last year · {v1ePrevYearLabel(d.label)}</span></span>
+                        <span className="font-medium text-[#111827]">{fmt0(d.yoy)}</span>
                       </div>
                     )}
                   </div>
@@ -5493,15 +5788,15 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
                   {idx === monthSegBars.length - 1 && (
                     <LabelList dataKey="total" position="top" offset={6}
                       formatter={(v: number) => `$${Math.round(v / 1000)}k`}
-                      style={{ fontSize: 10, fontWeight: 600, fill: "#5b607a" }} />
+                      fill="#6b7280" style={{ fontSize: zone ? 12 : 10, fontWeight: 600 }} />
                   )}
                 </Bar>
               ))}
               {showYoY && (
-                <Bar dataKey="yoy" stackId="prev" fill="#c8cad4" name="Last year" radius={zone ? [4, 4, 0, 0] : [3, 3, 0, 0]} isAnimationActive={false}>
+                <Bar dataKey="yoy" stackId="prev" fill="#d1d5db" name="Last year" radius={zone ? [4, 4, 0, 0] : [3, 3, 0, 0]} isAnimationActive={false}>
                   <LabelList dataKey="yoy" position="top" offset={6}
                     formatter={(v: number) => v > 0 ? `$${Math.round(v / 1000)}k` : ""}
-                    style={{ fontSize: 9, fontWeight: 600, fill: "#a0a4b8" }} />
+                    style={{ fontSize: zone ? 12 : 9, fontWeight: 600, fill: "#9ca3af" }} />
                 </Bar>
               )}
             </ComposedChart>
@@ -5511,20 +5806,20 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
         {/* Legend */}
         <div className="flex items-center gap-x-3 gap-y-1 mt-1.5 flex-wrap">
           {activeSegBars.map(sb => (
-            <span key={sb.key} className={`flex items-center gap-1.5 ${zone ? "text-[12px] text-[#6b7280]" : "text-[10px] text-[#8a8fa8]"}`}>
+            <span key={sb.key} className={`flex items-center gap-1.5 ${zone ? "text-[12px] text-[#6b7280]" : "text-[10px] text-[#6b7280]"}`}>
               <span className={`w-2 h-2 flex-shrink-0 ${zone ? "rounded-full" : "rounded-sm"}`} style={{ background: sb.color }} />
               {sb.label}
               {v1SegLegendInfo[sb.label] && <InfoTip text={v1SegLegendInfo[sb.label]} />}
             </span>
           ))}
           {showYoY && !isWeekly && (
-            <span className={`flex items-center gap-1.5 ${zone ? "text-[12px] text-[#6b7280]" : "text-[10px] text-[#8a8fa8]"}`}>
-              <span className={`w-2 h-2 flex-shrink-0 ${zone ? "rounded-full" : "rounded-sm"}`} style={{ background: "#c8cad4" }} />
+            <span className={`flex items-center gap-1.5 ${zone ? "text-[12px] text-[#6b7280]" : "text-[10px] text-[#6b7280]"}`}>
+              <span className={`w-2 h-2 flex-shrink-0 ${zone ? "rounded-full" : "rounded-sm"}`} style={{ background: "#d1d5db" }} />
               Last year (same month)
             </span>
           )}
           {!isWeekly && (range === "6M" || range === "12M") && (
-            <span className="text-[9px] text-[#c0c3d3] italic ml-auto">Confidence fades on projected months</span>
+            <span className="text-[9px] text-[#d1d5db] italic ml-auto">Confidence fades on projected months</span>
           )}
         </div>
       </div>
@@ -5601,11 +5896,11 @@ const v1gSum = (d: V1gFundDate) => d.providers.reduce((s, p) => s + p.amount, 0)
 function V1gPill({ id, amount }: { id: string; amount: number }) {
   const meta = v1gProviderMeta[id];
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-[#f9f9fc] border border-[#e8eaf0] pl-1 pr-2.5 py-1">
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-[#f9fafb] border border-[#e5e7eb] pl-1 pr-2.5 py-1">
       <ProviderLogo id={id} size={16} />
-      <span className="text-[11px] font-medium text-[#1a1e35]">{meta.name}</span>
-      {!meta.balanceReadable && <span title="Fund for payout · balance unavailable" className="text-[9px] text-[#8a8fa8] border-b border-dotted border-[#c0c3d3] cursor-help leading-none">est.</span>}
-      <span className="text-[11px] font-bold text-[#5b607a]">+{fmt0(amount)}</span>
+      <span className="text-[11px] font-medium text-[#111827]">{meta.name}</span>
+      {!meta.balanceReadable && <span title="Fund for payout · balance unavailable" className="text-[9px] text-[#6b7280] border-b border-dotted border-[#d1d5db] cursor-help leading-none">est.</span>}
+      <span className="text-[11px] font-bold text-[#4b5563]">+{fmt0(amount)}</span>
     </span>
   );
 }
@@ -5627,46 +5922,46 @@ function V1gAddToCoverColumn({ onViewSchedule, collapsible = false }: { onViewSc
 
   return (
     <div className="px-5 py-4">
-      <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-1 h-[21px] flex items-center">Add to cover · next 7 days</p>
+      <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6b7280] mb-1 h-[21px] flex items-center">Add to cover · next 7 days</p>
 
       {inWindow.length === 0 ? (
         <>
           <div className="mt-4 flex items-center gap-2">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0e9f6e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
             <span className="text-base font-bold text-emerald-600">Nothing to fund this week ✓</span>
           </div>
-          {nextUnfunded && <p className="text-[11px] text-[#8a8fa8] mt-1.5">Next payday is {nextUnfunded.dow}, {nextUnfunded.date} — {fmt0(v1gSum(nextUnfunded))} to add.</p>}
+          {nextUnfunded && <p className="text-[11px] text-[#6b7280] mt-1.5">Next payday is {nextUnfunded.dow}, {nextUnfunded.date} — {fmt0(v1gSum(nextUnfunded))} to add.</p>}
           <div className="mt-4">{scheduleButton}</div>
         </>
       ) : (
         <>
           <div className="flex items-center justify-between gap-2 mt-4">
             <div className="flex items-end gap-2 min-w-0">
-              <p className="text-3xl font-bold text-[#5b607a] tracking-tight leading-none">{fmt0(total)}</p>
-              <span className="text-[11px] text-[#8a8fa8] mb-0.5">this week</span>
+              <p className="text-3xl font-bold text-[#4b5563] tracking-tight leading-none">{fmt0(total)}</p>
+              <span className="text-[11px] text-[#6b7280] mb-0.5">this week</span>
             </div>
             {scheduleButton}
           </div>
           <div className="mt-4 relative">
-            <div className="absolute left-[3px] top-2 bottom-2 w-px bg-[#e8eaf0]" />
+            <div className="absolute left-[3px] top-2 bottom-2 w-px bg-[#e5e7eb]" />
             <div className="space-y-6">
               {inWindow.map(e => {
                 const open = !collapsible || expanded.includes(e.date);
                 return (
                 <div key={e.date} className="relative pl-5">
-                  <div className="absolute left-0 top-[5px] w-2 h-2 rounded-full bg-[#c0c3d3] ring-2 ring-white" />
+                  <div className="absolute left-0 top-[5px] w-2 h-2 rounded-full bg-[#d1d5db] ring-2 ring-white" />
                   {collapsible ? (
                     <button onClick={() => toggle(e.date)} className="flex items-center gap-1.5 w-full text-left select-none">
-                      <span className="text-xs font-semibold text-[#1a1e35]">{e.dow}, {e.date}</span>
-                      <span className="text-xs text-[#d0d3de]">·</span>
-                      <span className="text-xs font-semibold text-[#5b607a]">{fmt0(v1gSum(e))}</span>
-                      <ChevronDown size={13} className={`ml-auto text-[#8a8fa8] transition-transform ${open ? "rotate-180" : ""}`} />
+                      <span className="text-xs font-semibold text-[#111827]">{e.dow}, {e.date}</span>
+                      <span className="text-xs text-[#d1d5db]">·</span>
+                      <span className="text-xs font-semibold text-[#4b5563]">{fmt0(v1gSum(e))}</span>
+                      <ChevronDown size={13} className={`ml-auto text-[#6b7280] transition-transform ${open ? "rotate-180" : ""}`} />
                     </button>
                   ) : (
                     <div className="flex items-baseline gap-1.5">
-                      <span className="text-xs font-semibold text-[#1a1e35]">{e.dow}, {e.date}</span>
-                      <span className="text-xs text-[#d0d3de]">·</span>
-                      <span className="text-xs font-semibold text-[#5b607a]">{fmt0(v1gSum(e))}</span>
+                      <span className="text-xs font-semibold text-[#111827]">{e.dow}, {e.date}</span>
+                      <span className="text-xs text-[#d1d5db]">·</span>
+                      <span className="text-xs font-semibold text-[#4b5563]">{fmt0(v1gSum(e))}</span>
                     </div>
                   )}
                   {open && (
@@ -5707,28 +6002,28 @@ function V1gFundingScheduleDialog({ open, onClose }: { open: boolean; onClose: (
       <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none p-4">
         <div className="bg-white rounded-xl shadow-2xl w-[520px] max-w-full max-h-[82vh] flex flex-col pointer-events-auto">
           {/* header + filters (sticky) */}
-          <div className="px-6 pt-5 pb-3 border-b border-[#e8eaf0] flex-shrink-0">
+          <div className="px-6 pt-5 pb-3 border-b border-[#e5e7eb] flex-shrink-0">
             <div className="flex items-start justify-between">
               <div>
-                <h2 className="text-[15px] font-semibold text-[#1a1e35]">Funding schedule</h2>
-                <p className="text-[11px] text-[#8a8fa8] mt-0.5">When to fund each account · dates reflect payout delay</p>
+                <h2 className="text-lg font-semibold text-[#111827]">Funding schedule</h2>
+                <p className="text-[11px] text-[#6b7280] mt-0.5">When to fund each account · dates reflect payout delay</p>
               </div>
-              <button onClick={onClose} className="p-1 rounded-md text-[#8a8fa8] hover:text-[#1a1e35] hover:bg-[#f0f1f5] transition-colors flex-shrink-0"><X size={16} /></button>
+              <button onClick={onClose} className="p-1 rounded-md text-[#6b7280] hover:text-[#111827] hover:bg-[#f3f4f6] transition-colors flex-shrink-0"><X size={16} /></button>
             </div>
             <div className="flex items-start gap-6 mt-3">
               <div>
-                <span className="block text-[10px] font-semibold uppercase tracking-wide text-[#8a8fa8] mb-1">Account</span>
-                <div className="flex bg-[#f0f1f5] rounded-md p-0.5 w-fit">
+                <span className="block text-[10px] font-semibold uppercase tracking-wide text-[#6b7280] mb-1">Account</span>
+                <div className="flex bg-[#f3f4f6] rounded-md p-0.5 w-fit">
                   {([["all", "All"], ["wise", "Wise"], ["paypal", "PayPal"], ["bitwage", "Bitwage"]] as const).map(([k, label]) => (
-                    <button key={k} onClick={() => setFProvider(k)} className={`px-2 py-0.5 rounded text-[11px] font-medium transition-all ${fProvider === k ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>{label}</button>
+                    <button key={k} onClick={() => setFProvider(k)} className={`px-2 py-0.5 rounded text-[11px] font-medium transition-all ${fProvider === k ? "bg-white text-[#0168dd] shadow-sm" : "text-[#6b7280] hover:text-[#111827]"}`}>{label}</button>
                   ))}
                 </div>
               </div>
               <div>
-                <span className="block text-[10px] font-semibold uppercase tracking-wide text-[#8a8fa8] mb-1">Status</span>
-                <div className="flex bg-[#f0f1f5] rounded-md p-0.5 w-fit">
+                <span className="block text-[10px] font-semibold uppercase tracking-wide text-[#6b7280] mb-1">Status</span>
+                <div className="flex bg-[#f3f4f6] rounded-md p-0.5 w-fit">
                   {([["upcoming", "All upcoming"], ["unfunded", "Unfunded only"]] as const).map(([k, label]) => (
-                    <button key={k} onClick={() => setFStatus(k)} className={`px-2 py-0.5 rounded text-[11px] font-medium transition-all ${fStatus === k ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>{label}</button>
+                    <button key={k} onClick={() => setFStatus(k)} className={`px-2 py-0.5 rounded text-[11px] font-medium transition-all ${fStatus === k ? "bg-white text-[#0168dd] shadow-sm" : "text-[#6b7280] hover:text-[#111827]"}`}>{label}</button>
                   ))}
                 </div>
               </div>
@@ -5739,20 +6034,20 @@ function V1gFundingScheduleDialog({ open, onClose }: { open: boolean; onClose: (
               const meta = v1gProviderMeta[fProvider];
               const shortfall = acct && acct.balance !== undefined && acct.needed !== undefined ? acct.needed - acct.balance : null;
               return (
-                <div className="mt-3 flex items-center justify-between gap-3 bg-[#f9f9fc] border border-[#e8eaf0] rounded-lg px-3 py-2.5">
+                <div className="mt-3 flex items-center justify-between gap-3 bg-[#f9fafb] border border-[#e5e7eb] rounded-lg px-3 py-2.5">
                   <div className="flex items-center gap-2 min-w-0">
                     <ProviderLogo id={fProvider} size={22} />
                     <div>
-                      <p className="text-xs font-semibold text-[#1a1e35]">{meta.name}</p>
-                      <p className="text-[10px] text-[#8a8fa8]">{acct?.balance !== undefined
-                        ? <>Balance <span className="font-semibold text-[#1a1e35]">{fmt0(acct.balance)}</span></>
+                      <p className="text-xs font-semibold text-[#111827]">{meta.name}</p>
+                      <p className="text-[10px] text-[#6b7280]">{acct?.balance !== undefined
+                        ? <>Balance <span className="font-semibold text-[#111827]">{fmt0(acct.balance)}</span></>
                         : "Balance unavailable"}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3 flex-shrink-0">
                     {acct?.status === "needs-funding" && shortfall !== null && shortfall > 0 && (
                       <div className="text-right">
-                        <p className="text-[10px] text-[#8a8fa8]">Add to cover</p>
+                        <p className="text-[10px] text-[#6b7280]">Add to cover</p>
                         <p className="text-xs font-bold text-amber-600">+{fmt0(shortfall)}</p>
                       </div>
                     )}
@@ -5772,36 +6067,36 @@ function V1gFundingScheduleDialog({ open, onClose }: { open: boolean; onClose: (
           {/* body — timeline (scrolls) */}
           <div className="flex-1 overflow-y-auto px-6 py-4">
             {rows.length === 0 ? (
-              <p className="text-center text-[12px] text-[#8a8fa8] py-10">No funding dates match these filters.</p>
+              <p className="text-center text-[12px] text-[#6b7280] py-10">No funding dates match these filters.</p>
             ) : (
               <div className="relative">
-                <div className="absolute left-[4px] top-3 bottom-3 w-px bg-[#e8eaf0]" />
+                <div className="absolute left-[4px] top-3 bottom-3 w-px bg-[#e5e7eb]" />
                 <div className="space-y-6">
                   {rows.map(e => {
                     const total = v1gSum(e);
                     const projected = e.tag === "projected";
-                    const dot = e.funded ? "bg-emerald-400" : e.tag === "next" ? "bg-[#0168dd]" : projected ? "bg-[#c0c3d3]" : "bg-amber-400";
+                    const dot = e.funded ? "bg-emerald-400" : e.tag === "next" ? "bg-[#0168dd]" : projected ? "bg-[#d1d5db]" : "bg-amber-400";
                     return (
                       <div key={e.date} className="relative pl-6">
                         <div className={`absolute left-0 top-[5px] w-[9px] h-[9px] rounded-full ring-2 ring-white ${dot}`} />
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2">
-                            <span className={`text-sm font-semibold ${projected ? "text-[#8a8fa8]" : "text-[#1a1e35]"}`}>{e.dow}, {e.date}</span>
+                            <span className={`text-sm font-semibold ${projected ? "text-[#6b7280]" : "text-[#111827]"}`}>{e.dow}, {e.date}</span>
                             {e.tag === "next" && <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-[#e8f2fd] text-[#0168dd]">next payday</span>}
-                            {projected && <span className="text-[10px] text-[#c0c3d3]">· projected</span>}
+                            {projected && <span className="text-[10px] text-[#d1d5db]">· projected</span>}
                             {e.funded && <span className="text-[10px] text-emerald-600 font-medium flex items-center gap-0.5">{check} funded</span>}
                           </div>
-                          <span className={`text-sm font-bold ${e.funded ? "text-emerald-600" : projected ? "text-[#8a8fa8]" : "text-[#5b607a]"}`}>{fmt0(total)}</span>
+                          <span className={`text-sm font-bold ${e.funded ? "text-emerald-600" : projected ? "text-[#6b7280]" : "text-[#4b5563]"}`}>{fmt0(total)}</span>
                         </div>
                         <div className="flex flex-wrap gap-1.5">
                           {e.providers.map(p => {
                             const meta = v1gProviderMeta[p.id];
                             return (
-                              <span key={p.id} className={`inline-flex items-center gap-1.5 rounded-full border pl-1 pr-2.5 py-1 bg-[#f9f9fc] ${e.funded ? "border-[#eef0f4] opacity-70" : "border-[#e8eaf0]"}`}>
+                              <span key={p.id} className={`inline-flex items-center gap-1.5 rounded-full border pl-1 pr-2.5 py-1 bg-[#f9fafb] ${e.funded ? "border-[#f3f4f6] opacity-70" : "border-[#e5e7eb]"}`}>
                                 <ProviderLogo id={p.id} size={16} />
-                                <span className="text-[11px] font-medium text-[#1a1e35]">{meta.name}</span>
-                                {!meta.balanceReadable && <span className="text-[9px] text-[#c0c3d3]">est.</span>}
-                                <span className="text-[11px] font-bold text-[#5b607a]">+{fmt0(p.amount)}</span>
+                                <span className="text-[11px] font-medium text-[#111827]">{meta.name}</span>
+                                {!meta.balanceReadable && <span className="text-[9px] text-[#d1d5db]">est.</span>}
+                                <span className="text-[11px] font-bold text-[#4b5563]">+{fmt0(p.amount)}</span>
                               </span>
                             );
                           })}
@@ -5811,16 +6106,16 @@ function V1gFundingScheduleDialog({ open, onClose }: { open: boolean; onClose: (
                   })}
                 </div>
                 {anyEst && (
-                  <p className="text-[10px] text-[#a0a4b8] leading-snug mt-4">· est. — PayPal balance is unavailable, so the figure is the payout routed to it, not a confirmed gap.</p>
+                  <p className="text-[10px] text-[#9ca3af] leading-snug mt-4">· est. — PayPal balance is unavailable, so the figure is the payout routed to it, not a confirmed gap.</p>
                 )}
               </div>
             )}
           </div>
 
           {/* footer (sticky) */}
-          <div className="px-6 py-3 border-t border-[#e8eaf0] flex items-center justify-between flex-shrink-0">
-            <span className="text-[11px] text-[#8a8fa8]">Showing June + next payday · follows your range</span>
-            <button className="flex items-center gap-1.5 text-xs font-semibold border border-[#e8eaf0] rounded-lg px-3 py-1.5 text-[#1a1e35] hover:bg-[#f5f6fa] transition-colors"><Download size={13} /> Export</button>
+          <div className="px-6 py-3 flex items-center justify-between flex-shrink-0">
+            <span className="text-[11px] text-[#6b7280]">Showing June + next payday · follows your range</span>
+            <button className="flex items-center gap-1.5 text-xs font-semibold border border-[#e5e7eb] rounded-lg px-3 py-1.5 text-[#111827] hover:bg-[#f9fafb] transition-colors"><Download size={13} /> Export</button>
           </div>
         </div>
       </div>
@@ -5832,14 +6127,14 @@ function Version1G({ showStatusBreakdown, seasonalityOn }: { showStatusBreakdown
   const [bottomTab, setBottomTab] = useState<"history"|"future">("history");
   return (
     <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
-      <h1 className="text-xl font-semibold text-[#1a1e35]">Payments report</h1>
+      <h1 className="text-xl font-semibold text-[#111827]">Payments report</h1>
       <V1gPredictivePanel showStatusBreakdown={showStatusBreakdown} seasonalityOn={seasonalityOn} />
       <FundYourAccountsPanel showBars={false} />
       <div>
-        <p className="text-base font-semibold text-[#1a1e35] mb-3">Payment Activity</p>
-        <div className="flex items-center gap-0 mb-3 border-b border-[#e8eaf0]">
+        <p className="text-base font-semibold text-[#111827] mb-3">Payment Activity</p>
+        <div className="flex items-center gap-0 mb-3 border-b border-[#e5e7eb]">
           {([["history","Payment History"],["future","Future Tracked So Far"]] as const).map(([id, label]) => (
-            <button key={id} onClick={() => setBottomTab(id)} className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${bottomTab === id ? "border-[#0168dd] text-[#0168dd]" : "border-transparent text-[#8a8fa8] hover:text-[#1a1e35]"}`}>{label}</button>
+            <button key={id} onClick={() => setBottomTab(id)} className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${bottomTab === id ? "border-[#0168dd] text-[#0168dd]" : "border-transparent text-[#6b7280] hover:text-[#111827]"}`}>{label}</button>
           ))}
         </div>
         {bottomTab === "history" ? <V1PaymentHistory /> : <V1FutureTracked />}
@@ -5852,13 +6147,13 @@ function Version1H({ showStatusBreakdown, seasonalityOn }: { showStatusBreakdown
   const [bottomTab, setBottomTab] = useState<"history"|"future">("history");
   return (
     <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
-      <h1 className="text-xl font-semibold text-[#1a1e35]">Payments report</h1>
+      <h1 className="text-xl font-semibold text-[#111827]">Payments report</h1>
       <V1gPredictivePanel showStatusBreakdown={showStatusBreakdown} seasonalityOn={seasonalityOn} sideFund />
       <div>
-        <p className="text-base font-semibold text-[#1a1e35] mb-3">Payment Activity</p>
-        <div className="flex items-center gap-0 mb-3 border-b border-[#e8eaf0]">
+        <p className="text-base font-semibold text-[#111827] mb-3">Payment Activity</p>
+        <div className="flex items-center gap-0 mb-3 border-b border-[#e5e7eb]">
           {([["history","Payment History"],["future","Future Tracked So Far"]] as const).map(([id, label]) => (
-            <button key={id} onClick={() => setBottomTab(id)} className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${bottomTab === id ? "border-[#0168dd] text-[#0168dd]" : "border-transparent text-[#8a8fa8] hover:text-[#1a1e35]"}`}>{label}</button>
+            <button key={id} onClick={() => setBottomTab(id)} className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${bottomTab === id ? "border-[#0168dd] text-[#0168dd]" : "border-transparent text-[#6b7280] hover:text-[#111827]"}`}>{label}</button>
           ))}
         </div>
         {bottomTab === "history" ? <V1PaymentHistory /> : <V1FutureTracked />}
@@ -5873,13 +6168,13 @@ function Version1I({ showStatusBreakdown, seasonalityOn }: { showStatusBreakdown
   const [bottomTab, setBottomTab] = useState<"history"|"future">("history");
   return (
     <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
-      <h1 className="text-xl font-semibold text-[#1a1e35]">Payments report</h1>
+      <h1 className="text-xl font-semibold text-[#111827]">Payments report</h1>
       <V1gPredictivePanel showStatusBreakdown={showStatusBreakdown} seasonalityOn={seasonalityOn} sideFund v1i />
       <div>
-        <p className="text-base font-semibold text-[#1a1e35] mb-3">Payment Activity</p>
-        <div className="flex items-center gap-0 mb-3 border-b border-[#e8eaf0]">
+        <p className="text-base font-semibold text-[#111827] mb-3">Payment Activity</p>
+        <div className="flex items-center gap-0 mb-3 border-b border-[#e5e7eb]">
           {([["history","Payment History"],["future","Future Tracked So Far"]] as const).map(([id, label]) => (
-            <button key={id} onClick={() => setBottomTab(id)} className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${bottomTab === id ? "border-[#0168dd] text-[#0168dd]" : "border-transparent text-[#8a8fa8] hover:text-[#1a1e35]"}`}>{label}</button>
+            <button key={id} onClick={() => setBottomTab(id)} className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${bottomTab === id ? "border-[#0168dd] text-[#0168dd]" : "border-transparent text-[#6b7280] hover:text-[#111827]"}`}>{label}</button>
           ))}
         </div>
         {bottomTab === "history" ? <V1PaymentHistory /> : <V1FutureTracked />}
@@ -5892,13 +6187,13 @@ function Version1J({ showStatusBreakdown, seasonalityOn }: { showStatusBreakdown
   const [bottomTab, setBottomTab] = useState<"history"|"future">("history");
   return (
     <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
-      <h1 className="text-xl font-semibold text-[#1a1e35]">Payments report</h1>
+      <h1 className="text-xl font-semibold text-[#111827]">Payments report</h1>
       <V1gPredictivePanel showStatusBreakdown={showStatusBreakdown} seasonalityOn={seasonalityOn} v1i v1j />
       <div>
-        <p className="text-base font-semibold text-[#1a1e35] mb-3">Payment Activity</p>
-        <div className="flex items-center gap-0 mb-3 border-b border-[#e8eaf0]">
+        <p className="text-base font-semibold text-[#111827] mb-3">Payment Activity</p>
+        <div className="flex items-center gap-0 mb-3 border-b border-[#e5e7eb]">
           {([["history","Payment History"],["future","Future Tracked So Far"]] as const).map(([id, label]) => (
-            <button key={id} onClick={() => setBottomTab(id)} className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${bottomTab === id ? "border-[#0168dd] text-[#0168dd]" : "border-transparent text-[#8a8fa8] hover:text-[#1a1e35]"}`}>{label}</button>
+            <button key={id} onClick={() => setBottomTab(id)} className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${bottomTab === id ? "border-[#0168dd] text-[#0168dd]" : "border-transparent text-[#6b7280] hover:text-[#111827]"}`}>{label}</button>
           ))}
         </div>
         {bottomTab === "history" ? <V1PaymentHistory /> : <V1FutureTracked />}
@@ -5911,13 +6206,13 @@ function Version1K({ showStatusBreakdown, seasonalityOn }: { showStatusBreakdown
   const [bottomTab, setBottomTab] = useState<"history"|"future">("history");
   return (
     <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
-      <h1 className="text-xl font-semibold text-[#1a1e35]">Payments report</h1>
+      <h1 className="text-xl font-semibold text-[#111827]">Payments report</h1>
       <V1gPredictivePanel showStatusBreakdown={showStatusBreakdown} seasonalityOn={seasonalityOn} v1i v1j v1k />
       <div>
-        <p className="text-base font-semibold text-[#1a1e35] mb-3">Payment Activity</p>
-        <div className="flex items-center gap-0 mb-3 border-b border-[#e8eaf0]">
+        <p className="text-base font-semibold text-[#111827] mb-3">Payment Activity</p>
+        <div className="flex items-center gap-0 mb-3 border-b border-[#e5e7eb]">
           {([["history","Payment History"],["future","Future Tracked So Far"]] as const).map(([id, label]) => (
-            <button key={id} onClick={() => setBottomTab(id)} className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${bottomTab === id ? "border-[#0168dd] text-[#0168dd]" : "border-transparent text-[#8a8fa8] hover:text-[#1a1e35]"}`}>{label}</button>
+            <button key={id} onClick={() => setBottomTab(id)} className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${bottomTab === id ? "border-[#0168dd] text-[#0168dd]" : "border-transparent text-[#6b7280] hover:text-[#111827]"}`}>{label}</button>
           ))}
         </div>
         {bottomTab === "history" ? <V1PaymentHistory /> : <V1FutureTracked />}
@@ -5937,13 +6232,13 @@ function Version1L({ showStatusBreakdown, seasonalityOn }: { showStatusBreakdown
   return (
     <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
       <div className="flex items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold text-[#1a1e35]">Payments report</h1>
-        <div className="flex bg-[#f0f1f5] rounded-lg p-0.5">
+        <h1 className="text-xl font-semibold text-[#111827]">Payments report</h1>
+        <div className="flex bg-[#f3f4f6] rounded-lg p-0.5">
           {([["detailed","Detailed"],["condensed","Condensed"]] as const).map(([k, label]) => {
             const active = (k === "condensed") === dense;
             return (
               <button key={k} onClick={() => setDense(k === "condensed")}
-                className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${active ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>{label}</button>
+                className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${active ? "bg-white text-[#0168dd] shadow-sm" : "text-[#6b7280] hover:text-[#111827]"}`}>{label}</button>
             );
           })}
         </div>
@@ -5951,7 +6246,7 @@ function Version1L({ showStatusBreakdown, seasonalityOn }: { showStatusBreakdown
       <V1gPredictivePanel showStatusBreakdown={showStatusBreakdown} seasonalityOn={seasonalityOn} v1i v1j v1k v1l condensed={dense} onProviderClick={setDetailProvider} />
       {/* "Future Tracked So Far" tab retired — its detail now lives in the future-payment page (item E) */}
       <div>
-        <p className="text-base font-semibold text-[#1a1e35] mb-3">Payment History</p>
+        <p className="text-base font-semibold text-[#111827] mb-3">Payment History</p>
         <V1PaymentHistory />
       </div>
     </div>
@@ -5977,14 +6272,14 @@ function Version1M({ showStatusBreakdown, seasonalityOn }: { showStatusBreakdown
 
   return (
     <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
-      <h1 className="text-xl font-semibold text-[#1a1e35]">Payments report</h1>
+      <h1 className="text-xl font-semibold text-[#111827]">Payments report</h1>
       {/* Detailed/Condensed toggle hidden in 1M (still available in 1L); 1M stays Detailed */}
       <V1gPredictivePanel showStatusBreakdown={showStatusBreakdown} seasonalityOn={seasonalityOn} v1i v1j v1k v1l v1m condensed={dense} onProviderClick={openFuture} />
       <div ref={activityRef}>
-        <p className="text-base font-semibold text-[#1a1e35] mb-3">Payment Activity</p>
-        <div className="flex items-center gap-0 mb-6 border-b border-[#e8eaf0]">
+        <p className="text-base font-semibold text-[#111827] mb-3">Payment Activity</p>
+        <div className="flex items-center gap-0 mb-6 border-b border-[#e5e7eb]">
           {([["history","Payment History"],["future","Future Tracked So Far"]] as const).map(([id, label]) => (
-            <button key={id} onClick={() => setBottomTab(id)} className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${bottomTab === id ? "border-[#0168dd] text-[#0168dd]" : "border-transparent text-[#8a8fa8] hover:text-[#1a1e35]"}`}>{label}</button>
+            <button key={id} onClick={() => setBottomTab(id)} className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${bottomTab === id ? "border-[#0168dd] text-[#0168dd]" : "border-transparent text-[#6b7280] hover:text-[#111827]"}`}>{label}</button>
           ))}
         </div>
         {bottomTab === "history" ? <V1PaymentHistory /> : <V1mFutureTracked provider={futureProvider} period={futurePeriod} onProviderChange={setFutureProvider} onPeriodChange={setFuturePeriod} />}
@@ -6010,13 +6305,13 @@ function Version1N({ showStatusBreakdown, seasonalityOn }: { showStatusBreakdown
 
   return (
     <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
-      <h1 className="text-xl font-semibold text-[#1a1e35]">Payments report</h1>
+      <h1 className="text-xl font-semibold text-[#111827]">Payments report</h1>
       <V1gPredictivePanel showStatusBreakdown={showStatusBreakdown} seasonalityOn={seasonalityOn} v1i v1j v1k v1l v1m condensed={dense} onProviderClick={openFuture} />
       <div ref={activityRef}>
-        <p className="text-base font-semibold text-[#1a1e35] mb-3">Payment Activity</p>
-        <div className="flex items-center gap-0 mb-6 border-b border-[#e8eaf0]">
+        <p className="text-base font-semibold text-[#111827] mb-3">Payment Activity</p>
+        <div className="flex items-center gap-0 mb-6 border-b border-[#e5e7eb]">
           {([["history","Payment History"],["future","Future Tracked So Far"]] as const).map(([id, label]) => (
-            <button key={id} onClick={() => setBottomTab(id)} className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${bottomTab === id ? "border-[#0168dd] text-[#0168dd]" : "border-transparent text-[#8a8fa8] hover:text-[#1a1e35]"}`}>{label}</button>
+            <button key={id} onClick={() => setBottomTab(id)} className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${bottomTab === id ? "border-[#0168dd] text-[#0168dd]" : "border-transparent text-[#6b7280] hover:text-[#111827]"}`}>{label}</button>
           ))}
         </div>
         {bottomTab === "history" ? <V1PaymentHistory /> : <V1mFutureTracked provider={futureProvider} period={futurePeriod} onProviderChange={setFutureProvider} onPeriodChange={setFuturePeriod} grouped />}
@@ -6026,11 +6321,236 @@ function Version1N({ showStatusBreakdown, seasonalityOn }: { showStatusBreakdown
 }
 
 // Final UI — exact copy of 1N; the version we'll iterate the final shell/styling on.
-function VersionFinalUI({ showStatusBreakdown, seasonalityOn }: { showStatusBreakdown: boolean; seasonalityOn: boolean }) {
+// Zone empty-state illustration ("no data") — design-system asset from Figma DD0eEumGwzGfrPbb7q2iak
+// node 9343:19846, inlined as a data URI so it survives the Figma asset-URL expiry and deploys cleanly.
+const ZONE_EMPTY_ILLUSTRATION = "data:image/svg+xml;base64,PHN2ZyBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIiBvdmVyZmxvdz0idmlzaWJsZSIgc3R5bGU9ImRpc3BsYXk6IGJsb2NrOyIgd2lkdGg9Ijg2IiBoZWlnaHQ9Ijc0IiB2aWV3Qm94PSIwIDAgODYgNzQiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxnIGlkPSJlbXB0eSI+CjxwYXRoIGlkPSJWZWN0b3IiIGZpbGwtcnVsZT0iZXZlbm9kZCIgY2xpcC1ydWxlPSJldmVub2RkIiBkPSJNMTAuMTE3MiAyNi44NzA3QzQuMzA4MjYgMzYuNjY2OCAxLjI4NDU3IDQ5LjQ0NzUgNy4yMzczOSA1OS4wOTc3QzEyLjc4ODkgNjguMDk3MiAyNS41ODQ0IDY2LjQ0MjIgMzUuOTY2MSA2OC43NzQ1QzQ1Ljk4MDcgNzEuMDI0NCA1Ni4wNjQ1IDc3LjA1NzUgNjUuMDY5IDcyLjA5Qzc1LjMwNTcgNjYuNDQyNiA4MS4wOTA3IDU1LjAyMjkgODEuODc3MyA0My40NDY1QzgyLjcxMzUgMzEuMTQwMyA3OS4zNTkzIDE3Ljc2OTUgNjkuMjQyNiAxMC42NjU2QzU5LjY3MjEgMy45NDUxNSA0Ny4wNzU3IDcuOTM0NTggMzUuNzMyNyAxMS4wNDM1QzI1LjU0MjggMTMuODM2MyAxNS40ODQyIDE3LjgxOTggMTAuMTE3MiAyNi44NzA3WiIgZmlsbD0iI0YxRjdGRiIvPgo8ZyBpZD0iYm94IiBmaWx0ZXI9InVybCgjZmlsdGVyMF9kXzBfNDgpIj4KPHBhdGggaWQ9IlBhdGgiIGQ9Ik0xMC42NjAxIDIxLjQ4MTFINzUuNTc1NFY1Mi42NDExQzc1LjU3NTQgNTMuOTg2NCA3NC40ODQ4IDU1LjA3NzEgNzMuMTM5NCA1NS4wNzcxSDEzLjA5NjFDMTEuNzUwNyA1NS4wNzcxIDEwLjY2MDEgNTMuOTg2NCAxMC42NjAxIDUyLjY0MTFWMjEuNDgxMVoiIGZpbGw9IiNCOEM5RTAiLz4KPHBhdGggaWQ9IlBhdGhfMiIgZD0iTTEwLjQ5MzggOS42NzE3NUw0LjE1OTI2IDIzLjYwNzVDMy45MTg0OCAyNC4xMTAzIDMuOTUyNDggMjQuNzAxNSA0LjI0OTMyIDI1LjE3MzVDNC41NDYxNSAyNS42NDU0IDUuMDY0MzMgMjUuOTMyMSA1LjYyMTg1IDI1LjkzMjhIODAuMzc2NEM4MC45NDYxIDI1LjkzMjggODEuNDc0MiAyNS42MzQgODEuNzY3OCAyNS4xNDU3QzgyLjA2MTQgMjQuNjU3NCA4Mi4wNzc2IDI0LjA1MDkgODEuODEwNSAyMy41NDc2TDc1LjYwNyA5LjY3MTc1SDEwLjQ5MzhaIiBmaWxsPSIjRTRFRUZDIi8+CjxwYXRoIGlkPSJQYXRoXzMiIGQ9Ik02Mi40OTA5IDBMNzUuNjA2NSA5LjY3MTc3SDEwLjQ4ODNMMjMuNTMzOSAwSDYyLjQ5MDlaIiBmaWxsPSIjQ0REQkVFIi8+CjxwYXRoIGlkPSJQYXRoXzQiIGQ9Ik0yMy41MzM5IDBWOS42NzE3N0gxMC40ODgzTDIzLjUzMzkgMFoiIGZpbGw9IiNCOEM5RTAiLz4KPHBhdGggaWQ9IlBhdGhfNSIgZD0iTTYyLjQ5MiAwVjkuNjY0NjdMNzUuNjA3NiA5LjY3MTc3TDYyLjQ5MiAwWiIgZmlsbD0iI0I4QzlFMCIvPgo8L2c+CjwvZz4KPGRlZnM+CjxmaWx0ZXIgaWQ9ImZpbHRlcjBfZF8wXzQ4IiB4PSItMi41MzY0N2UtMDkiIHk9IjAiIHdpZHRoPSI4NiIgaGVpZ2h0PSI2My4wNzcxIiBmaWx0ZXJVbml0cz0idXNlclNwYWNlT25Vc2UiIGNvbG9yLWludGVycG9sYXRpb24tZmlsdGVycz0ic1JHQiI+CjxmZUZsb29kIGZsb29kLW9wYWNpdHk9IjAiIHJlc3VsdD0iQmFja2dyb3VuZEltYWdlRml4Ii8+CjxmZUNvbG9yTWF0cml4IGluPSJTb3VyY2VBbHBoYSIgdHlwZT0ibWF0cml4IiB2YWx1ZXM9IjAgMCAwIDAgMCAwIDAgMCAwIDAgMCAwIDAgMCAwIDAgMCAwIDEyNyAwIiByZXN1bHQ9ImhhcmRBbHBoYSIvPgo8ZmVPZmZzZXQgZHk9IjQiLz4KPGZlR2F1c3NpYW5CbHVyIHN0ZERldmlhdGlvbj0iMiIvPgo8ZmVDb21wb3NpdGUgaW4yPSJoYXJkQWxwaGEiIG9wZXJhdG9yPSJvdXQiLz4KPGZlQ29sb3JNYXRyaXggdHlwZT0ibWF0cml4IiB2YWx1ZXM9IjAgMCAwIDAgMCAwIDAgMCAwIDAgMCAwIDAgMCAwIDAgMCAwIDAuMDUgMCIvPgo8ZmVCbGVuZCBtb2RlPSJub3JtYWwiIGluMj0iQmFja2dyb3VuZEltYWdlRml4IiByZXN1bHQ9ImVmZmVjdDFfZHJvcFNoYWRvd18wXzQ4Ii8+CjxmZUJsZW5kIG1vZGU9Im5vcm1hbCIgaW49IlNvdXJjZUdyYXBoaWMiIGluMj0iZWZmZWN0MV9kcm9wU2hhZG93XzBfNDgiIHJlc3VsdD0ic2hhcGUiLz4KPC9maWx0ZXI+CjwvZGVmcz4KPC9zdmc+Cg==";
+
+// Cold-start empty state (spec §5.3): no pay rates, pay periods, tracked hours, or history —
+// nothing can be projected, so each section guides the two setup prerequisites (set pay rates
+// + start tracking time) instead of showing data. No CSV import path (out of MVP scope).
+function FinalSectionEmpty({ title, body, children, pad = "py-12" }: { icon?: ReactNode; title: string; body: string; children?: ReactNode; pad?: string }) {
+  return (
+    <div className={`flex flex-col items-center justify-center text-center px-6 ${pad}`}>
+      <img src={ZONE_EMPTY_ILLUSTRATION} alt="" className="w-20 h-auto mb-2.5" aria-hidden="true" />
+      <p className="text-lg font-medium text-[#111827] leading-[26px] mb-[5px]">{title}</p>
+      <p className="text-sm text-[#4b5563] leading-5 max-w-[360px]">{body}</p>
+      {children}
+    </div>
+  );
+}
+
+// Sample roster for the V3 empty-state "members missing setup" popovers.
+const EMPTY_ROSTER: { name: string; initials: string; color: string }[] = [
+  { name: "Marcus Chen", initials: "MC", color: "#0e9f6e" },
+  { name: "Aurora Arjomilla", initials: "AA", color: "#0168dd" },
+  { name: "Liam O'Brien", initials: "LO", color: "#0e9f6e" },
+  { name: "Priya Nair", initials: "PN", color: "#e5764e" },
+  { name: "Emma Novak", initials: "EN", color: "#8b5cf6" },
+  { name: "Diego Santos", initials: "DS", color: "#f59e0b" },
+  { name: "Omar Haddad", initials: "OH", color: "#0e9f6e" },
+  { name: "Zara Ali", initials: "ZA", color: "#8b5cf6" },
+  { name: "Noah Kim", initials: "NK", color: "#0168dd" },
+  { name: "Chloe Dubois", initials: "CD", color: "#e5764e" },
+  { name: "Yuki Tanaka", initials: "YT", color: "#8b5cf6" },
+  { name: "Sofia Rossi", initials: "SR", color: "#e5764e" },
+  { name: "James Okafor", initials: "JO", color: "#2f8af4" },
+  { name: "Marta Kowalski", initials: "MK", color: "#f59e0b" },
+];
+
+function FinalUIEmptyBody({ ver }: { ver: 1 | 2 | 3 }) {
+  const [tab, setTab] = useState<"history" | "future">("history");
+  const [showExample, setShowExample] = useState(false); // "See an example" preview modal
+  const [learnMore, setLearnMore] = useState<null | "rates" | "tracking">(null); // per-step "Learn more" how-to dialog
+  const [memberList, setMemberList] = useState<null | "rates" | "tracking">(null); // V3 "N members with no …" list popover
+  // V3 per-step status: a count of who's still missing (opens a member-list popover), or an "all set up" state at 0.
+  const memberStatus = (kind: "rates" | "tracking", missing: number, noun: string) => (
+    missing === 0 ? (
+      <p className="inline-flex items-center gap-1.5 text-[13px] font-medium text-[#0e9f6e]"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg> You&apos;re all set up</p>
+    ) : (
+      <div className="relative">
+        <a href="#" onClick={(e) => { e.preventDefault(); setMemberList(memberList === kind ? null : kind); }} className="inline-flex items-center gap-1.5 text-[13px] font-medium text-[#c2410c] hover:text-[#9a3412] transition-colors">
+          <AlertTriangle size={13} className="flex-shrink-0" aria-hidden="true" /> {missing} members with no {noun}
+        </a>
+        {memberList === kind && (<>
+          <div className="fixed inset-0 z-20" onClick={() => setMemberList(null)} />
+          <div className="absolute left-0 top-6 z-30 w-60 bg-white rounded-lg border border-[#e5e7eb] shadow-xl overflow-hidden">
+            <div className="px-3 py-2 border-b border-[#f3f4f6]"><p className="text-[11px] font-semibold uppercase tracking-wide text-[#6b7280]">No {noun} · {missing}</p></div>
+            <div className="max-h-56 overflow-y-auto py-1">
+              {EMPTY_ROSTER.map(m => (
+                <div key={m.name} className="flex items-center gap-2 px-3 py-1.5">
+                  <span className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-semibold text-white flex-shrink-0" style={{ background: m.color }} aria-hidden="true">{m.initials}</span>
+                  <span className="text-[13px] text-[#111827] truncate">{m.name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>)}
+      </div>
+    )
+  );
+  // Funding-schedule empty card (header + Zone illustration + get-started guide + step cards).
+  // Shared by V1 (col-span-9 in the grid) and V2 (full-width single card).
+  const fundingCard = (cls: string, showHeader: boolean, v3 = false) => (
+    <div className={`bg-white rounded-lg border border-[#e5e7eb] flex flex-col ${cls}`}>
+      {showHeader && (
+        <div className="px-4 flex items-center gap-3 border-b bg-white rounded-t-lg h-[60px] border-[#e5e7eb]">
+          <p className="text-lg font-medium text-[#111827]">Funding schedule</p>
+        </div>
+      )}
+      <div className="px-6 py-10 flex-1 flex flex-col items-center justify-center text-center">
+        <img src={ZONE_EMPTY_ILLUSTRATION} alt="" className="w-20 h-auto mb-2.5" aria-hidden="true" />
+        <p className="text-lg font-medium text-[#111827] leading-[26px] mb-[5px]">Set up payroll to see your funding</p>
+        <p className="text-sm text-[#4b5563] leading-5 max-w-[460px]">We project your funding from your team&apos;s pay rates and tracked time. Add both, and your estimated payroll, funding schedule, and month-over-month trends fill in automatically — an estimate at first (no history yet) that sharpens each cycle. <a href="#" onClick={(e) => { e.preventDefault(); setShowExample(true); }} className="font-medium text-[#0168dd] underline underline-offset-2 hover:text-[#0057bb]">See an example</a></p>
+        <div className="flex items-stretch gap-4 mt-5 w-full max-w-[720px] text-left">
+          {/* Zone step card — reproduced from Figma node 81:283 (pixel-perfect) */}
+          <div className="flex-1 min-w-0 bg-white border border-[#e5e7eb] rounded-lg p-6 flex flex-col gap-3">
+            <div className="flex items-center justify-between gap-2 w-full">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="material-symbols-rounded flex-shrink-0 text-[#4b5563] leading-none" style={{ fontSize: 24, fontVariationSettings: '"FILL" 0' }} aria-hidden="true">tune</span>
+                <p className="text-base font-semibold text-[#111827] leading-6 truncate">1 . Set pay rates</p>
+              </div>
+              <button onClick={e => e.preventDefault()} className={zbtn("outlinePrimary", "sm", "flex-shrink-0")}>Set pay rates</button>
+            </div>
+            <p className="text-sm text-[#6b7280] leading-5">So we know what each member earns. <a href="#" onClick={(e) => { e.preventDefault(); setLearnMore("rates"); }} className="font-medium text-[#0168dd] underline underline-offset-2 hover:text-[#0057bb]">Learn more</a></p>
+            {v3 && memberStatus("rates", 103, "pay rates")}
+          </div>
+          <div className="flex-1 min-w-0 bg-white border border-[#e5e7eb] rounded-lg p-6 flex flex-col gap-3">
+            <div className="flex items-center justify-between gap-2 w-full">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="material-symbols-rounded flex-shrink-0 text-[#4b5563] leading-none" style={{ fontSize: 24, fontVariationSettings: '"FILL" 0' }} aria-hidden="true">schedule</span>
+                <p className="text-base font-semibold text-[#111827] leading-6 truncate">2 . Tracking Time</p>
+              </div>
+              <button onClick={e => e.preventDefault()} className={zbtn("outlinePrimary", "sm", "flex-shrink-0")}>Start</button>
+            </div>
+            <p className="text-sm text-[#6b7280] leading-5">So we can project hours worked. <a href="#" onClick={(e) => { e.preventDefault(); setLearnMore("tracking"); }} className="font-medium text-[#0168dd] underline underline-offset-2 hover:text-[#0057bb]">Learn more</a></p>
+            {v3 && memberStatus("tracking", 105, "tracked time")}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+  return (
+    <>
+      {ver === 1 ? (<>
+      <div className="grid grid-cols-12 gap-6 items-stretch">
+        {/* Estimated Payroll — compact empty */}
+        <div className="col-span-3 bg-white rounded-lg border border-[#e5e7eb] flex flex-col">
+          <div className="px-4 flex items-center border-b bg-white rounded-t-lg h-[60px] border-[#e5e7eb]">
+            <p className="text-lg font-medium text-[#111827]">Estimated Payroll <span className="text-[#6b7280] font-normal whitespace-nowrap">· June 2026</span></p>
+          </div>
+          <div className="px-4 py-8 flex-1 flex flex-col items-center justify-center text-center">
+            <img src={ZONE_EMPTY_ILLUSTRATION} alt="" className="w-20 h-auto mb-2.5" aria-hidden="true" />
+            <p className="text-lg font-medium text-[#111827] leading-[26px] mb-[5px]">No estimate yet</p>
+            <p className="text-sm text-[#4b5563] leading-5">Add pay rates and track time to project your monthly payroll.</p>
+          </div>
+        </div>
+        {fundingCard("col-span-9", true)}
+      </div>
+      {/* Explore chart — empty */}
+      <div className="bg-white rounded-lg border border-[#e5e7eb] overflow-hidden">
+        <div className="flex items-center gap-3 border-b border-[#e5e7eb] bg-white px-4 h-[60px]">
+          <p className="text-lg font-medium text-[#111827]">Explore your payments over time</p>
+        </div>
+        <FinalSectionEmpty pad="py-14" icon={<TrendingUp size={20} />} title="No trends yet" body="Your month-over-month payroll trend appears here once you have a few completed pay cycles." />
+      </div>
+      </>) : ver === 2 ? fundingCard("", false) : fundingCard("", false, true)}
+      {/* Payment Activity — two tabs, each empty */}
+      <div className="pt-2">
+        <p className="text-lg font-medium text-[#111827] mb-3">Payment Activity</p>
+        <div className="flex items-center gap-0 mb-6 border-b border-[#e5e7eb]">
+          <button onClick={() => setTab("history")} className={`px-4 py-2.5 text-sm font-medium uppercase tracking-wide border-b-2 transition-colors -mb-px ${tab === "history" ? "border-[#0168dd] text-[#0168dd]" : "border-transparent text-[#6b7280] hover:text-[#111827]"}`}>Payment History</button>
+          <button onClick={() => setTab("future")} className={`px-4 py-2.5 text-sm font-medium uppercase tracking-wide border-b-2 transition-colors -mb-px ${tab === "future" ? "border-[#0168dd] text-[#0168dd]" : "border-transparent text-[#6b7280] hover:text-[#111827]"}`}>Future Tracked So Far</button>
+        </div>
+        <div className="bg-white rounded-lg border border-[#e5e7eb]">
+          {tab === "history" ? (
+            <FinalSectionEmpty icon={<ClipboardList size={20} />} title="No payments yet" body="Once you run your first payroll, every payment shows up here — with full history by member and earning type." />
+          ) : (
+            <FinalSectionEmpty icon={<Users size={20} />} title="Nothing tracked yet" body="Set pay rates and start tracking time to see projected amounts by member — before they're paid.">
+              <div className="flex items-center gap-2 mt-4">
+                <button onClick={e => e.preventDefault()} className={zbtn("solidPrimary", "sm")}>Set pay rates</button>
+                <button onClick={e => e.preventDefault()} className={zbtn("outlineGray", "sm")}>Start time tracking</button>
+              </div>
+            </FinalSectionEmpty>
+          )}
+        </div>
+      </div>
+      {/* "See an example" — live, non-interactive preview of the filled page */}
+      {showExample && (<>
+        <div className="fixed inset-0 z-40 bg-black/40" onClick={() => setShowExample(false)} />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+          <div className="bg-white rounded-xl shadow-2xl w-[980px] max-w-[95vw] max-h-[88vh] flex flex-col pointer-events-auto overflow-hidden">
+            <div className="flex items-start justify-between px-5 py-4 border-b border-[#e5e7eb] flex-shrink-0">
+              <div>
+                <h2 className="text-base font-semibold text-[#111827]">Here&apos;s how it&apos;ll look with data</h2>
+                <p className="text-[12px] text-[#6b7280] mt-0.5">A preview of your Payments report once pay rates and tracked time start flowing in.</p>
+              </div>
+              <button onClick={() => setShowExample(false)} aria-label="Close preview" className="p-1 rounded-md text-[#6b7280] hover:text-[#111827] hover:bg-[#f3f4f6] transition-colors flex-shrink-0"><X size={18} aria-hidden="true" /></button>
+            </div>
+            <div className="flex-1 overflow-auto bg-[#f9fafb]">
+              <div className="pointer-events-none select-none origin-top-left" style={{ transform: "scale(0.6)", width: "166.6%" }} aria-hidden="true">
+                <VersionFinalUI state="filled" showStatusBreakdown={false} seasonalityOn={true} />
+              </div>
+            </div>
+            <div className="flex items-center justify-end px-5 py-3 border-t border-[#e5e7eb] flex-shrink-0">
+              <button onClick={() => setShowExample(false)} className={zbtn("solidPrimary", "md")}>Got it</button>
+            </div>
+          </div>
+        </div>
+      </>)}
+      {/* Per-step "Learn more" how-to dialog — reuses the breakdown-info dialog chrome */}
+      {learnMore && (<>
+        <div className="fixed inset-0 z-40 bg-black/30" onClick={() => setLearnMore(null)} />
+        <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-[520px] max-w-full max-h-[85vh] flex flex-col pointer-events-auto">
+            <div className="flex items-start justify-between px-5 py-5 flex-shrink-0">
+              <div><h2 className="text-lg font-semibold text-[#111827]">{learnMore === "rates" ? "Set pay rates" : "Start tracking time"}</h2></div>
+              <button onClick={() => setLearnMore(null)} aria-label="Close" className="p-1 rounded-md text-[#6b7280] hover:text-[#111827] hover:bg-[#f3f4f6] transition-colors flex-shrink-0"><X size={16} aria-hidden="true" /></button>
+            </div>
+            <div className="px-5 py-2.5 overflow-y-auto">
+              {learnMore === "rates" ? (
+                <>
+                  <p className="text-sm text-[#4b5563] leading-relaxed mb-4">So we can estimate what you&apos;ll owe each cycle, Hubstaff needs to know how much each person earns and how often you pay them.</p>
+                  <ol className="space-y-4 text-sm leading-relaxed">
+                    <li className="flex gap-3"><span className="w-6 h-6 rounded-full bg-[#f0f5ff] text-[#0168dd] text-[12px] font-semibold flex items-center justify-center flex-shrink-0">1</span><span className="text-[#6b7280]"><span className="font-semibold text-[#111827] block mb-0.5">Open a member</span>Go to <span className="font-medium text-[#111827]">Team → Members</span> and pick someone you pay.</span></li>
+                    <li className="flex gap-3"><span className="w-6 h-6 rounded-full bg-[#f0f5ff] text-[#0168dd] text-[12px] font-semibold flex items-center justify-center flex-shrink-0">2</span><span className="text-[#6b7280]"><span className="font-semibold text-[#111827] block mb-0.5">Set their pay rate</span>Add an hourly rate for tracked work, or a fixed amount per pay period.</span></li>
+                    <li className="flex gap-3"><span className="w-6 h-6 rounded-full bg-[#f0f5ff] text-[#0168dd] text-[12px] font-semibold flex items-center justify-center flex-shrink-0">3</span><span className="text-[#6b7280]"><span className="font-semibold text-[#111827] block mb-0.5">Set the pay period</span>Choose weekly, bi-weekly, semi-monthly, or monthly — this drives your funding dates.</span></li>
+                  </ol>
+                  <p className="text-[12px] text-[#9ca3af] leading-snug mt-4">Repeat for everyone you pay. Rates and pay periods can differ per person.</p>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm text-[#4b5563] leading-relaxed mb-4">Projected hourly pay comes from the time your team actually tracks. Once tracking starts, we fill in the hours-based part of each payout as the cycle runs.</p>
+                  <ol className="space-y-4 text-sm leading-relaxed">
+                    <li className="flex gap-3"><span className="w-6 h-6 rounded-full bg-[#f0f5ff] text-[#0168dd] text-[12px] font-semibold flex items-center justify-center flex-shrink-0">1</span><span className="text-[#6b7280]"><span className="font-semibold text-[#111827] block mb-0.5">Install Hubstaff</span>Have each member add the desktop, mobile, or web app from <span className="font-medium text-[#111827]">Team → Members</span>.</span></li>
+                    <li className="flex gap-3"><span className="w-6 h-6 rounded-full bg-[#f0f5ff] text-[#0168dd] text-[12px] font-semibold flex items-center justify-center flex-shrink-0">2</span><span className="text-[#6b7280]"><span className="font-semibold text-[#111827] block mb-0.5">Track to projects</span>Members start the timer while they work; hours sync automatically.</span></li>
+                    <li className="flex gap-3"><span className="w-6 h-6 rounded-full bg-[#f0f5ff] text-[#0168dd] text-[12px] font-semibold flex items-center justify-center flex-shrink-0">3</span><span className="text-[#6b7280]"><span className="font-semibold text-[#111827] block mb-0.5">Watch it fill in</span>As hours land, your estimate and funding schedule update through the cycle.</span></li>
+                  </ol>
+                  <p className="text-[12px] text-[#9ca3af] leading-snug mt-4">Fixed-pay members don&apos;t need to track — their amount is already known from their rate.</p>
+                </>
+              )}
+            </div>
+            <div className="flex items-center justify-end px-5 py-5 flex-shrink-0">
+              <button onClick={() => setLearnMore(null)} className={zbtn("solidPrimary", "md")}>Got it</button>
+            </div>
+          </div>
+        </div>
+      </>)}
+    </>
+  );
+}
+
+function VersionFinalUI({ showStatusBreakdown, seasonalityOn, state = "filled" }: { showStatusBreakdown: boolean; seasonalityOn: boolean; state?: "filled" | "initial" | "empty" }) {
+  // `state` selects which Final UI variant to render. All three are the same content today
+  // (copies) — branch on `state` here as the initial/empty states get built out.
   const dense = false;
   const [bottomTab, setBottomTab] = useState<"history"|"future">("history");
   const [futureProvider, setFutureProvider] = useState<string>("all");
   const [futurePeriod, setFuturePeriod] = useState<string>("June 2026");
+  const [ftVer, setFtVer] = useState<"v1" | "v2" | "v3">("v3"); // Future Tracked layout version — V3 is the live direction; V1/V2 kept for reference
+  const SHOW_FT_VERSION_TOGGLE = false; // toggle hidden; flip to true to compare V1/V2/V3 again
+  const [wiseVer, setWiseVer] = useState<0 | 1 | 2 | 3 | 4 | 5>(1); // Wise Interest disclosure — 0 = off, 1–5 = the five treatments
+  const [emptyVer, setEmptyVer] = useState<1 | 2 | 3>(1); // Empty-state layout variant — V1 = full, V2 = funding card + tabs, V3 = guided (member counts)
+  const wiseConnected = v1gFundSchedule.some(e => e.providers.some(p => p.id === "wise")); // only surface when Wise is a connected payout method
   const activityRef = useRef<HTMLDivElement>(null);
 
   const openFuture = (providerId: string) => {
@@ -6041,24 +6561,56 @@ function VersionFinalUI({ showStatusBreakdown, seasonalityOn }: { showStatusBrea
   };
 
   return (
-    <div className="px-6 pb-5 space-y-6" style={{ fontFamily: '"Roboto", "Helvetica Neue", Helvetica, Arial, sans-serif' }}>
+    <WiseVerContext.Provider value={wiseConnected ? wiseVer : 0}>
+    <div data-final-state={state} data-wise-ver={wiseVer} className="px-6 pb-5 space-y-6 bg-[#f9fafb] min-h-full" style={{ fontFamily: '"Roboto", "Helvetica Neue", Helvetica, Arial, sans-serif' }}>
       {/* Zone page header — real structure from hubstaff-server (shadow-md, sticky, h2 text-2xl font-light) */}
       <header className="bg-white shadow-md sticky top-12 z-20 -mx-6 px-6">
         <div className="flex justify-between items-center h-8 pt-3 pb-4 box-content">
           <h2 className="text-2xl font-light text-[#111827]">Payments report</h2>
+          {state === "empty" ? (
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-semibold uppercase tracking-widest text-[#9ca3af]">Empty state</span>
+              <div className="flex items-center bg-[#f3f4f6] rounded-lg p-0.5">
+                {([1, 2, 3] as const).map(v => (
+                  <button key={v} onClick={() => setEmptyVer(v)} className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${emptyVer === v ? "bg-white text-[#0168dd] shadow-sm" : "text-[#6b7280] hover:text-[#111827]"}`}>V{v}</button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-semibold uppercase tracking-widest text-[#9ca3af]">Wise interest</span>
+              <div className="flex items-center bg-[#f3f4f6] rounded-lg p-0.5">
+                {([[0, "Off"], [1, "1"], [2, "2"], [3, "3"], [4, "4"], [5, "5"]] as const).map(([v, label]) => (
+                  <button key={v} onClick={() => setWiseVer(v)} className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${wiseVer === v ? "bg-white text-[#0168dd] shadow-sm" : "text-[#6b7280] hover:text-[#111827]"}`}>{label}</button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </header>
+      {state === "empty" ? <FinalUIEmptyBody ver={emptyVer} /> : (<>
       <V1gPredictivePanel showStatusBreakdown={showStatusBreakdown} seasonalityOn={seasonalityOn} v1i v1j v1k v1l v1m zone condensed={dense} onProviderClick={openFuture} />
-      <div ref={activityRef}>
-        <p className="text-base font-semibold text-[#111827] mb-3">Payment Activity</p>
-        <div className="flex items-center gap-0 mb-6 border-b border-[#e5e7eb]">
-          {([["history","Payment History"],["future","Future Tracked So Far"]] as const).map(([id, label]) => (
-            <button key={id} onClick={() => setBottomTab(id)} className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${bottomTab === id ? "border-[#0168dd] text-[#0168dd]" : "border-transparent text-[#6b7280] hover:text-[#111827]"}`}>{label}</button>
-          ))}
+      <div ref={activityRef} className="pt-2">
+        <p className="text-lg font-medium text-[#111827] mb-3">Payment Activity</p>
+        <div className="flex items-center justify-between gap-0 mb-6 border-b border-[#e5e7eb]">
+          <div className="flex items-center gap-0">
+            {([["history","Payment History"],["future","Future Tracked So Far"]] as const).map(([id, label]) => (
+              <button key={id} onClick={() => setBottomTab(id)} className={`px-4 py-2.5 text-sm font-medium uppercase tracking-wide border-b-2 transition-colors -mb-px ${bottomTab === id ? "border-[#0168dd] text-[#0168dd]" : "border-transparent text-[#6b7280] hover:text-[#111827]"}`}>{label}</button>
+            ))}
+          </div>
+          {SHOW_FT_VERSION_TOGGLE && bottomTab === "future" && (
+            <div className="flex w-fit mb-2">
+              {(["v1", "v2", "v3"] as const).map(v => (
+                <button key={v} onClick={() => setFtVer(v)} className={`h-7 px-3 flex items-center justify-center text-xs font-semibold uppercase tracking-wide border border-l-0 first:border-l border-[#d1d5db] first:rounded-l-[6px] last:rounded-r-[6px] transition-colors ${ftVer === v ? "bg-[#f0f5ff] text-[#0168dd]" : "text-[#6b7280] hover:bg-[#f9fafb]"}`}>{v.toUpperCase()}</button>
+              ))}
+            </div>
+          )}
         </div>
-        {bottomTab === "history" ? <V1PaymentHistory /> : <V1mFutureTracked provider={futureProvider} period={futurePeriod} onProviderChange={setFutureProvider} onPeriodChange={setFuturePeriod} grouped zone />}
+        {bottomTab === "history" ? <V1PaymentHistoryZone /> : <V1mFutureTracked provider={futureProvider} period={futurePeriod} onProviderChange={setFutureProvider} onPeriodChange={setFuturePeriod} grouped zone ftVer={ftVer} />}
       </div>
+      </>)}
     </div>
+    </WiseVerContext.Provider>
   );
 }
 
@@ -6075,7 +6627,7 @@ function V1lFutureDetail({ providerId, onBack }: { providerId: string; onBack: (
   const confirmedPct = Math.round((cycle.confirmed / total) * 100);
   const plannedPct   = Math.round((cycle.planned / total) * 100);
   const projectedPct = 100 - confirmedPct - plannedPct;
-  const provColor = v2ProviderColors[cycle.provider] ?? "#8a8fa8";
+  const provColor = v2ProviderColors[cycle.provider] ?? "#6b7280";
 
   // "How we get there" figures for this pay period.
   const typical = Math.round(total / 1.28 / 100) * 100; // ~$8,300
@@ -6113,9 +6665,9 @@ function V1lFutureDetail({ providerId, onBack }: { providerId: string; onBack: (
   const rangeFrom = matrixMembers.length ? safePage * PAGE_SIZE + 1 : 0;
   const rangeTo = safePage * PAGE_SIZE + pagedMembers.length;
 
-  const th = "text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8]";
+  const th = "text-[10px] font-semibold uppercase tracking-widest text-[#6b7280]";
   const cell = (v: number | undefined, deduction = false) =>
-    !v ? <span className="text-[#d0d3de]">—</span>
+    !v ? <span className="text-[#d1d5db]">—</span>
        : deduction ? <span className="text-[#c0392b]">−{fmt0(v)}</span> : fmt0(v);
 
   return (
@@ -6123,22 +6675,22 @@ function V1lFutureDetail({ providerId, onBack }: { providerId: string; onBack: (
       {/* Header — same pattern as Version 2 */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <button onClick={onBack} className="flex items-center gap-1.5 text-xs text-[#8a8fa8] hover:text-[#1a1e35] transition-colors"><ArrowLeft size={14} /> Back</button>
-          <div className="w-px h-4 bg-[#e8eaf0]" />
+          <button onClick={onBack} className="flex items-center gap-1.5 text-xs text-[#6b7280] hover:text-[#111827] transition-colors"><ArrowLeft size={14} /> Back</button>
+          <div className="w-px h-4 bg-[#e5e7eb]" />
           <ProviderLogo id={providerId} size={20} />
-          <span className="text-base font-semibold text-[#1a1e35]">{cycle.provider}</span>
+          <span className="text-base font-semibold text-[#111827]">{cycle.provider}</span>
         </div>
         <div className="flex items-center gap-2">
-          <button className="flex items-center gap-1.5 text-xs border border-[#e8eaf0] rounded px-3 py-1.5 text-[#1a1e35] hover:bg-[#f5f6fa] transition-colors"><Download size={12} /> Export payment</button>
+          <button className="flex items-center gap-1.5 text-xs border border-[#e5e7eb] rounded px-3 py-1.5 text-[#111827] hover:bg-[#f9fafb] transition-colors"><Download size={12} /> Export payment</button>
           <button className="flex items-center gap-1.5 text-xs bg-[#0168dd] text-white rounded px-3 py-1.5 hover:bg-[#0057bb] transition-colors"><ExternalLink size={12} /> Go to {cycle.provider}</button>
         </div>
       </div>
       {/* Summary card — the total, broken down by certainty and by earning type */}
-      <div className="bg-white rounded-lg border border-[#e8eaf0] px-5 py-4">
+      <div className="bg-white rounded-lg border border-[#e5e7eb] px-5 py-4">
         <div className="flex items-center gap-8">
           <div className="flex-shrink-0 min-w-[150px]">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8]">Total projected</p>
-            <p className="text-3xl font-bold text-[#1a1e35] tracking-tight mt-0.5">{fmt2(total)}</p>
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6b7280]">Total projected</p>
+            <p className="text-3xl font-bold text-[#111827] tracking-tight mt-0.5">{fmt2(total)}</p>
             <button onClick={() => setShowHow(true)} className="inline-flex items-center gap-1 text-[11px] font-medium text-[#0168dd] hover:text-[#0057bb] transition-colors mt-1"><Info size={11} /> How we get there</button>
           </div>
           <div className="flex-1">
@@ -6146,26 +6698,26 @@ function V1lFutureDetail({ providerId, onBack }: { providerId: string; onBack: (
               <span className="text-emerald-600 font-semibold">Confirmed {fmt2(cycle.confirmed)} ({confirmedPct}%)</span>
               <span className="text-[#0168dd] font-semibold">Planned {fmt2(cycle.planned)} ({plannedPct}%)</span>
             </div>
-            <div className="h-2.5 rounded-full overflow-hidden flex bg-[#eef0f5]">
+            <div className="h-2.5 rounded-full overflow-hidden flex bg-[#f3f4f6]">
               <div className="h-full bg-emerald-500" style={{ width: `${confirmedPct}%` }} />
               <div className="h-full bg-[#0168dd]" style={{ width: `${plannedPct}%` }} />
             </div>
           </div>
-          <div className="flex-shrink-0 border-l border-[#e8eaf0] pl-5">
-            <div className="space-y-1 text-[11px] text-[#8a8fa8]">
+          <div className="flex-shrink-0 border-l border-[#e5e7eb] pl-5">
+            <div className="space-y-1 text-[11px] text-[#6b7280]">
               <div className="flex items-center gap-1"><CalendarDays size={11} />{cycle.dateRange}</div>
               <div className="flex items-center gap-1"><Users size={11} />{cycle.members} members · {cycle.cycle}</div>
             </div>
           </div>
         </div>
-        <div className="mt-4 pt-4 border-t border-[#f0f1f5]">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-3">By earning type</p>
+        <div className="mt-4 pt-4 border-t border-[#f3f4f6]">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6b7280] mb-3">By earning type</p>
           <div className="flex flex-wrap gap-x-10 gap-y-4">
             {ETS.map(e => (
               <div key={e} className="flex flex-col">
-                <span className="text-[10px] font-medium uppercase tracking-wide text-[#8a8fa8]">{v1lEtLabel[e]}</span>
-                <span className="text-[15px] font-bold tabular-nums text-[#1a1e35] mt-1 leading-none">
-                  {etTotals[e] ? (e === "Deductions" ? <span className="text-[#c0392b]">−{fmt0(etTotals[e])}</span> : fmt0(etTotals[e])) : <span className="text-[#d0d3de]">—</span>}
+                <span className="text-[10px] font-medium uppercase tracking-wide text-[#6b7280]">{v1lEtLabel[e]}</span>
+                <span className="text-[15px] font-bold tabular-nums text-[#111827] mt-1 leading-none">
+                  {etTotals[e] ? (e === "Deductions" ? <span className="text-[#c0392b]">−{fmt0(etTotals[e])}</span> : fmt0(etTotals[e])) : <span className="text-[#d1d5db]">—</span>}
                 </span>
               </div>
             ))}
@@ -6173,12 +6725,12 @@ function V1lFutureDetail({ providerId, onBack }: { providerId: string; onBack: (
         </div>
       </div>
       {/* Breakdown — matrix: earning types × Confirmed/Planned per member; projected aggregate-only */}
-      <div className="bg-white rounded-lg border border-[#e8eaf0] overflow-hidden">
-        <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-[#e8eaf0]">
-          <p className="text-sm font-semibold text-[#1a1e35]">By member <span className="text-[#8a8fa8] font-normal">— confirmed &amp; planned pay, by earning type</span></p>
+      <div className="bg-white rounded-lg border border-[#e5e7eb] overflow-hidden">
+        <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-[#e5e7eb]">
+          <p className="text-sm font-semibold text-[#111827]">By member <span className="text-[#6b7280] font-normal">— tracked &amp; planned pay, by earning type</span></p>
           <div className="flex items-center gap-3">
             <button onClick={() => setCollapsed(anyExpanded ? new Set(matrixMembers.map(m => m.name)) : new Set())} className="flex items-center gap-1 text-[11px] text-[#0168dd] hover:opacity-80">{anyExpanded ? "Collapse all" : "Expand all"}</button>
-            <span className="w-px h-3.5 bg-[#e8eaf0]" />
+            <span className="w-px h-3.5 bg-[#e5e7eb]" />
             <button className="flex items-center gap-1 text-[11px] text-[#0168dd] hover:opacity-80"><Filter size={12} /> Filters</button>
             <button className="flex items-center gap-1 text-[11px] text-[#0168dd] hover:opacity-80"><Columns size={12} /> Columns</button>
             <button className="flex items-center gap-1 text-[11px] text-[#0168dd] hover:opacity-80"><Download size={12} /> Export</button>
@@ -6187,7 +6739,7 @@ function V1lFutureDetail({ providerId, onBack }: { providerId: string; onBack: (
         <div className="overflow-x-auto">
         <table className="w-full text-xs min-w-[860px]">
           <thead>
-            <tr className="border-b border-[#e8eaf0]">
+            <tr className="border-b border-[#e5e7eb]">
               <th className={`text-left py-2.5 px-5 ${th}`}>Member</th>
               {ETS.map(e => <th key={e} className={`text-right py-2.5 px-3 whitespace-nowrap ${th}`}>{v1lEtLabel[e]}</th>)}
               <th className={`text-right py-2.5 px-5 whitespace-nowrap ${th}`}>Total</th>
@@ -6198,35 +6750,35 @@ function V1lFutureDetail({ providerId, onBack }: { providerId: string; onBack: (
               const open = !collapsed.has(m.name);
               return (
               <Fragment key={m.name}>
-                <tr className="border-t border-[#e8eaf0] hover:bg-[#fafbfd] cursor-pointer" onClick={() => toggle(m.name)}>
+                <tr className="border-t border-[#e5e7eb] hover:bg-[#f9fafb] cursor-pointer" onClick={() => toggle(m.name)}>
                   <td className={`${open ? "pt-3 pb-1" : "py-3"} px-5`}>
                     <div className="flex items-center gap-2">
-                      <ChevronRight size={13} className={`text-[#b0b3c5] transition-transform flex-shrink-0 ${open ? "rotate-90" : ""}`} />
+                      <ChevronRight size={13} className={`text-[#9ca3af] transition-transform flex-shrink-0 ${open ? "rotate-90" : ""}`} />
                       <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0" style={{ background: m.color }}>{m.avatar}</div>
-                      <span className="font-semibold text-[#1a1e35]">{m.name}</span>
+                      <span className="font-semibold text-[#111827]">{m.name}</span>
                     </div>
                   </td>
                   {ETS.map(e => <td key={e} className={`${open ? "pt-3 pb-1" : "py-3"} px-3`} />)}
-                  <td className={`${open ? "pt-3 pb-1" : "py-3"} px-5 text-right font-bold text-[#1a1e35] tabular-nums`}>{fmt0(m.known)}</td>
+                  <td className={`${open ? "pt-3 pb-1" : "py-3"} px-5 text-right font-bold text-[#111827] tabular-nums`}>{fmt0(m.known)}</td>
                 </tr>
                 {open && (
                 <>
                 <tr>
                   <td className="py-1 px-5 pl-[46px]"><CertaintyLabel status="Confirmed" /></td>
                   {ETS.map(e => (
-                    <td key={e} className="py-1 px-3 text-right tabular-nums text-[#5b607a]">
+                    <td key={e} className="py-1 px-3 text-right tabular-nums text-[#4b5563]">
                       {cell(m.confirmed[e], e === "Deductions")}
                       {e === "Hourly" && m.confirmed.Hourly && m.rate && (
-                        <div className="text-[10px] text-[#a0a4b8] font-normal tabular-nums">${m.rate}/hr · {m.hours}h</div>
+                        <div className="text-[10px] text-[#9ca3af] font-normal tabular-nums">${m.rate}/hr · {m.hours}h</div>
                       )}
                     </td>
                   ))}
-                  <td className="py-1 px-5 text-right tabular-nums font-medium text-[#1a1e35]">{cell(m.cTotal)}</td>
+                  <td className="py-1 px-5 text-right tabular-nums font-medium text-[#111827]">{cell(m.cTotal)}</td>
                 </tr>
                 <tr>
                   <td className="py-1 pb-3 px-5 pl-[46px]"><CertaintyLabel status="Planned" /></td>
-                  {ETS.map(e => <td key={e} className="py-1 pb-3 px-3 text-right tabular-nums text-[#5b607a]">{cell(m.planned[e], e === "Deductions")}</td>)}
-                  <td className="py-1 pb-3 px-5 text-right tabular-nums font-medium text-[#1a1e35]">{cell(m.pTotal)}</td>
+                  {ETS.map(e => <td key={e} className="py-1 pb-3 px-3 text-right tabular-nums text-[#4b5563]">{cell(m.planned[e], e === "Deductions")}</td>)}
+                  <td className="py-1 pb-3 px-5 text-right tabular-nums font-medium text-[#111827]">{cell(m.pTotal)}</td>
                 </tr>
                 </>
                 )}
@@ -6237,14 +6789,14 @@ function V1lFutureDetail({ providerId, onBack }: { providerId: string; onBack: (
         </table>
         </div>
         {/* Pagination — max 10 members per page */}
-        <div className="flex items-center justify-between gap-3 px-5 py-3 border-t border-[#e8eaf0]">
-          <span className="text-[11px] text-[#8a8fa8]">Showing <span className="font-medium text-[#5b607a]">{rangeFrom}–{rangeTo}</span> of {matrixMembers.length} members</span>
+        <div className="flex items-center justify-between gap-3 px-5 py-3 border-t border-[#e5e7eb]">
+          <span className="text-[11px] text-[#6b7280]">Showing <span className="font-medium text-[#4b5563]">{rangeFrom}–{rangeTo}</span> of {matrixMembers.length} members</span>
           <div className="flex items-center gap-1">
-            <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={safePage === 0} className="flex items-center justify-center w-7 h-7 rounded border border-[#e8eaf0] text-[#5b607a] hover:bg-[#f5f6fa] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"><ChevronLeft size={14} /></button>
+            <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={safePage === 0} className="flex items-center justify-center w-7 h-7 rounded border border-[#e5e7eb] text-[#4b5563] hover:bg-[#f9fafb] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"><ChevronLeft size={14} /></button>
             {Array.from({ length: pageCount }, (_, i) => (
-              <button key={i} onClick={() => setPage(i)} className={`w-7 h-7 rounded text-[11px] font-medium transition-colors ${i === safePage ? "bg-[#0168dd] text-white" : "text-[#5b607a] hover:bg-[#f5f6fa] border border-[#e8eaf0]"}`}>{i + 1}</button>
+              <button key={i} onClick={() => setPage(i)} className={`w-7 h-7 rounded text-[11px] font-medium transition-colors ${i === safePage ? "bg-[#0168dd] text-white" : "text-[#4b5563] hover:bg-[#f9fafb] border border-[#e5e7eb]"}`}>{i + 1}</button>
             ))}
-            <button onClick={() => setPage(p => Math.min(pageCount - 1, p + 1))} disabled={safePage >= pageCount - 1} className="flex items-center justify-center w-7 h-7 rounded border border-[#e8eaf0] text-[#5b607a] hover:bg-[#f5f6fa] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"><ChevronRight size={14} /></button>
+            <button onClick={() => setPage(p => Math.min(pageCount - 1, p + 1))} disabled={safePage >= pageCount - 1} className="flex items-center justify-center w-7 h-7 rounded border border-[#e5e7eb] text-[#4b5563] hover:bg-[#f9fafb] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"><ChevronRight size={14} /></button>
           </div>
         </div>
       </div>
@@ -6255,53 +6807,53 @@ function V1lFutureDetail({ providerId, onBack }: { providerId: string; onBack: (
           <div className="fixed inset-0 z-40 bg-black/30" onClick={() => setShowHow(false)} />
           <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none p-4">
             <div className="bg-white rounded-xl shadow-2xl w-[480px] max-w-full max-h-[85vh] flex flex-col pointer-events-auto">
-              <div className="flex items-start justify-between px-6 pt-5 pb-4 border-b border-[#e8eaf0] flex-shrink-0">
+              <div className="flex items-start justify-between px-5 py-5 flex-shrink-0">
                 <div>
-                  <h2 className="text-[15px] font-semibold text-[#1a1e35]">How we get there</h2>
-                  <p className="text-[11px] text-[#8a8fa8] mt-0.5">How your {cycle.dateRange.replace(", 2026", "")} {cycle.provider} payment is built.</p>
+                  <h2 className="text-lg font-semibold text-[#111827]">How we get there</h2>
+                  <p className="text-[11px] text-[#6b7280] mt-0.5">How your {cycle.dateRange.replace(", 2026", "")} {cycle.provider} payment is built.</p>
                 </div>
-                <button onClick={() => setShowHow(false)} className="p-1 rounded-md text-[#8a8fa8] hover:text-[#1a1e35] hover:bg-[#f0f1f5] transition-colors flex-shrink-0"><X size={16} /></button>
+                <button onClick={() => setShowHow(false)} className="p-1 rounded-md text-[#6b7280] hover:text-[#111827] hover:bg-[#f3f4f6] transition-colors flex-shrink-0"><X size={16} /></button>
               </div>
-              <div className="px-6 py-4 overflow-y-auto space-y-4">
+              <div className="px-5 py-2.5 overflow-y-auto space-y-4">
                 {/* the math */}
                 <div className="flex items-stretch gap-1.5">
-                  <div className="flex-1 rounded-lg border border-[#e8eaf0] bg-[#f9f9fc] px-2.5 py-2">
-                    <p className="text-[9px] font-semibold uppercase tracking-wider text-[#8a8fa8] leading-tight">Typical pay period</p>
-                    <p className="text-[15px] font-bold text-[#1a1e35] mt-1.5 leading-none tracking-tight">{fmt0(typical)}</p>
-                    <p className="text-[10px] text-[#a0a4b8] mt-1.5 leading-tight">recent monthly avg</p>
+                  <div className="flex-1 rounded-lg border border-[#e5e7eb] bg-[#f9fafb] px-2.5 py-2">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-[#6b7280] leading-tight">Typical pay period</p>
+                    <p className="text-base font-bold text-[#111827] mt-1.5 leading-none tracking-tight">{fmt0(typical)}</p>
+                    <p className="text-xs text-[#6b7280] mt-1.5 leading-tight">recent monthly avg</p>
                   </div>
-                  <span className="flex items-center text-[#b0b3c5] font-semibold text-sm flex-shrink-0 px-0.5">+</span>
-                  <div className="flex-1 rounded-lg border border-[#e8eaf0] bg-[#f9f9fc] px-2.5 py-2">
-                    <p className="text-[9px] font-semibold uppercase tracking-wider text-[#8a8fa8] leading-tight">Adjustments</p>
-                    <p className="text-[15px] font-bold text-emerald-600 mt-1.5 leading-none tracking-tight">+{adjPct}%</p>
-                    <p className="text-[10px] text-[#a0a4b8] mt-1.5 leading-tight">headcount + season</p>
+                  <span className="flex items-center text-[#9ca3af] font-semibold text-sm flex-shrink-0 px-0.5">+</span>
+                  <div className="flex-1 rounded-lg border border-[#e5e7eb] bg-[#f9fafb] px-2.5 py-2">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-[#6b7280] leading-tight">Adjustments</p>
+                    <p className="text-base font-bold text-emerald-600 mt-1.5 leading-none tracking-tight">+{adjPct}%</p>
+                    <p className="text-xs text-[#6b7280] mt-1.5 leading-tight">headcount + season</p>
                   </div>
-                  <span className="flex items-center text-[#b0b3c5] font-semibold text-sm flex-shrink-0 px-0.5">=</span>
+                  <span className="flex items-center text-[#9ca3af] font-semibold text-sm flex-shrink-0 px-0.5">=</span>
                   <div className="flex-1 rounded-lg border border-[#bcd4f2] bg-[#f0f6ff] px-2.5 py-2">
-                    <p className="text-[9px] font-semibold uppercase tracking-wider text-[#0168dd] leading-tight">Projected</p>
-                    <p className="text-[15px] font-bold text-[#1a1e35] mt-1.5 leading-none tracking-tight">{fmt0(total)}</p>
-                    <p className="text-[10px] text-[#a0a4b8] mt-1.5 leading-tight">this pay period</p>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-[#0168dd] leading-tight">Projected</p>
+                    <p className="text-base font-bold text-[#111827] mt-1.5 leading-none tracking-tight">{fmt0(total)}</p>
+                    <p className="text-xs text-[#6b7280] mt-1.5 leading-tight">this pay period</p>
                   </div>
                 </div>
-                <div className="pt-4 border-t border-[#f0f1f5]">
-                  <p className="text-[11px] text-[#8a8fa8] leading-snug">The <span className="font-semibold text-emerald-600">+{adjPct}%</span> comes from trends in your history:</p>
+                <div className="pt-4">
+                  <p className="text-sm text-[#6b7280] leading-snug">The <span className="font-semibold text-emerald-600">+{adjPct}%</span> comes from trends in your history:</p>
                   <div className="mt-2 space-y-1.5">
-                    <div className="flex items-baseline gap-2 text-[12px]"><span className="font-semibold text-emerald-600 w-10 flex-shrink-0">+{hcPct}%</span><span className="text-[#1a1e35] font-medium flex-shrink-0">Headcount change</span><span className="text-[#8a8fa8] truncate">· {cycle.members} this cycle vs avg {avgMembers}</span></div>
-                    <div className="flex items-baseline gap-2 text-[12px]"><span className="font-semibold text-emerald-600 w-10 flex-shrink-0">+{seasonPct}%</span><span className="text-[#1a1e35] font-medium flex-shrink-0">Seasonality</span><span className="text-[#8a8fa8] truncate">· June is typically above average</span></div>
+                    <div className="flex items-baseline gap-2 text-[12px]"><span className="font-semibold text-emerald-600 w-10 flex-shrink-0">+{hcPct}%</span><span className="text-[#111827] font-medium flex-shrink-0">Headcount change</span><span className="text-[#6b7280] truncate">· {cycle.members} this cycle vs avg {avgMembers}</span></div>
+                    <div className="flex items-baseline gap-2 text-[12px]"><span className="font-semibold text-emerald-600 w-10 flex-shrink-0">+{seasonPct}%</span><span className="text-[#111827] font-medium flex-shrink-0">Seasonality</span><span className="text-[#6b7280] truncate">· June is typically above average</span></div>
                   </div>
-                  <p className="text-[11px] text-[#8a8fa8] mt-2 leading-snug">Applied on top of your {fmt0(typical)} typical pay period to reach <span className="font-semibold text-[#1a1e35]">{fmt0(total)}</span>.</p>
+                  <p className="text-xs text-[#6b7280] mt-2 leading-snug">Applied on top of your {fmt0(typical)} typical pay period to reach <span className="font-semibold text-[#111827]">{fmt0(total)}</span>.</p>
                 </div>
                 {/* certainty terminology */}
-                <div className="pt-4 border-t border-[#f0f1f5]">
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-2">What makes up the {fmt0(total)}</p>
-                  <ul className="space-y-2 text-[11px] leading-snug">
-                    <li className="flex gap-2"><span className="w-2.5 h-2.5 rounded-sm bg-emerald-500 mt-0.5 flex-shrink-0" /><span className="text-[#8a8fa8]"><span className="font-semibold text-[#1a1e35]">Confirmed {fmt0(cycle.confirmed)}</span> — hours already tracked. Final.</span></li>
-                    <li className="flex gap-2"><span className="w-2.5 h-2.5 rounded-sm bg-[#0168dd] mt-0.5 flex-shrink-0" /><span className="text-[#8a8fa8]"><span className="font-semibold text-[#1a1e35]">Planned {fmt0(cycle.planned)}</span> — scheduled (PTO/holidays, adjustments, fixed pay). Committed unless cancelled.</span></li>
+                <div className="pt-4">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-[#6b7280] mb-2">What makes up the {fmt0(total)}</p>
+                  <ul className="space-y-2 text-sm leading-snug">
+                    <li className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-sm bg-emerald-500 flex-shrink-0" /><span className="text-[#6b7280]"><span className="font-semibold text-[#111827]">Tracked {fmt0(cycle.confirmed)}</span> — hours already logged. Final.</span></li>
+                    <li className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-sm bg-[#0168dd] flex-shrink-0" /><span className="text-[#6b7280]"><span className="font-semibold text-[#111827]">Planned {fmt0(cycle.planned)}</span> — scheduled (PTO/holidays, adjustments, fixed pay). Committed unless cancelled.</span></li>
                   </ul>
                 </div>
-                <p className="text-[11px] text-[#a0a4b8] leading-snug">{fmt0(total)} is an estimate from your history — not a guaranteed figure. Add a buffer, or <a href="#" onClick={e => e.preventDefault()} className="font-medium text-[#8a8fa8] underline decoration-dotted decoration-[#c0c3d3] underline-offset-2 hover:text-[#1a1e35] transition-colors">see how to improve accuracy</a>.</p>
+                <p className="text-sm text-[#9ca3af] leading-snug">{fmt0(total)} is an estimate from your history — not a guaranteed figure. Add a buffer, or <a href="#" onClick={e => e.preventDefault()} className="font-medium text-[#6b7280] underline decoration-dotted decoration-[#d1d5db] underline-offset-2 hover:text-[#111827] transition-colors">see how to improve accuracy</a>.</p>
               </div>
-              <div className="flex items-center justify-end px-6 py-4 border-t border-[#e8eaf0] flex-shrink-0">
+              <div className="flex items-center justify-end px-5 py-5 flex-shrink-0">
                 <button onClick={() => setShowHow(false)} className="px-5 py-2 rounded-lg text-sm font-semibold bg-[#0168dd] text-white hover:bg-[#0057bb] transition-colors">Done</button>
               </div>
             </div>
@@ -6313,7 +6865,7 @@ function V1lFutureDetail({ providerId, onBack }: { providerId: string; onBack: (
 }
 
 // item E for 1M — "Future Tracked So Far": all providers in one filterable view.
-function V1mFutureTracked({ provider, period, onProviderChange, onPeriodChange, grouped = false, zone = false }: { provider: string; period: string; onProviderChange: (id: string) => void; onPeriodChange: (label: string) => void; grouped?: boolean; zone?: boolean }) {
+function V1mFutureTracked({ provider, period, onProviderChange, onPeriodChange, grouped = false, zone = false, ftVer = "v1" }: { provider: string; period: string; onProviderChange: (id: string) => void; onPeriodChange: (label: string) => void; grouped?: boolean; zone?: boolean; ftVer?: "v1" | "v2" | "v3" }) {
   const [showHow, setShowHow] = useState(false);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(0);
@@ -6367,11 +6919,11 @@ function V1mFutureTracked({ provider, period, onProviderChange, onPeriodChange, 
 
   // Breakdown-bar lenses (this period's total, not a time series)
   const sourceSegs = [
-    { label: zone ? "Tracked" : "Confirmed", value: confirmed, color: zone ? withAlpha("#0e9f6e", 0.8) : "#10b981" },
+    { label: zone ? "Tracked" : "Confirmed", value: confirmed, color: zone ? withAlpha("#0e9f6e", 0.8) : "#0e9f6e" },
     { label: "Planned",     value: planned,   color: zone ? withAlpha("#0168dd", 0.8) : "#0168dd" },
     { label: "~Projected",  value: projected, color: zone ? withAlpha("#7fcaff", 0.7) : "#85baf5", striped: !zone },
   ].filter(s => s.value > 0);
-  const etSegColor: Record<string, string> = { "Fixed pay": "#6366f1", Hourly: "#0168dd", "PTO / Holiday": "#38bdf8", Additions: "#10b981", Overtime: "#f59e0b" };
+  const etSegColor: Record<string, string> = { "Fixed pay": "#6366f1", Hourly: "#0168dd", "PTO / Holiday": "#38bdf8", Additions: "#0e9f6e", Overtime: "#f59e0b" };
   const typeOrder = ["Fixed pay", "Hourly", "PTO / Holiday", "Additions", "Overtime"] as const;
   const typePositives = typeOrder.map(k => ({ label: v1lEtLabel[k], value: etTotals[k] ?? 0, color: etSegColor[k] })).filter(s => s.value > 0);
   const typeGross = typePositives.reduce((s, x) => s + x.value, 0);
@@ -6380,7 +6932,7 @@ function V1mFutureTracked({ provider, period, onProviderChange, onPeriodChange, 
 
   const typical = Math.round(total / 1.28 / 100) * 100;
   const adjPct = 28, hcPct = 18, seasonPct = 10;
-  const provName = v1mFutureProviderList.find(p => p.id === provider)?.name ?? "All providers";
+  const provName = isAll ? `All payout methods (${v1mFutureProviderList.length - 1})` : (v1mFutureProviderList.find(p => p.id === provider)?.name ?? "");
 
   const PAGE = 10;
   const pageCount = Math.max(1, Math.ceil(rows.length / PAGE));
@@ -6389,121 +6941,214 @@ function V1mFutureTracked({ provider, period, onProviderChange, onPeriodChange, 
   const rangeFrom = rows.length ? safePage * PAGE + 1 : 0;
   const rangeTo = safePage * PAGE + paged.length;
 
-  const th = "text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8]";
-  const cell = (v: number | undefined, deduction = false) => !v ? <span className="text-[#d0d3de]">—</span> : deduction ? <span className="text-[#c0392b]">−{fmt0(v)}</span> : fmt0(v);
+  const th = "text-[10px] font-semibold uppercase tracking-widest text-[#6b7280]";
+  const cell = (v: number | undefined, deduction = false) => !v ? <span className="text-[#d1d5db]">—</span> : deduction ? <span className="text-[#c0392b]">−{fmt0(v)}</span> : fmt0(v);
   const selectProvider = (id: string) => { onProviderChange(id); onPeriodChange(v1mCurrentPeriod(id)); setProvOpen(false); setPage(0); };
 
   return (
     <div className="space-y-4">
-      {/* Controls — labelled pay-period + payment-method selectors */}
+      {ftVer === "v1" ? (
       <div className="flex items-end justify-between gap-3">
         <div className="flex items-end gap-4">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-1.5">Period</p>
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6b7280] mb-1.5">Payment method</p>
             <div className="relative">
-              <button onClick={() => { setPeriodOpen(o => !o); setProvOpen(false); }} className="flex items-center justify-between gap-2 text-sm border border-[#e8eaf0] rounded-md px-3.5 py-2 bg-white text-[#1a1e35] hover:bg-[#f5f6fa] transition-colors min-w-[190px]"><span className="flex items-center gap-2"><CalendarDays size={14} className="text-[#8a8fa8]" /> {activePeriod.label}</span> <ChevronDown size={14} className="text-[#8a8fa8]" /></button>
-              {periodOpen && (<>
-                <div className="fixed inset-0 z-20" onClick={() => setPeriodOpen(false)} />
-                <div className="absolute left-0 mt-1 z-30 bg-white border border-[#e8eaf0] rounded-lg shadow-lg py-1 min-w-[210px]">
-                  <p className="px-3 pt-1 pb-1.5 text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8]">{cycleInfo.cycle} pay periods</p>
-                  {periods.map(p => <button key={p.label} onClick={() => { onPeriodChange(p.label); setPeriodOpen(false); setPage(0); }} className={`w-full text-left px-3 py-1.5 text-sm hover:bg-[#f5f6fa] ${p.label === activePeriod.label ? "text-[#0168dd] font-medium" : "text-[#1a1e35]"}`}>{p.label}</button>)}
+              <button onClick={() => { setProvOpen(o => !o); setPeriodOpen(false); }} className="flex items-center justify-between gap-2 text-sm border border-[#e5e7eb] rounded-md h-10 px-3.5 bg-white text-[#111827] hover:bg-[#f9fafb] transition-colors min-w-[190px]"><span className="flex items-center gap-2">{!isAll && <ProviderLogo id={provider} size={16} />} {provName}</span> <ChevronDown size={14} className="text-[#6b7280]" /></button>
+              {provOpen && (<>
+                <div className="fixed inset-0 z-20" onClick={() => setProvOpen(false)} />
+                <div className="absolute left-0 mt-1 z-30 bg-white border border-[#e5e7eb] rounded-lg shadow-lg py-1 min-w-[210px]">
+                  {v1mFutureProviderList.map(p => <button key={p.id} onClick={() => selectProvider(p.id)} className={`w-full flex items-center gap-2 text-left px-3 py-1.5 text-sm hover:bg-[#f9fafb] ${p.id === provider ? "text-[#0168dd] font-medium" : "text-[#111827]"}`}>{p.id !== "all" ? <ProviderLogo id={p.id} size={14} /> : <span className="w-3.5 h-3.5 rounded-full flex-shrink-0" style={{ background: "linear-gradient(135deg,#0168dd,#85baf5)" }} />}{p.name}</button>)}
                 </div>
               </>)}
             </div>
           </div>
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-1.5">Payment method</p>
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6b7280] mb-1.5">Pay period</p>
             <div className="relative">
-              <button onClick={() => { setProvOpen(o => !o); setPeriodOpen(false); }} className="flex items-center justify-between gap-2 text-sm border border-[#e8eaf0] rounded-md px-3.5 py-2 bg-white text-[#1a1e35] hover:bg-[#f5f6fa] transition-colors min-w-[190px]"><span className="flex items-center gap-2">{!isAll && <ProviderLogo id={provider} size={16} />} {provName}</span> <ChevronDown size={14} className="text-[#8a8fa8]" /></button>
-              {provOpen && (<>
-                <div className="fixed inset-0 z-20" onClick={() => setProvOpen(false)} />
-                <div className="absolute left-0 mt-1 z-30 bg-white border border-[#e8eaf0] rounded-lg shadow-lg py-1 min-w-[210px]">
-                  {v1mFutureProviderList.map(p => <button key={p.id} onClick={() => selectProvider(p.id)} className={`w-full flex items-center gap-2 text-left px-3 py-1.5 text-sm hover:bg-[#f5f6fa] ${p.id === provider ? "text-[#0168dd] font-medium" : "text-[#1a1e35]"}`}>{p.id !== "all" ? <ProviderLogo id={p.id} size={14} /> : <span className="w-3.5 h-3.5 rounded-full flex-shrink-0" style={{ background: "linear-gradient(135deg,#0168dd,#85baf5)" }} />}{p.name}</button>)}
+              <button onClick={() => { setPeriodOpen(o => !o); setProvOpen(false); }} className="flex items-center justify-between gap-2 text-sm border border-[#e5e7eb] rounded-md h-10 px-3.5 bg-white text-[#111827] hover:bg-[#f9fafb] transition-colors min-w-[190px]"><span className="flex items-center gap-2">{activePeriod.label}</span> <ChevronDown size={14} className="text-[#6b7280]" /></button>
+              {periodOpen && (<>
+                <div className="fixed inset-0 z-20" onClick={() => setPeriodOpen(false)} />
+                <div className="absolute left-0 mt-1 z-30 bg-white border border-[#e5e7eb] rounded-lg shadow-lg py-1 min-w-[210px]">
+                  <p className="px-3 pt-1 pb-1.5 text-[10px] font-semibold uppercase tracking-widest text-[#6b7280]">{cycleInfo.cycle} pay periods</p>
+                  {periods.map(p => <button key={p.label} onClick={() => { onPeriodChange(p.label); setPeriodOpen(false); setPage(0); }} className={`w-full text-left px-3 py-1.5 text-sm hover:bg-[#f9fafb] ${p.label === activePeriod.label ? "text-[#0168dd] font-medium" : "text-[#111827]"}`}>{p.label}</button>)}
                 </div>
               </>)}
             </div>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button className={zone ? zbtn("outlineGray", "sm") : "flex items-center gap-1.5 text-xs border border-[#e8eaf0] rounded px-3 py-2 text-[#1a1e35] hover:bg-[#f5f6fa] transition-colors"}><Download size={zone ? 16 : 12} /> Export</button>
-          {!isAll && <button className={zone ? zbtn("solidPrimary", "sm") : "flex items-center gap-1.5 text-xs bg-[#0168dd] text-white rounded px-3 py-2 hover:bg-[#0057bb] transition-colors"}><ExternalLink size={zone ? 16 : 12} /> Go to {provName}</button>}
+          <button className={zone ? zbtn("outlineGray", "md") : "flex items-center gap-1.5 text-xs border border-[#e5e7eb] rounded px-3 py-2 text-[#111827] hover:bg-[#f9fafb] transition-colors"}><Download size={zone ? 16 : 12} /> Export</button>
+          {!isAll && <button className={zone ? zbtn("solidPrimary", "md") : "flex items-center gap-1.5 text-xs bg-[#0168dd] text-white rounded px-3 py-2 hover:bg-[#0057bb] transition-colors"}><ExternalLink size={zone ? 16 : 12} /> Go to {provName}</button>}
         </div>
       </div>
+      ) : ftVer === "v2" ? (
+      <div className="bg-white rounded-t-lg border border-[#e5e7eb] flex items-center justify-between gap-3 px-5 py-3">
+        <div className="flex items-baseline gap-2">
+          <p className="text-lg font-medium text-[#111827]">Projected so far</p>
+          <span className="text-lg text-[#9ca3af]">:</span>
+          <p className="text-2xl font-bold text-[#111827] tracking-tight">{fmt2(total)}</p>
+          <button onClick={() => setShowHow(true)} className={zbtn("ghostGray", "sm", "self-center ml-1")}><Info size={16} /> How we get there</button>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <button onClick={() => { setProvOpen(o => !o); setPeriodOpen(false); }} className="flex items-center justify-between gap-2 text-sm border border-[#d1d5db] rounded-[6px] h-8 px-3 bg-white text-[#111827] hover:bg-[#f9fafb] transition-colors min-w-[150px]"><span className="flex items-center gap-2">{!isAll && <ProviderLogo id={provider} size={16} />} {provName}</span> <ChevronDown size={14} className="text-[#6b7280]" /></button>
+            {provOpen && (<>
+              <div className="fixed inset-0 z-20" onClick={() => setProvOpen(false)} />
+              <div className="absolute right-0 mt-1 z-30 bg-white border border-[#e5e7eb] rounded-lg shadow-lg py-1 min-w-[210px]">
+                {v1mFutureProviderList.map(p => <button key={p.id} onClick={() => selectProvider(p.id)} className={`w-full flex items-center gap-2 text-left px-3 py-1.5 text-sm hover:bg-[#f9fafb] ${p.id === provider ? "text-[#0168dd] font-medium" : "text-[#111827]"}`}>{p.id !== "all" ? <ProviderLogo id={p.id} size={14} /> : <span className="w-3.5 h-3.5 rounded-full flex-shrink-0" style={{ background: "linear-gradient(135deg,#0168dd,#85baf5)" }} />}{p.name}</button>)}
+              </div>
+            </>)}
+          </div>
+          <div className="relative">
+            <button onClick={() => { setPeriodOpen(o => !o); setProvOpen(false); }} className="flex items-center justify-between gap-2 text-sm border border-[#d1d5db] rounded-[6px] h-8 px-3 bg-white text-[#111827] hover:bg-[#f9fafb] transition-colors min-w-[140px]"><span>{activePeriod.label}</span> <ChevronDown size={14} className="text-[#6b7280]" /></button>
+            {periodOpen && (<>
+              <div className="fixed inset-0 z-20" onClick={() => setPeriodOpen(false)} />
+              <div className="absolute right-0 mt-1 z-30 bg-white border border-[#e5e7eb] rounded-lg shadow-lg py-1 min-w-[210px]">
+                <p className="px-3 pt-1 pb-1.5 text-[10px] font-semibold uppercase tracking-widest text-[#6b7280]">{cycleInfo.cycle} pay periods</p>
+                {periods.map(p => <button key={p.label} onClick={() => { onPeriodChange(p.label); setPeriodOpen(false); setPage(0); }} className={`w-full text-left px-3 py-1.5 text-sm hover:bg-[#f9fafb] ${p.label === activePeriod.label ? "text-[#0168dd] font-medium" : "text-[#111827]"}`}>{p.label}</button>)}
+              </div>
+            </>)}
+          </div>
+          <button className={zbtn("outlineGray", "sm")}><Download size={16} /> Export</button>
+        </div>
+      </div>
+      ) : (
+      <div className="bg-white rounded-t-lg border border-[#e5e7eb] flex items-center justify-between gap-3 px-5 h-[60px]">
+        <div className="flex items-center gap-4">
+          <div className="relative">
+            <button onClick={() => { setProvOpen(o => !o); setPeriodOpen(false); }} className="flex items-center justify-between gap-2 text-sm border border-[#d1d5db] rounded-[6px] h-8 px-3 bg-white text-[#111827] hover:bg-[#f9fafb] transition-colors min-w-[150px]"><span className="flex items-center gap-2">{!isAll && <ProviderLogo id={provider} size={16} />} {provName}</span> <ChevronDown size={14} className="text-[#6b7280]" /></button>
+            {provOpen && (<>
+              <div className="fixed inset-0 z-20" onClick={() => setProvOpen(false)} />
+              <div className="absolute left-0 mt-1 z-30 bg-white border border-[#e5e7eb] rounded-lg shadow-lg py-1 min-w-[210px]">
+                {v1mFutureProviderList.map(p => <button key={p.id} onClick={() => selectProvider(p.id)} className={`w-full flex items-center gap-2 text-left px-3 py-1.5 text-sm hover:bg-[#f9fafb] ${p.id === provider ? "text-[#0168dd] font-medium" : "text-[#111827]"}`}>{p.id !== "all" ? <ProviderLogo id={p.id} size={14} /> : <span className="w-3.5 h-3.5 rounded-full flex-shrink-0" style={{ background: "linear-gradient(135deg,#0168dd,#85baf5)" }} />}{p.name}</button>)}
+              </div>
+            </>)}
+          </div>
+          <div className="relative">
+            <button onClick={() => { setPeriodOpen(o => !o); setProvOpen(false); }} className="flex items-center justify-between gap-2 text-sm border border-[#d1d5db] rounded-[6px] h-8 px-3 bg-white text-[#111827] hover:bg-[#f9fafb] transition-colors min-w-[140px]"><span><span className="text-[#6b7280]">Pay period:</span> {activePeriod.label}</span> <ChevronDown size={14} className="text-[#6b7280]" /></button>
+            {periodOpen && (<>
+              <div className="fixed inset-0 z-20" onClick={() => setPeriodOpen(false)} />
+              <div className="absolute left-0 mt-1 z-30 bg-white border border-[#e5e7eb] rounded-lg shadow-lg py-1 min-w-[210px]">
+                <p className="px-3 pt-1 pb-1.5 text-[10px] font-semibold uppercase tracking-widest text-[#6b7280]">{cycleInfo.cycle} pay periods</p>
+                {periods.map(p => <button key={p.label} onClick={() => { onPeriodChange(p.label); setPeriodOpen(false); setPage(0); }} className={`w-full text-left px-3 py-1.5 text-sm hover:bg-[#f9fafb] ${p.label === activePeriod.label ? "text-[#0168dd] font-medium" : "text-[#111827]"}`}>{p.label}</button>)}
+              </div>
+            </>)}
+          </div>
+        </div>
+        <button className={zbtn("outlineGray", "sm")}><Download size={16} /> Export</button>
+      </div>
+      )}
 
       {loading ? (
         <div className="space-y-4 animate-pulse">
-          <div className="bg-white rounded-lg border border-[#e8eaf0] px-5 py-4">
+          <div className="bg-white rounded-lg border border-[#e5e7eb] px-5 py-4">
             <div className="flex items-center gap-8">
-              <div className="flex-shrink-0 min-w-[150px] space-y-2"><div className="h-2.5 w-24 rounded bg-[#eef0f5]" /><div className="h-8 w-40 rounded bg-[#e8eaf0]" /><div className="h-2.5 w-28 rounded bg-[#eef0f5]" /></div>
-              <div className="flex-1"><div className="h-2.5 rounded-full bg-[#eef0f5]" /></div>
-              <div className="flex-shrink-0 border-l border-[#e8eaf0] pl-5 space-y-2"><div className="h-2.5 w-20 rounded bg-[#eef0f5]" /><div className="h-2.5 w-24 rounded bg-[#eef0f5]" /></div>
+              <div className="flex-shrink-0 min-w-[150px] space-y-2"><div className="h-2.5 w-24 rounded bg-[#f3f4f6]" /><div className="h-8 w-40 rounded bg-[#e5e7eb]" /><div className="h-2.5 w-28 rounded bg-[#f3f4f6]" /></div>
+              <div className="flex-1"><div className="h-2.5 rounded-full bg-[#f3f4f6]" /></div>
+              <div className="flex-shrink-0 border-l border-[#e5e7eb] pl-5 space-y-2"><div className="h-2.5 w-20 rounded bg-[#f3f4f6]" /><div className="h-2.5 w-24 rounded bg-[#f3f4f6]" /></div>
             </div>
-            <div className="mt-4 pt-4 border-t border-[#f0f1f5] flex flex-wrap gap-x-10 gap-y-4">
-              {Array.from({ length: 6 }).map((_, i) => <div key={i} className="space-y-1.5"><div className="h-2 w-14 rounded bg-[#eef0f5]" /><div className="h-4 w-16 rounded bg-[#e8eaf0]" /></div>)}
+            <div className="mt-4 pt-4 border-t border-[#f3f4f6] flex flex-wrap gap-x-10 gap-y-4">
+              {Array.from({ length: 6 }).map((_, i) => <div key={i} className="space-y-1.5"><div className="h-2 w-14 rounded bg-[#f3f4f6]" /><div className="h-4 w-16 rounded bg-[#e5e7eb]" /></div>)}
             </div>
           </div>
-          <div className="bg-white rounded-lg border border-[#e8eaf0] px-5 py-5 space-y-4">
-            {Array.from({ length: 6 }).map((_, i) => <div key={i} className="flex items-center gap-3"><div className="w-6 h-6 rounded-full bg-[#eef0f5] flex-shrink-0" /><div className="h-3 w-40 rounded bg-[#eef0f5]" /><div className="ml-auto h-3 w-16 rounded bg-[#eef0f5]" /></div>)}
+          <div className="bg-white rounded-lg border border-[#e5e7eb] px-5 py-5 space-y-4">
+            {Array.from({ length: 6 }).map((_, i) => <div key={i} className="flex items-center gap-3"><div className="w-6 h-6 rounded-full bg-[#f3f4f6] flex-shrink-0" /><div className="h-3 w-40 rounded bg-[#f3f4f6]" /><div className="ml-auto h-3 w-16 rounded bg-[#f3f4f6]" /></div>)}
           </div>
         </div>
       ) : (<>
       {/* Summary card */}
-      <div className="bg-white rounded-lg border border-[#e8eaf0] px-5 py-4">
+      <div className={`bg-white border border-[#e5e7eb] px-5 py-5 ${ftVer !== "v1" ? "-mt-4 rounded-none border-t-0" : "rounded-lg"}`}>
         <div className="flex items-start gap-6">
-          <div className="flex-shrink-0">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8]">Total projected</p>
-            <p className="text-2xl font-bold text-[#1a1e35] tracking-tight mt-0.5">{fmt2(total)}</p>
-            <button onClick={() => setShowHow(true)} className={zone ? zbtn("ghostGray", "sm", "mt-1") : "inline-flex items-center gap-1 text-[11px] font-medium text-[#8a8fa8] hover:text-[#1a1e35] transition-colors mt-1"}><Info size={zone ? 16 : 11} /> How we get there</button>
+          <div className={`flex-shrink-0 ${ftVer !== "v1" ? "hidden" : ""}`}>
+            <p className={zone ? "text-[11px] font-semibold uppercase tracking-wide text-[#6b7280]" : "text-[10px] font-semibold uppercase tracking-widest text-[#6b7280]"}>Total projected</p>
+            <p className="text-2xl font-bold text-[#111827] tracking-tight mt-0.5">{fmt2(total)}</p>
+            <button onClick={() => setShowHow(true)} className={zone ? zbtn("ghostGray", "sm", "mt-1") : "inline-flex items-center gap-1 text-[11px] font-medium text-[#6b7280] hover:text-[#111827] transition-colors mt-1"}><Info size={zone ? 16 : 11} /> How we get there</button>
           </div>
-          <div className="flex-1 min-w-0 border-l border-[#f0f1f5] pl-6">
+          <div className={`flex-1 min-w-0 ${ftVer !== "v1" ? "" : "border-l border-[#f3f4f6] pl-6"}`}>
+            {zone ? (
+            /* Breakdown header — label + description stacked (left column), segmented control (right), top-aligned */
+            <div className="flex items-start justify-between gap-6 mb-4">
+              <div className="flex flex-col gap-1 min-w-0">
+                {ftVer === "v3" ? (<>
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-[#6b7280]">Total projected</p>
+                  <div className="flex items-baseline gap-2 mt-1">
+                    <p className="text-2xl font-bold text-[#111827] tracking-tight leading-none">{fmt2(total)}</p>
+                    <button onClick={() => setShowHow(true)} title="How we get there" aria-label="How we get there" className={`${ZBTN_BASE} h-7 w-7 ${ZBTN_VARIANT.ghostGray} self-center`}><Info size={16} /></button>
+                  </div>
+                </>) : (<>
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-[#6b7280]">Breakdown</p>
+                  <p className="text-sm text-[#6b7280] leading-snug">
+                    {segLens === "source" ? "Tracked is final; planned is committed; projected is still an estimate." : "What the payout is made of — e.g. fixed and hourly pay, PTO, and more."}{" "}
+                    <a href="#" onClick={(e) => { e.preventDefault(); setShowBreakdownInfo(true); }} className="font-medium underline underline-offset-2 hover:text-[#111827] transition-colors select-none">Learn more</a>
+                  </p>
+                </>)}
+              </div>
+              <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                <div className="flex w-fit">
+                  {([["source","Tracked vs. projected"],["type","Payroll breakdown"]] as const).map(([k, label]) => (
+                    <button key={k} onClick={() => setSegLens(k)} className={`h-8 px-3 flex items-center justify-center whitespace-nowrap text-sm overflow-hidden transition-colors border border-l-0 first:border-l border-[#d1d5db] first:rounded-l-[6px] last:rounded-r-[6px] ${segLens === k ? "bg-[#f0f5ff] text-[#0168dd] font-medium" : "text-[#374151] font-normal hover:bg-[#f9fafb]"}`}>{label}</button>
+                  ))}
+                </div>
+                {ftVer === "v3" && (
+                  <p className="text-[11px] text-[#6b7280] leading-snug text-right whitespace-nowrap">
+                    {segLens === "source" ? "Tracked is locked in, planned is scheduled, projected is still an estimate." : "The pay types that make up each payout — hourly, fixed pay, PTO, and more."}{" "}
+                    <a href="#" onClick={(e) => { e.preventDefault(); setShowBreakdownInfo(true); }} className="font-medium underline underline-offset-2 hover:text-[#111827] transition-colors select-none">Learn more</a>
+                  </p>
+                )}
+              </div>
+            </div>
+            ) : (<>
             <div className="flex items-center justify-between gap-3 mb-2">
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8]">Breakdown</p>
-              <div className={zone ? "flex w-fit" : "flex bg-[#f0f1f5] rounded-md p-0.5"}>
-                {([["source","Confirmed vs. projected"],["type","Payroll breakdown"]] as const).map(([k, label]) => (
-                  <button key={k} onClick={() => setSegLens(k)} className={zone
-                    ? `h-8 px-3 flex items-center justify-center whitespace-nowrap text-sm overflow-hidden transition-colors border border-l-0 first:border-l border-[#d1d5db] first:rounded-l-[6px] last:rounded-r-[6px] ${segLens === k ? "bg-[#eef2ff] text-[#0168dd] font-medium" : "text-[#374151] font-normal hover:bg-[#f9fafb]"}`
-                    : `px-2.5 py-0.5 rounded text-[11px] font-medium transition-all ${segLens === k ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>{label}</button>
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6b7280]">Breakdown</p>
+              <div className="flex bg-[#f3f4f6] rounded-md p-0.5">
+                {([["source","Tracked vs. projected"],["type","Payroll breakdown"]] as const).map(([k, label]) => (
+                  <button key={k} onClick={() => setSegLens(k)} className={`px-2.5 py-0.5 rounded text-[11px] font-medium transition-all ${segLens === k ? "bg-white text-[#0168dd] shadow-sm" : "text-[#6b7280] hover:text-[#111827]"}`}>{label}</button>
                 ))}
               </div>
             </div>
-            <p className="text-[11px] text-[#8a8fa8] leading-snug mb-3">
-              {segLens === "source" ? "How certain each amount is — confirmed and planned are already committed, while projected is still an estimate." : "What the payout is made of — fixed and hourly pay, PTO, additions and overtime, minus any deductions."}{" "}
-              <a href="#" onClick={(e) => { e.preventDefault(); setShowBreakdownInfo(true); }} className="font-medium underline underline-offset-2 hover:text-[#1a1e35] transition-colors select-none">Learn more</a>
+            <p className="text-[11px] text-[#6b7280] leading-snug mb-3">
+              {segLens === "source" ? "Tracked is final; planned is committed; projected is still an estimate." : "What the payout is made of — e.g. fixed and hourly pay, PTO, and more."}{" "}
+              <a href="#" onClick={(e) => { e.preventDefault(); setShowBreakdownInfo(true); }} className="font-medium underline underline-offset-2 hover:text-[#111827] transition-colors select-none">Learn more</a>
             </p>
+            </>)}
             {segLens === "source" ? (<>
-            <div className="relative h-3 rounded-full overflow-hidden flex bg-[#eef0f5]">
+            <div className="relative h-3 rounded-full overflow-hidden flex bg-[#f3f4f6]">
               {sourceSegs.map((s, i) => <div key={s.label} className="h-full" title={`${s.label} ${fmt0(s.value)}`} style={{ width: `${Math.round(s.value / total * 100)}%`, background: s.striped ? "repeating-linear-gradient(90deg,#85baf5 0px,#85baf5 5px,#bfdbfe 5px,#bfdbfe 9px)" : s.color, marginRight: i < sourceSegs.length - 1 ? 1 : 0 }} />)}
             </div>
-            <div className="flex flex-wrap gap-x-6 gap-y-2 mt-3">
-              {sourceSegs.map(s => (
-                <div key={s.label} className="flex items-center gap-1.5 text-[11px]">
-                  <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ background: s.striped ? "repeating-linear-gradient(45deg,#85baf5 0,#85baf5 3px,#bfdbfe 3px,#bfdbfe 5px)" : s.color }} />
-                  <span className="text-[#8a8fa8]">{s.label}</span>
-                  <span className="font-semibold text-[#1a1e35] tabular-nums">{fmt0(s.value)}</span>
-                  {v1SourceLegendInfo[s.label] && <InfoTip text={v1SourceLegendInfo[s.label]} />}
-                </div>
-              ))}
+            <div className="flex items-start justify-between gap-6 mt-3">
+              <div className="flex flex-wrap gap-x-6 gap-y-2 flex-1 min-w-0">
+                {sourceSegs.map(s => (
+                  <div key={s.label} className="flex items-center gap-1.5 text-[11px]">
+                    <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ background: s.striped ? "repeating-linear-gradient(45deg,#85baf5 0,#85baf5 3px,#bfdbfe 3px,#bfdbfe 5px)" : s.color }} />
+                    <span className="text-[#6b7280]">{s.label}</span>
+                    <span className="font-semibold text-[#111827] tabular-nums">{fmt0(s.value)}</span>
+                    {v1SourceLegendInfo[s.label] && <InfoTip text={v1SourceLegendInfo[s.label]} />}
+                  </div>
+                ))}
+              </div>
             </div>
           </>) : (<>
-            <div className="h-3 rounded-full overflow-hidden flex bg-[#eef0f5]">
+            <div className="h-3 rounded-full overflow-hidden flex bg-[#f3f4f6]">
               {typePositives.map(s => <div key={s.label} className="h-full" title={`${s.label} ${fmt0(s.value)}`} style={{ width: `${s.value / typeTrack * 100}%`, minWidth: 4, background: s.color, marginRight: 1 }} />)}
-              {typeDeductions > 0 && <div className="h-full" title={`Deductions −${fmt0(typeDeductions)} (removed from gross)`} style={{ width: `${typeDeductions / typeTrack * 100}%`, minWidth: 4, background: "repeating-linear-gradient(45deg,#ef4444 0,#ef4444 3px,#fca5a5 3px,#fca5a5 6px)" }} />}
+              {typeDeductions > 0 && <div className="h-full" title={`Deductions −${fmt0(typeDeductions)} (removed from gross)`} style={{ width: `${typeDeductions / typeTrack * 100}%`, minWidth: 4, background: "#ef4444" }} />}
             </div>
-            <div className="flex flex-wrap gap-x-6 gap-y-2 mt-3">
-              {typePositives.map(s => (
-                <div key={s.label} className="flex items-center gap-1.5 text-[11px]">
-                  <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ background: s.color }} />
-                  <span className="text-[#8a8fa8]">{s.label}</span>
-                  <span className="font-semibold text-[#1a1e35] tabular-nums">{fmt0(s.value)}</span>
-                </div>
-              ))}
-              {typeDeductions > 0 && (
-                <div className="flex items-center gap-1.5 text-[11px]">
-                  <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ background: "repeating-linear-gradient(45deg,#ef4444 0,#ef4444 3px,#fca5a5 3px,#fca5a5 6px)" }} />
-                  <span className="text-[#8a8fa8]">Deductions</span>
-                  <span className="font-semibold text-[#c0392b] tabular-nums">−{fmt0(typeDeductions)}</span>
-                </div>
-              )}
+            <div className="flex items-start justify-between gap-6 mt-3">
+              <div className="flex flex-wrap gap-x-6 gap-y-2 flex-1 min-w-0">
+                {typePositives.map(s => (
+                  <div key={s.label} className="flex items-center gap-1.5 text-[11px]">
+                    <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ background: s.color }} />
+                    <span className="text-[#6b7280]">{s.label}</span>
+                    <span className="font-semibold text-[#111827] tabular-nums">{fmt0(s.value)}</span>
+                  </div>
+                ))}
+                {typeDeductions > 0 && (
+                  <div className="flex items-center gap-1.5 text-[11px]">
+                    <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ background: "#ef4444" }} />
+                    <span className="text-[#6b7280]">Deductions</span>
+                    <span className="font-semibold text-[#c0392b] tabular-nums">−{fmt0(typeDeductions)}</span>
+                  </div>
+                )}
+              </div>
             </div>
           </>)}
           </div>
@@ -6511,55 +7156,70 @@ function V1mFutureTracked({ provider, period, onProviderChange, onPeriodChange, 
       </div>
 
       {/* By-member matrix */}
-      <div className="bg-white rounded-lg border border-[#e8eaf0] overflow-hidden">
-        <div className="flex items-center justify-end gap-3 px-5 py-3 border-b border-[#e8eaf0]">
+      <div className={`bg-white border border-[#e5e7eb] overflow-hidden ${ftVer !== "v1" ? "-mt-4 rounded-b-lg border-t-0" : "rounded-lg"}`}>
+        {zone ? (
+        /* Zone table toolbar — Filters (bordered, left) · Columns (icon-only, right) */
+        <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-[#e5e7eb]">
+          <div className="flex items-center gap-3">
+            <div className="grow md:grow-0">
+              <input type="text" name="q" placeholder="Search" className="w-full md:min-w-56 h-8 rounded-[6px] border border-gray-300 bg-white px-3 text-sm text-gray-700 placeholder:text-gray-400 focus:outline-none focus:border-[#2aa7ff] focus:ring-1 focus:ring-[#2aa7ff]" />
+            </div>
+            <button className={zbtn("outlineGray", "sm")}><ListFilter size={16} /> Filters</button>
+          </div>
+          <button aria-label="Columns" title="Columns" className={`${ZBTN_BASE} h-8 w-8 ${ZBTN_VARIANT.outlineGray}`}><Columns3 size={16} /></button>
+        </div>
+        ) : (
+        <div className="flex items-center justify-end gap-3 px-5 py-3 border-b border-[#e5e7eb]">
           {!grouped && <>
             <button onClick={() => setCollapsed(anyExpanded ? new Set(rows.map(m => m.name)) : new Set())} className="flex items-center gap-1 text-[11px] text-[#0168dd] hover:opacity-80">{anyExpanded ? "Collapse all" : "Expand all"}</button>
-            <span className="w-px h-3.5 bg-[#e8eaf0]" />
+            <span className="w-px h-3.5 bg-[#e5e7eb]" />
           </>}
-          <button className={zone ? zbtn("ghostPrimary", "sm") : "flex items-center gap-1 text-[11px] text-[#0168dd] hover:opacity-80"}><Filter size={zone ? 16 : 12} /> Filters</button>
-          <button className={zone ? zbtn("ghostPrimary", "sm") : "flex items-center gap-1 text-[11px] text-[#0168dd] hover:opacity-80"}><Columns size={zone ? 16 : 12} /> Columns</button>
+          <button className="flex items-center gap-1 text-[11px] text-[#0168dd] hover:opacity-80"><Filter size={12} /> Filters</button>
+          <button className="flex items-center gap-1 text-[11px] text-[#0168dd] hover:opacity-80"><Columns size={12} /> Columns</button>
         </div>
+        )}
         <div className="overflow-x-auto">
         {grouped ? (
-        <table className="w-full text-xs min-w-[1020px]">
+        <table className={zone ? "w-full text-sm border-separate border-spacing-0 min-w-[1020px]" : "w-full text-xs min-w-[1020px]"}>
           <thead>
             <tr>
-              <th rowSpan={2} className={`text-left py-2.5 px-5 align-bottom ${th}`}>Member</th>
-              <th rowSpan={2} className={`text-left py-2.5 px-3 whitespace-nowrap align-bottom ${th}`}>Payment method</th>
-              <th colSpan={2} className={`text-center py-2 px-3 border-l border-[#e8eaf0] ${th} text-emerald-600`}>Confirmed</th>
-              <th colSpan={4} className={`text-center py-2 px-3 border-l border-[#e8eaf0] ${th} text-[#0168dd]`}>Planned</th>
-              <th rowSpan={2} className={`text-right py-2.5 px-5 whitespace-nowrap align-bottom border-l border-[#e8eaf0] ${th}`}>Total</th>
+              {zone && <th rowSpan={2} className="w-0 px-3 py-2.5 border-r border-[#e5e7eb] bg-[#f9fafb] align-bottom"><input type="checkbox" className="appearance-none shrink-0 w-3.5 h-3.5 rounded-[4px] border border-[#d1d5db] bg-white align-middle relative cursor-pointer checked:bg-[#2aa7ff] checked:border-[#2aa7ff] after:content-[''] after:absolute after:left-1/2 after:top-[45%] after:-translate-x-1/2 after:-translate-y-1/2 after:w-[4px] after:h-[7px] after:border-white after:border-r-2 after:border-b-2 after:rotate-45" /></th>}
+              <th rowSpan={2} className={zone ? "px-3 py-2.5 border-r border-[#e5e7eb] bg-[#f9fafb] text-[#1f2937] text-sm font-semibold text-left align-bottom min-w-[200px]" : `text-left py-2.5 px-5 align-bottom ${th}`}>Member</th>
+              <th rowSpan={2} className={zone ? "px-3 py-2.5 border-r border-[#e5e7eb] bg-[#f9fafb] text-[#1f2937] text-sm font-semibold text-left align-bottom whitespace-nowrap" : `text-left py-2.5 px-3 whitespace-nowrap align-bottom ${th}`}>Payment method</th>
+              <th colSpan={2} className={zone ? "px-3 py-2.5 border-r border-b border-[#e5e7eb] bg-[#f9fafb] text-[#0e9f6e] text-sm font-semibold text-center" : `text-center py-2 px-3 border-l border-[#e5e7eb] ${th} text-emerald-600`}>Tracked</th>
+              <th colSpan={4} className={zone ? "px-3 py-2.5 border-r border-b border-[#e5e7eb] bg-[#f9fafb] text-[#0168dd] text-sm font-semibold text-center" : `text-center py-2 px-3 border-l border-[#e5e7eb] ${th} text-[#0168dd]`}>Planned</th>
+              <th rowSpan={2} className={zone ? "px-3 py-2.5 border-[#e5e7eb] bg-[#f9fafb] text-[#1f2937] text-sm font-semibold text-left align-bottom whitespace-nowrap" : `text-right py-2.5 px-5 whitespace-nowrap align-bottom border-l border-[#e5e7eb] ${th}`}>Total</th>
             </tr>
-            <tr className="border-b border-[#e8eaf0]">
-              <th className={`text-right py-2 px-3 whitespace-nowrap border-l border-[#e8eaf0] ${th}`}>{v1lEtLabel["Hourly"]}</th>
-              <th className={`text-right py-2 px-3 whitespace-nowrap ${th}`}>{v1lEtLabel["Overtime"]}</th>
-              <th className={`text-right py-2 px-3 whitespace-nowrap border-l border-[#e8eaf0] ${th}`}>{v1lEtLabel["Fixed pay"]}</th>
-              <th className={`text-right py-2 px-3 whitespace-nowrap ${th}`}>{v1lEtLabel["PTO / Holiday"]}</th>
-              <th className={`text-right py-2 px-3 whitespace-nowrap ${th}`}>{v1lEtLabel["Additions"]}</th>
-              <th className={`text-right py-2 px-3 whitespace-nowrap ${th}`}>{v1lEtLabel["Deductions"]}</th>
+            <tr className={zone ? "" : "border-b border-[#e5e7eb]"}>
+              <th className={zone ? "px-3 py-2.5 border-r border-[#e5e7eb] bg-[#f9fafb] text-[#1f2937] text-sm font-semibold text-left whitespace-nowrap" : `text-right py-2 px-3 whitespace-nowrap border-l border-[#e5e7eb] ${th}`}>{v1lEtLabel["Hourly"]}</th>
+              <th className={zone ? "px-3 py-2.5 border-r border-[#e5e7eb] bg-[#f9fafb] text-[#1f2937] text-sm font-semibold text-left whitespace-nowrap" : `text-right py-2 px-3 whitespace-nowrap ${th}`}>{v1lEtLabel["Overtime"]}</th>
+              <th className={zone ? "px-3 py-2.5 border-r border-[#e5e7eb] bg-[#f9fafb] text-[#1f2937] text-sm font-semibold text-left whitespace-nowrap" : `text-right py-2 px-3 whitespace-nowrap border-l border-[#e5e7eb] ${th}`}>{v1lEtLabel["Fixed pay"]}</th>
+              <th className={zone ? "px-3 py-2.5 border-r border-[#e5e7eb] bg-[#f9fafb] text-[#1f2937] text-sm font-semibold text-left whitespace-nowrap" : `text-right py-2 px-3 whitespace-nowrap ${th}`}>{v1lEtLabel["PTO / Holiday"]}</th>
+              <th className={zone ? "px-3 py-2.5 border-r border-[#e5e7eb] bg-[#f9fafb] text-[#1f2937] text-sm font-semibold text-left whitespace-nowrap" : `text-right py-2 px-3 whitespace-nowrap ${th}`}>{v1lEtLabel["Additions"]}</th>
+              <th className={zone ? "px-3 py-2.5 border-r border-[#e5e7eb] bg-[#f9fafb] text-[#1f2937] text-sm font-semibold text-left whitespace-nowrap" : `text-right py-2 px-3 whitespace-nowrap ${th}`}>{v1lEtLabel["Deductions"]}</th>
             </tr>
           </thead>
           <tbody>
             {paged.map(m => (
-              <tr key={m.name} className="border-t border-[#e8eaf0] hover:bg-[#fafbfd]">
-                <td className="py-3 px-5">
+              <tr key={m.name} className={zone ? "group/row h-12 [&>td]:align-middle" : "border-t border-[#e5e7eb] hover:bg-[#f9fafb]"}>
+                {zone && <td className="w-0 px-3 py-2 border-r border-t border-[#e5e7eb] group-hover/row:bg-[#f9fafb] align-middle"><input type="checkbox" className="appearance-none shrink-0 w-3.5 h-3.5 rounded-[4px] border border-[#d1d5db] bg-white align-middle relative cursor-pointer checked:bg-[#2aa7ff] checked:border-[#2aa7ff] after:content-[''] after:absolute after:left-1/2 after:top-[45%] after:-translate-x-1/2 after:-translate-y-1/2 after:w-[4px] after:h-[7px] after:border-white after:border-r-2 after:border-b-2 after:rotate-45" /></td>}
+                <td className={zone ? "px-3 py-2 border-r border-t border-[#e5e7eb] group-hover/row:bg-[#f9fafb]" : "py-3 px-5"}>
                   <div className="flex items-center gap-2">
                     <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0" style={{ background: m.color }}>{m.avatar}</div>
-                    <span className="font-semibold text-[#1a1e35]">{m.name}</span>
+                    <span className={zone ? "text-[#2aa7ff] text-sm hover:underline cursor-pointer" : "font-semibold text-[#111827]"}>{m.name}</span>
                   </div>
                 </td>
-                <td className="py-3 px-3"><span className="inline-flex items-center gap-1.5 text-[#5b607a] whitespace-nowrap"><ProviderLogo id={m.provider} size={14} />{v1gProviderMeta[m.provider]?.name ?? m.provider}</span></td>
-                <td className="py-3 px-3 text-right tabular-nums text-[#5b607a] border-l border-[#f0f1f5]">
+                <td className={zone ? "px-3 py-2 border-r border-t border-[#e5e7eb] group-hover/row:bg-[#f9fafb]" : "py-3 px-3"}><span className={zone ? "inline-flex items-center gap-1.5 text-[#4b5563] text-xs whitespace-nowrap" : "inline-flex items-center gap-1.5 text-[#4b5563] whitespace-nowrap"}><ProviderLogo id={m.provider} size={14} />{v1gProviderMeta[m.provider]?.name ?? m.provider}</span></td>
+                <td className={zone ? "px-3 py-2 border-r border-t border-[#e5e7eb] text-left tabular-nums text-[#111827] text-sm group-hover/row:bg-[#f9fafb]" : "py-3 px-3 text-right tabular-nums text-[#4b5563] border-l border-[#f3f4f6]"}>
                   {cell(m.confirmed["Hourly"])}
-                  {m.confirmed["Hourly"] && m.rate && (<div className="text-[10px] text-[#a0a4b8] font-normal tabular-nums">${m.rate}/hr · {m.hours}h</div>)}
+                  {m.confirmed["Hourly"] && m.rate && (<div className={zone ? "text-xs text-[#6b7280] font-normal tabular-nums" : "text-[10px] text-[#9ca3af] font-normal tabular-nums"}>${m.rate}/hr · {m.hours}h</div>)}
                 </td>
-                <td className="py-3 px-3 text-right tabular-nums text-[#5b607a]">{cell(m.confirmed["Overtime"])}</td>
-                <td className="py-3 px-3 text-right tabular-nums text-[#5b607a] border-l border-[#f0f1f5]">{cell(m.planned["Fixed pay"])}</td>
-                <td className="py-3 px-3 text-right tabular-nums text-[#5b607a]">{cell(m.planned["PTO / Holiday"])}</td>
-                <td className="py-3 px-3 text-right tabular-nums text-[#5b607a]">{cell(m.planned["Additions"])}</td>
-                <td className="py-3 px-3 text-right tabular-nums text-[#5b607a]">{cell(m.planned["Deductions"], true)}</td>
-                <td className="py-3 px-5 text-right font-bold text-[#1a1e35] tabular-nums border-l border-[#f0f1f5]">{fmt0(m.known)}</td>
+                <td className={zone ? "px-3 py-2 border-r border-t border-[#e5e7eb] text-left tabular-nums text-[#111827] text-sm group-hover/row:bg-[#f9fafb]" : "py-3 px-3 text-right tabular-nums text-[#4b5563]"}>{cell(m.confirmed["Overtime"])}</td>
+                <td className={zone ? "px-3 py-2 border-r border-t border-[#e5e7eb] text-left tabular-nums text-[#111827] text-sm group-hover/row:bg-[#f9fafb]" : "py-3 px-3 text-right tabular-nums text-[#4b5563] border-l border-[#f3f4f6]"}>{cell(m.planned["Fixed pay"])}</td>
+                <td className={zone ? "px-3 py-2 border-r border-t border-[#e5e7eb] text-left tabular-nums text-[#111827] text-sm group-hover/row:bg-[#f9fafb]" : "py-3 px-3 text-right tabular-nums text-[#4b5563]"}>{cell(m.planned["PTO / Holiday"])}</td>
+                <td className={zone ? "px-3 py-2 border-r border-t border-[#e5e7eb] text-left tabular-nums text-[#111827] text-sm group-hover/row:bg-[#f9fafb]" : "py-3 px-3 text-right tabular-nums text-[#4b5563]"}>{cell(m.planned["Additions"])}</td>
+                <td className={zone ? "px-3 py-2 border-r border-t border-[#e5e7eb] text-left tabular-nums text-[#111827] text-sm group-hover/row:bg-[#f9fafb]" : "py-3 px-3 text-right tabular-nums text-[#4b5563]"}>{cell(m.planned["Deductions"], true)}</td>
+                <td className={zone ? "px-3 py-2 border-t border-[#e5e7eb] text-left font-semibold text-[#111827] text-sm tabular-nums group-hover/row:bg-[#f9fafb]" : "py-3 px-5 text-right font-bold text-[#111827] tabular-nums border-l border-[#f3f4f6]"}>{fmt0(m.known)}</td>
               </tr>
             ))}
           </tbody>
@@ -6567,7 +7227,7 @@ function V1mFutureTracked({ provider, period, onProviderChange, onPeriodChange, 
         ) : (
         <table className="w-full text-xs min-w-[1020px]">
           <thead>
-            <tr className="border-b border-[#e8eaf0]">
+            <tr className="border-b border-[#e5e7eb]">
               <th className={`text-left py-2.5 px-5 ${th}`}>Member</th>
               <th className={`text-left py-2.5 px-3 whitespace-nowrap ${th}`}>Payment method</th>
               {ETS.map(e => <th key={e} className={`text-right py-2.5 px-3 whitespace-nowrap ${th}`}>{v1lEtLabel[e]}</th>)}
@@ -6579,37 +7239,37 @@ function V1mFutureTracked({ provider, period, onProviderChange, onPeriodChange, 
               const open = !collapsed.has(m.name);
               return (
               <Fragment key={m.name}>
-                <tr className="border-t border-[#e8eaf0] hover:bg-[#fafbfd] cursor-pointer" onClick={() => toggle(m.name)}>
+                <tr className="border-t border-[#e5e7eb] hover:bg-[#f9fafb] cursor-pointer" onClick={() => toggle(m.name)}>
                   <td className={`${open ? "pt-3 pb-1" : "py-3"} px-5`}>
                     <div className="flex items-center gap-2">
-                      <ChevronRight size={13} className={`text-[#b0b3c5] transition-transform flex-shrink-0 ${open ? "rotate-90" : ""}`} />
+                      <ChevronRight size={13} className={`text-[#9ca3af] transition-transform flex-shrink-0 ${open ? "rotate-90" : ""}`} />
                       <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0" style={{ background: m.color }}>{m.avatar}</div>
-                      <span className="font-semibold text-[#1a1e35]">{m.name}</span>
+                      <span className="font-semibold text-[#111827]">{m.name}</span>
                     </div>
                   </td>
                   <td className={`${open ? "pt-3 pb-1" : "py-3"} px-3`}>
-                    <span className="inline-flex items-center gap-1.5 text-[#5b607a] whitespace-nowrap"><ProviderLogo id={m.provider} size={14} />{v1gProviderMeta[m.provider]?.name ?? m.provider}</span>
+                    <span className="inline-flex items-center gap-1.5 text-[#4b5563] whitespace-nowrap"><ProviderLogo id={m.provider} size={14} />{v1gProviderMeta[m.provider]?.name ?? m.provider}</span>
                   </td>
                   {ETS.map(e => <td key={e} className={`${open ? "pt-3 pb-1" : "py-3"} px-3`} />)}
-                  <td className={`${open ? "pt-3 pb-1" : "py-3"} px-5 text-right font-bold text-[#1a1e35] tabular-nums`}>{fmt0(m.known)}</td>
+                  <td className={`${open ? "pt-3 pb-1" : "py-3"} px-5 text-right font-bold text-[#111827] tabular-nums`}>{fmt0(m.known)}</td>
                 </tr>
                 {open && (<>
                 <tr>
                   <td className="py-1 px-5 pl-[46px]"><CertaintyLabel status="Confirmed" /></td>
                   <td className="py-1 px-3" />
                   {ETS.map(e => (
-                    <td key={e} className="py-1 px-3 text-right tabular-nums text-[#5b607a]">
+                    <td key={e} className="py-1 px-3 text-right tabular-nums text-[#4b5563]">
                       {cell(m.confirmed[e], e === "Deductions")}
-                      {e === "Hourly" && m.confirmed.Hourly && m.rate && (<div className="text-[10px] text-[#a0a4b8] font-normal tabular-nums">${m.rate}/hr · {m.hours}h</div>)}
+                      {e === "Hourly" && m.confirmed.Hourly && m.rate && (<div className="text-[10px] text-[#9ca3af] font-normal tabular-nums">${m.rate}/hr · {m.hours}h</div>)}
                     </td>
                   ))}
-                  <td className="py-1 px-5 text-right tabular-nums font-medium text-[#1a1e35]">{cell(m.cTotal)}</td>
+                  <td className="py-1 px-5 text-right tabular-nums font-medium text-[#111827]">{cell(m.cTotal)}</td>
                 </tr>
                 <tr>
                   <td className="py-1 pb-3 px-5 pl-[46px]"><CertaintyLabel status="Planned" /></td>
                   <td className="py-1 pb-3 px-3" />
-                  {ETS.map(e => <td key={e} className="py-1 pb-3 px-3 text-right tabular-nums text-[#5b607a]">{cell(m.planned[e], e === "Deductions")}</td>)}
-                  <td className="py-1 pb-3 px-5 text-right tabular-nums font-medium text-[#1a1e35]">{cell(m.pTotal)}</td>
+                  {ETS.map(e => <td key={e} className="py-1 pb-3 px-3 text-right tabular-nums text-[#4b5563]">{cell(m.planned[e], e === "Deductions")}</td>)}
+                  <td className="py-1 pb-3 px-5 text-right tabular-nums font-medium text-[#111827]">{cell(m.pTotal)}</td>
                 </tr>
                 </>)}
               </Fragment>
@@ -6619,16 +7279,37 @@ function V1mFutureTracked({ provider, period, onProviderChange, onPeriodChange, 
         </table>
         )}
         </div>
-        <div className="flex items-center justify-between gap-3 px-5 py-3 border-t border-[#e8eaf0]">
-          <span className="text-[11px] text-[#8a8fa8]">Showing <span className="font-medium text-[#5b607a]">{rangeFrom}–{rangeTo}</span> of {rows.length} members</span>
+        {zone ? (
+        /* Zone Pagination — active page = primary-50 box + primary-700 text + bottom accent;
+           inactive = plain gray text; text Previous/Next; "N per page" selector. */
+        <div className="flex items-center justify-between gap-3 px-5 py-3 border-t border-[#e5e7eb]">
+          <div className="flex items-center gap-3 text-sm text-[#6b7280]">
+            <span>Showing {rangeFrom}–{rangeTo} items</span>
+            <span className="inline-flex items-center gap-0.5 border border-[#e5e7eb] rounded-[4px] pl-2.5 pr-1 py-1 text-[#111827] select-none"><span className="font-medium">10</span><span className="material-symbols-rounded" style={{ fontSize: 18 }}>keyboard_arrow_down</span></span>
+            <span>Per page</span>
+          </div>
           <div className="flex items-center gap-1">
-            <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={safePage === 0} className="flex items-center justify-center w-7 h-7 rounded border border-[#e8eaf0] text-[#5b607a] hover:bg-[#f5f6fa] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"><ChevronLeft size={14} /></button>
+            {safePage > 0 && (
+              <button onClick={() => setPage(p => Math.max(0, p - 1))} className="inline-flex items-center gap-0.5 h-8 pl-1 pr-2.5 rounded-[4px] text-sm text-[#6b7280] hover:text-[#111827] transition-colors"><span className="material-symbols-rounded" style={{ fontSize: 18 }}>chevron_left</span>Previous</button>
+            )}
             {Array.from({ length: pageCount }, (_, i) => (
-              <button key={i} onClick={() => setPage(i)} className={`w-7 h-7 rounded text-[11px] font-medium transition-colors ${i === safePage ? "bg-[#0168dd] text-white" : "text-[#5b607a] hover:bg-[#f5f6fa] border border-[#e8eaf0]"}`}>{i + 1}</button>
+              <button key={i} onClick={() => setPage(i)} className={`relative h-8 min-w-[32px] px-2 rounded-[4px] text-sm transition-colors ${i === safePage ? "bg-[#eaf6ff] text-[#0168dd] font-medium" : "text-[#6b7280] font-normal hover:bg-[#f9fafb]"}`}>{i + 1}{i === safePage && <span className="absolute left-1/2 -translate-x-1/2 -bottom-[1.5px] w-[18px] h-[3px] rounded-full bg-[#0168dd]" />}</button>
             ))}
-            <button onClick={() => setPage(p => Math.min(pageCount - 1, p + 1))} disabled={safePage >= pageCount - 1} className="flex items-center justify-center w-7 h-7 rounded border border-[#e8eaf0] text-[#5b607a] hover:bg-[#f5f6fa] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"><ChevronRight size={14} /></button>
+            <button onClick={() => setPage(p => Math.min(pageCount - 1, p + 1))} disabled={safePage >= pageCount - 1} className="inline-flex items-center gap-0.5 h-8 pl-2.5 pr-1 rounded-[4px] text-sm text-[#6b7280] hover:text-[#111827] disabled:opacity-40 disabled:cursor-not-allowed transition-colors">Next<span className="material-symbols-rounded" style={{ fontSize: 18 }}>chevron_right</span></button>
           </div>
         </div>
+        ) : (
+        <div className="flex items-center justify-between gap-3 px-5 py-3 border-t border-[#e5e7eb]">
+          <span className="text-[11px] text-[#6b7280]">Showing <span className="font-medium text-[#4b5563]">{rangeFrom}–{rangeTo}</span> of {rows.length} members</span>
+          <div className="flex items-center gap-1">
+            <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={safePage === 0} className="flex items-center justify-center w-7 h-7 rounded border border-[#e5e7eb] text-[#4b5563] hover:bg-[#f9fafb] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"><ChevronLeft size={14} /></button>
+            {Array.from({ length: pageCount }, (_, i) => (
+              <button key={i} onClick={() => setPage(i)} className={`w-7 h-7 rounded text-[11px] font-medium transition-colors ${i === safePage ? "bg-[#0168dd] text-white" : "text-[#4b5563] hover:bg-[#f9fafb] border border-[#e5e7eb]"}`}>{i + 1}</button>
+            ))}
+            <button onClick={() => setPage(p => Math.min(pageCount - 1, p + 1))} disabled={safePage >= pageCount - 1} className="flex items-center justify-center w-7 h-7 rounded border border-[#e5e7eb] text-[#4b5563] hover:bg-[#f9fafb] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"><ChevronRight size={14} /></button>
+          </div>
+        </div>
+        )}
       </div>
       </>)}
 
@@ -6637,39 +7318,39 @@ function V1mFutureTracked({ provider, period, onProviderChange, onPeriodChange, 
         <div className="fixed inset-0 z-40 bg-black/30" onClick={() => setShowHow(false)} />
         <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none p-4">
           <div className="bg-white rounded-xl shadow-2xl w-[480px] max-w-full max-h-[85vh] flex flex-col pointer-events-auto">
-            <div className="flex items-start justify-between px-6 pt-5 pb-4 border-b border-[#e8eaf0] flex-shrink-0">
+            <div className="flex items-start justify-between px-5 py-5 flex-shrink-0">
               <div>
-                <h2 className="text-[15px] font-semibold text-[#1a1e35]">How we get there</h2>
-                <p className="text-[11px] text-[#8a8fa8] mt-0.5">How your {activePeriod.label} {isAll ? "projected payout" : provName + " payment"} is built.</p>
+                <h2 className="text-lg font-semibold text-[#111827]">How we get there</h2>
+                <p className="text-sm text-[#6b7280] mt-0.5">How your {activePeriod.label} {isAll ? "projected payout" : provName + " payment"} is built.</p>
               </div>
-              <button onClick={() => setShowHow(false)} className="p-1 rounded-md text-[#8a8fa8] hover:text-[#1a1e35] hover:bg-[#f0f1f5] transition-colors flex-shrink-0"><X size={16} /></button>
+              <button onClick={() => setShowHow(false)} className="p-1 rounded-md text-[#6b7280] hover:text-[#111827] hover:bg-[#f3f4f6] transition-colors flex-shrink-0"><X size={16} /></button>
             </div>
-            <div className="px-6 py-4 overflow-y-auto space-y-4">
+            <div className="px-5 py-2.5 overflow-y-auto space-y-4">
               <div className="flex items-stretch gap-1.5">
-                <div className="flex-1 rounded-lg border border-[#e8eaf0] bg-[#f9f9fc] px-2.5 py-2"><p className="text-[9px] font-semibold uppercase tracking-wider text-[#8a8fa8] leading-tight">Typical period</p><p className="text-[15px] font-bold text-[#1a1e35] mt-1.5 leading-none tracking-tight">{fmt0(typical)}</p><p className="text-[10px] text-[#a0a4b8] mt-1.5 leading-tight">recent monthly avg</p></div>
-                <span className="flex items-center text-[#b0b3c5] font-semibold text-sm flex-shrink-0 px-0.5">+</span>
-                <div className="flex-1 rounded-lg border border-[#e8eaf0] bg-[#f9f9fc] px-2.5 py-2"><p className="text-[9px] font-semibold uppercase tracking-wider text-[#8a8fa8] leading-tight">Adjustments</p><p className="text-[15px] font-bold text-emerald-600 mt-1.5 leading-none tracking-tight">+{adjPct}%</p><p className="text-[10px] text-[#a0a4b8] mt-1.5 leading-tight">headcount + season</p></div>
-                <span className="flex items-center text-[#b0b3c5] font-semibold text-sm flex-shrink-0 px-0.5">=</span>
-                <div className="flex-1 rounded-lg border border-[#bcd4f2] bg-[#f0f6ff] px-2.5 py-2"><p className="text-[9px] font-semibold uppercase tracking-wider text-[#0168dd] leading-tight">Projected</p><p className="text-[15px] font-bold text-[#1a1e35] mt-1.5 leading-none tracking-tight">{fmt0(total)}</p><p className="text-[10px] text-[#a0a4b8] mt-1.5 leading-tight">this period</p></div>
+                <div className="flex-1 rounded-lg border border-[#e5e7eb] bg-[#f9fafb] px-2.5 py-2"><p className="text-xs font-semibold uppercase tracking-wider text-[#6b7280] leading-tight">Typical period</p><p className="text-base font-bold text-[#111827] mt-1.5 leading-none tracking-tight">{fmt0(typical)}</p><p className="text-xs text-[#6b7280] mt-1.5 leading-tight">recent monthly avg</p></div>
+                <span className="flex items-center text-[#9ca3af] font-semibold text-sm flex-shrink-0 px-0.5">+</span>
+                <div className="flex-1 rounded-lg border border-[#e5e7eb] bg-[#f9fafb] px-2.5 py-2"><p className="text-xs font-semibold uppercase tracking-wider text-[#6b7280] leading-tight">Adjustments</p><p className="text-base font-bold text-[#0e9f6e] mt-1.5 leading-none tracking-tight">+{adjPct}%</p><p className="text-xs text-[#6b7280] mt-1.5 leading-tight">Headcount + season</p></div>
+                <span className="flex items-center text-[#9ca3af] font-semibold text-sm flex-shrink-0 px-0.5">=</span>
+                <div className="flex-1 rounded-lg border border-[#bcd4f2] bg-[#f0f6ff] px-2.5 py-2"><p className="text-xs font-semibold uppercase tracking-wider text-[#0168dd] leading-tight">Projected</p><p className="text-base font-bold text-[#111827] mt-1.5 leading-none tracking-tight">{fmt0(total)}</p><p className="text-xs text-[#6b7280] mt-1.5 leading-tight">this period</p></div>
               </div>
-              <div className="pt-4 border-t border-[#f0f1f5]">
-                <p className="text-[11px] text-[#8a8fa8] leading-snug">The <span className="font-semibold text-emerald-600">+{adjPct}%</span> comes from trends in your history:</p>
-                <div className="mt-2 space-y-1.5">
-                  <div className="flex items-baseline gap-2 text-[12px]"><span className="font-semibold text-emerald-600 w-10 flex-shrink-0">+{hcPct}%</span><span className="text-[#1a1e35] font-medium flex-shrink-0">Headcount change</span></div>
-                  <div className="flex items-baseline gap-2 text-[12px]"><span className="font-semibold text-emerald-600 w-10 flex-shrink-0">+{seasonPct}%</span><span className="text-[#1a1e35] font-medium flex-shrink-0">Seasonality</span><span className="text-[#8a8fa8] truncate">· June is typically above average</span></div>
+              <div className="pt-4">
+                <p className="text-sm text-[#6b7280] leading-snug"><span className="font-semibold text-[#0e9f6e]">+{adjPct}%</span> comes from trends in your payment history:</p>
+                <div className="mt-2 space-y-1.5 text-sm">
+                  <div className="flex items-baseline gap-1.5"><span className="font-semibold text-[#0e9f6e] w-[34px] flex-shrink-0">+{hcPct}%</span><span className="text-[#111827] font-medium flex-shrink-0">Headcount change</span><span className="text-[#6b7280] truncate">· {v1CurrMembers} this cycle vs avg {v1AvgMembers}</span></div>
+                  <div className="flex items-baseline gap-1.5"><span className="font-semibold text-[#0e9f6e] w-[34px] flex-shrink-0">+{seasonPct}%</span><span className="text-[#111827] font-medium flex-shrink-0">Seasonality</span><span className="text-[#6b7280] truncate">· June is typically above average</span></div>
                 </div>
               </div>
-              <div className="pt-4 border-t border-[#f0f1f5]">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-2">What makes up the {fmt0(total)}</p>
-                <ul className="space-y-2 text-[11px] leading-snug">
-                  <li className="flex gap-2"><span className="w-2.5 h-2.5 rounded-sm bg-emerald-500 mt-0.5 flex-shrink-0" /><span className="text-[#8a8fa8]"><span className="font-semibold text-[#1a1e35]">Confirmed {fmt0(confirmed)}</span> — hours already tracked. Final.</span></li>
-                  <li className="flex gap-2"><span className="w-2.5 h-2.5 rounded-sm bg-[#0168dd] mt-0.5 flex-shrink-0" /><span className="text-[#8a8fa8]"><span className="font-semibold text-[#1a1e35]">Planned {fmt0(planned)}</span> — scheduled (PTO/holidays, adjustments, fixed pay). Committed unless cancelled.</span></li>
-                  <li className="flex gap-2"><span className="w-2.5 h-2.5 rounded-sm mt-0.5 flex-shrink-0" style={{ background: "repeating-linear-gradient(90deg,#85baf5 0px,#85baf5 3px,#bfdbfe 3px,#bfdbfe 5px)" }} /><span className="text-[#8a8fa8]"><span className="font-semibold text-[#1a1e35]">Projected ~{fmt0(projected)}</span> — remaining hours + bonuses, estimated from history. The gap to the forecast.</span></li>
+              <div className="pt-4">
+                <p className="text-xs font-semibold uppercase tracking-wider text-[#6b7280] mb-2">What makes up the {fmt0(total)}</p>
+                <ul className="space-y-3 text-sm leading-relaxed">
+                  <li className="flex gap-2.5"><span className="w-2.5 h-2.5 rounded-sm bg-[#0e9f6e] mt-1 flex-shrink-0" /><span className="text-[#6b7280]"><span className="font-semibold text-[#111827] block mb-0.5">Tracked {fmt0(confirmed)}</span>Hours already logged, including overtime. Final — it won't change before payout.</span></li>
+                  <li className="flex gap-2.5"><span className="w-2.5 h-2.5 rounded-sm bg-[#0168dd] mt-1 flex-shrink-0" /><span className="text-[#6b7280]"><span className="font-semibold text-[#111827] block mb-0.5">Planned {fmt0(planned)}</span>Scheduled and known ahead: fixed pay, approved PTO and holidays, and manual adjustments. Committed unless cancelled.</span></li>
+                  <li className="flex gap-2.5"><span className="w-2.5 h-2.5 rounded-sm mt-1 flex-shrink-0" style={{ background: "repeating-linear-gradient(90deg,#85baf5 0,#85baf5 3px,#bfdbfe 3px,#bfdbfe 5px)" }} /><span className="text-[#6b7280]"><span className="font-semibold text-[#111827] block mb-0.5">Projected ~{fmt0(projected)}</span>Remaining hours and likely bonuses, estimated from history — the gap to today's forecast.</span></li>
                 </ul>
               </div>
-              <p className="text-[11px] text-[#a0a4b8] leading-snug">{fmt0(total)} is an estimate from your history — not a guaranteed figure.</p>
+              <p className="text-sm text-[#6b7280] leading-snug">{fmt0(total)} is an estimate from your payment history — not a guaranteed figure. Add a buffer, or <a href="#" onClick={e => e.preventDefault()} className="font-medium text-[#6b7280] underline decoration-dotted decoration-[#d1d5db] underline-offset-2 hover:text-[#111827] transition-colors">see how to improve accuracy</a>.</p>
             </div>
-            <div className="flex items-center justify-end px-6 py-4 border-t border-[#e8eaf0] flex-shrink-0">
+            <div className="flex items-center justify-end px-5 py-5 flex-shrink-0">
               <button onClick={() => setShowHow(false)} className={zone ? zbtn("solidPrimary", "md") : "px-5 py-2 rounded-lg text-sm font-semibold bg-[#0168dd] text-white hover:bg-[#0057bb] transition-colors"}>Done</button>
             </div>
           </div>
@@ -6680,38 +7361,38 @@ function V1mFutureTracked({ provider, period, onProviderChange, onPeriodChange, 
       {showBreakdownInfo && (<>
         <div className="fixed inset-0 z-40 bg-black/30" onClick={() => setShowBreakdownInfo(false)} />
         <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-[460px] max-w-full max-h-[85vh] flex flex-col pointer-events-auto">
-            <div className="flex items-start justify-between px-6 pt-5 pb-4 border-b border-[#e8eaf0] flex-shrink-0">
+          <div className="bg-white rounded-xl shadow-2xl w-[640px] max-w-full max-h-[85vh] flex flex-col pointer-events-auto">
+            <div className="flex items-start justify-between px-5 py-5 flex-shrink-0">
               <div>
-                <h2 className="text-[15px] font-semibold text-[#1a1e35]">{segLens === "source" ? "Confirmed vs. projected" : "Payroll breakdown"}</h2>
+                <h2 className="text-lg font-semibold text-[#111827]">{segLens === "source" ? "Tracked vs. projected" : "Payroll breakdown"}</h2>
               </div>
-              <button onClick={() => setShowBreakdownInfo(false)} className="p-1 rounded-md text-[#8a8fa8] hover:text-[#1a1e35] hover:bg-[#f0f1f5] transition-colors flex-shrink-0"><X size={16} /></button>
+              <button onClick={() => setShowBreakdownInfo(false)} className="p-1 rounded-md text-[#6b7280] hover:text-[#111827] hover:bg-[#f3f4f6] transition-colors flex-shrink-0"><X size={16} /></button>
             </div>
-            <div className="px-6 py-4 overflow-y-auto">
+            <div className="px-5 py-2.5 overflow-y-auto">
               {segLens === "source" ? (
                 <>
-                <p className="text-[12px] text-[#5b607a] leading-relaxed mb-4">Every amount in this period sits at one of three levels of certainty — some is already locked in, some is scheduled and expected, and the rest is still our best estimate. Together they show how much of the total you can rely on today versus what could still move before payout. Here's what each level means:</p>
-                <ul className="space-y-4 text-[11px] leading-relaxed">
-                  <li className="flex gap-2.5"><span className="w-2.5 h-2.5 rounded-sm bg-[#10b981] mt-1 flex-shrink-0" /><span className="text-[#8a8fa8]"><span className="font-semibold text-[#1a1e35] block mb-0.5">Confirmed</span>Time already tracked and recorded, including overtime. It's final and won't change before payout — the part you can count on. <span className="text-[#a0a4b8]">Example: 120 hours logged this cycle at $50/hr.</span></span></li>
-                  <li className="flex gap-2.5"><span className="w-2.5 h-2.5 rounded-sm bg-[#0168dd] mt-1 flex-shrink-0" /><span className="text-[#8a8fa8]"><span className="font-semibold text-[#1a1e35] block mb-0.5">Planned</span>Amounts scheduled and known ahead of time: fixed salaries, approved PTO and holidays, and manual payroll adjustments. Committed unless someone cancels them. <span className="text-[#a0a4b8]">Example: a $5,000 monthly salary, approved PTO, or a −$200 correction.</span></span></li>
-                  <li className="flex gap-2.5"><span className="w-2.5 h-2.5 rounded-sm mt-1 flex-shrink-0" style={{ background: "repeating-linear-gradient(90deg,#85baf5 0,#85baf5 3px,#bfdbfe 3px,#bfdbfe 5px)" }} /><span className="text-[#8a8fa8]"><span className="font-semibold text-[#1a1e35] block mb-0.5">~Projected</span>Our estimate of what's still to come this period — hours not yet logged, plus likely bonuses. Shown only as a team-wide aggregate, never assigned to a person, because it hasn't happened yet. <span className="text-[#a0a4b8]">Example: the hours left in the month.</span></span></li>
+                <p className="text-sm text-[#4b5563] leading-relaxed mb-4">Every amount in this period sits at one of three levels of certainty — some is already locked in, some is scheduled and expected, and the rest is still our best estimate. Together they show how much of the total you can rely on today versus what could still move before payout. Here's what each level means:</p>
+                <ul className="space-y-4 text-sm leading-relaxed">
+                  <li className="flex gap-2.5"><span className="w-2.5 h-2.5 rounded-sm bg-[#0e9f6e] mt-1 flex-shrink-0" /><span className="text-[#6b7280]"><span className="font-semibold text-[#111827] block mb-0.5">Tracked</span>Hours already logged and recorded, including overtime. It's final and won't change before payout — the part you can count on. <span className="text-[#9ca3af]">Example: 120 hours logged this cycle at $50/hr.</span></span></li>
+                  <li className="flex gap-2.5"><span className="w-2.5 h-2.5 rounded-sm bg-[#0168dd] mt-1 flex-shrink-0" /><span className="text-[#6b7280]"><span className="font-semibold text-[#111827] block mb-0.5">Planned</span>Amounts scheduled and known ahead of time: fixed salaries, approved PTO and holidays, and manual payroll adjustments. Committed unless someone cancels them. <span className="text-[#9ca3af]">Example: a $5,000 monthly salary, approved PTO, or a −$200 correction.</span></span></li>
+                  <li className="flex gap-2.5"><span className="w-2.5 h-2.5 rounded-sm mt-1 flex-shrink-0" style={{ background: "repeating-linear-gradient(90deg,#85baf5 0,#85baf5 3px,#bfdbfe 3px,#bfdbfe 5px)" }} /><span className="text-[#6b7280]"><span className="font-semibold text-[#111827] block mb-0.5">~Projected</span>Our estimate of what's still to come this period — hours not yet logged, plus likely bonuses. Shown only as a team-wide aggregate, never assigned to a person, because it hasn't happened yet. <span className="text-[#9ca3af]">Example: the hours left in the month.</span></span></li>
                 </ul>
                 </>
               ) : (
                 <>
-                <p className="text-[12px] text-[#5b607a] leading-relaxed mb-4">This view slices the same total by what the money actually pays for, rather than how certain it is. Each person's payout is built from a mix of earning types — regular pay, time off, and one-off extras — then any deductions are taken back out to reach the net. Here's what each part means:</p>
-                <ul className="space-y-4 text-[11px] leading-relaxed">
-                  <li className="flex gap-2.5"><span className="w-2.5 h-2.5 rounded-sm mt-1 flex-shrink-0" style={{ background: "#6366f1" }} /><span className="text-[#8a8fa8]"><span className="font-semibold text-[#1a1e35] block mb-0.5">Fixed pay</span>Salaried amounts that don't depend on hours worked — paid in full every cycle regardless of time tracked. <span className="text-[#a0a4b8]">Example: a $6,000/month retainer.</span></span></li>
-                  <li className="flex gap-2.5"><span className="w-2.5 h-2.5 rounded-sm mt-1 flex-shrink-0" style={{ background: "#0168dd" }} /><span className="text-[#8a8fa8]"><span className="font-semibold text-[#1a1e35] block mb-0.5">Hourly pay</span>Tracked hours multiplied by the person's rate. Grows through the period as more time is logged. <span className="text-[#a0a4b8]">Example: 80 hours × $45.</span></span></li>
-                  <li className="flex gap-2.5"><span className="w-2.5 h-2.5 rounded-sm mt-1 flex-shrink-0" style={{ background: "#38bdf8" }} /><span className="text-[#8a8fa8]"><span className="font-semibold text-[#1a1e35] block mb-0.5">PTO / Holiday</span>Approved paid time off and company holidays that fall in this period.</span></li>
-                  <li className="flex gap-2.5"><span className="w-2.5 h-2.5 rounded-sm mt-1 flex-shrink-0" style={{ background: "#10b981" }} /><span className="text-[#8a8fa8]"><span className="font-semibold text-[#1a1e35] block mb-0.5">Additions</span>One-off extras on top of regular pay — bonuses, reimbursements, or spot rewards.</span></li>
-                  <li className="flex gap-2.5"><span className="w-2.5 h-2.5 rounded-sm mt-1 flex-shrink-0" style={{ background: "#f59e0b" }} /><span className="text-[#8a8fa8]"><span className="font-semibold text-[#1a1e35] block mb-0.5">Overtime</span>Hours worked beyond the standard schedule, usually paid at a higher rate.</span></li>
-                  <li className="flex gap-2.5"><span className="w-2.5 h-2.5 rounded-sm mt-1 flex-shrink-0" style={{ background: "repeating-linear-gradient(45deg,#ef4444 0,#ef4444 3px,#fca5a5 3px,#fca5a5 6px)" }} /><span className="text-[#8a8fa8]"><span className="font-semibold text-[#c0392b] block mb-0.5">Deductions</span>Amounts taken out of gross pay, such as advances being repaid or corrections. Subtracted from the total and shown in red.</span></li>
+                <p className="text-sm text-[#4b5563] leading-relaxed mb-4">This view slices the same total by what the money actually pays for, rather than how certain it is. Each person's payout is built from a mix of earning types — regular pay, time off, and one-off extras — then any deductions are taken back out to reach the net. Here's what each part means:</p>
+                <ul className="space-y-4 text-sm leading-relaxed">
+                  <li className="flex gap-2.5"><span className="w-2.5 h-2.5 rounded-sm mt-1 flex-shrink-0" style={{ background: "#6366f1" }} /><span className="text-[#6b7280]"><span className="font-semibold text-[#111827] block mb-0.5">Fixed pay</span>Salaried amounts that don't depend on hours worked — paid in full every cycle regardless of time tracked. <span className="text-[#9ca3af]">Example: a $6,000/month retainer.</span></span></li>
+                  <li className="flex gap-2.5"><span className="w-2.5 h-2.5 rounded-sm mt-1 flex-shrink-0" style={{ background: "#0168dd" }} /><span className="text-[#6b7280]"><span className="font-semibold text-[#111827] block mb-0.5">Hourly pay</span>Tracked hours multiplied by the person's rate. Grows through the period as more time is logged. <span className="text-[#9ca3af]">Example: 80 hours × $45.</span></span></li>
+                  <li className="flex gap-2.5"><span className="w-2.5 h-2.5 rounded-sm mt-1 flex-shrink-0" style={{ background: "#38bdf8" }} /><span className="text-[#6b7280]"><span className="font-semibold text-[#111827] block mb-0.5">PTO / Holiday</span>Approved paid time off and company holidays that fall in this period.</span></li>
+                  <li className="flex gap-2.5"><span className="w-2.5 h-2.5 rounded-sm mt-1 flex-shrink-0" style={{ background: "#0e9f6e" }} /><span className="text-[#6b7280]"><span className="font-semibold text-[#111827] block mb-0.5">Additions</span>One-off extras on top of regular pay — bonuses, reimbursements, or spot rewards.</span></li>
+                  <li className="flex gap-2.5"><span className="w-2.5 h-2.5 rounded-sm mt-1 flex-shrink-0" style={{ background: "#f59e0b" }} /><span className="text-[#6b7280]"><span className="font-semibold text-[#111827] block mb-0.5">Overtime</span>Hours worked beyond the standard schedule, usually paid at a higher rate.</span></li>
+                  <li className="flex gap-2.5"><span className="w-2.5 h-2.5 rounded-sm mt-1 flex-shrink-0" style={{ background: "#ef4444" }} /><span className="text-[#6b7280]"><span className="font-semibold text-[#c0392b] block mb-0.5">Deductions</span>Amounts taken out of gross pay, such as advances being repaid or corrections. Subtracted from the total and shown in red.</span></li>
                 </ul>
                 </>
               )}
             </div>
-            <div className="flex items-center justify-end px-6 py-4 border-t border-[#e8eaf0] flex-shrink-0">
+            <div className="flex items-center justify-end px-5 py-5 flex-shrink-0">
               <button onClick={() => setShowBreakdownInfo(false)} className={zone ? zbtn("solidPrimary", "md") : "px-5 py-2 rounded-lg text-sm font-semibold bg-[#0168dd] text-white hover:bg-[#0057bb] transition-colors"}>Done</button>
             </div>
           </div>
@@ -6724,12 +7405,12 @@ function V1mFutureTracked({ provider, period, onProviderChange, onPeriodChange, 
 // ─── V2 ────────────────────────────────────────────────────────────────────────
 
 function V2StatusBadge({ status }: { status: string }) {
-  const s: Record<string,string> = { Projected:"bg-amber-100 text-amber-700", Draft:"bg-[#f0f1f5] text-[#8a8fa8]", Paid:"bg-emerald-100 text-emerald-700", Exported:"bg-blue-100 text-blue-700" };
+  const s: Record<string,string> = { Projected:"bg-amber-100 text-amber-700", Draft:"bg-[#f3f4f6] text-[#6b7280]", Paid:"bg-emerald-100 text-emerald-700", Exported:"bg-blue-100 text-blue-700" };
   return <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${s[status] ?? s.Draft}`}>{status}</span>;
 }
 
 function V2ProviderChip({ name }: { name: string }) {
-  const color = v2ProviderColors[name] ?? "#8a8fa8";
+  const color = v2ProviderColors[name] ?? "#6b7280";
   return <span className="text-[10px] font-semibold px-2 py-0.5 rounded border" style={{ color, borderColor: color+"44", background: color+"11" }}>{name}</span>;
 }
 
@@ -6750,12 +7431,12 @@ function ItemStatusBadge({ status }: { status: "Confirmed" | "Planned" | "Projec
 
 // Plain-text certainty label with a small leading dot (used in the 1L matrix).
 function CertaintyLabel({ status, strong = false }: { status: "Confirmed" | "Planned" | "Projected"; strong?: boolean }) {
-  const c = status === "Confirmed" ? "#10b981" : status === "Planned" ? "#0168dd" : "#85baf5";
+  const c = status === "Confirmed" ? "#0e9f6e" : status === "Planned" ? "#0168dd" : "#85baf5";
   const projected = status === "Projected";
   return (
-    <span className={`inline-flex items-center gap-1.5 text-[11px] ${strong ? "font-semibold text-[#1a1e35]" : "font-medium text-[#5b607a]"}`}>
+    <span className={`inline-flex items-center gap-1.5 text-[11px] ${strong ? "font-semibold text-[#111827]" : "font-medium text-[#4b5563]"}`}>
       <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={projected ? { border: `1px dashed ${c}` } : { background: c }} />
-      {status}
+      {status === "Confirmed" ? "Tracked" : status}
     </span>
   );
 }
@@ -6764,54 +7445,54 @@ function MembersTable({ cycle }: { cycle: typeof v2Cycles[0] }) {
   const [expanded, setExpanded] = useState<string[]>([]);
   const toggle = (name: string) => setExpanded(prev => prev.includes(name) ? prev.filter(n => n !== name) : [...prev, name]);
   return (
-    <div className="bg-white rounded-lg border border-[#e8eaf0] overflow-hidden">
-      <div className="flex items-center justify-between px-5 py-2.5 border-b border-[#e8eaf0]">
-        <span className="text-xs font-semibold text-[#1a1e35]">Members <span className="text-[#8a8fa8] font-normal">— {cycle.members} total, {v2WeeklyMembers.length} shown</span></span>
+    <div className="bg-white rounded-lg border border-[#e5e7eb] overflow-hidden">
+      <div className="flex items-center justify-between px-5 py-2.5 border-b border-[#e5e7eb]">
+        <span className="text-xs font-semibold text-[#111827]">Members <span className="text-[#6b7280] font-normal">— {cycle.members} total, {v2WeeklyMembers.length} shown</span></span>
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5 text-xs text-[#8a8fa8]">
+          <div className="flex items-center gap-1.5 text-xs text-[#6b7280]">
             <span>GROUP BY</span>
-            <button className="flex items-center gap-1 border border-[#e8eaf0] rounded px-2 py-1 text-[#1a1e35] hover:bg-[#f5f6fa] transition-colors">Members <ChevronDown size={11} /></button>
+            <button className="flex items-center gap-1 border border-[#e5e7eb] rounded px-2 py-1 text-[#111827] hover:bg-[#f9fafb] transition-colors">Members <ChevronDown size={11} /></button>
           </div>
-          <button className="border border-[#e8eaf0] rounded p-1 text-[#8a8fa8] hover:text-[#1a1e35] hover:bg-[#f5f6fa] transition-colors"><Settings size={13} /></button>
+          <button className="border border-[#e5e7eb] rounded p-1 text-[#6b7280] hover:text-[#111827] hover:bg-[#f9fafb] transition-colors"><Settings size={13} /></button>
           <button className="text-xs text-[#0168dd] flex items-center gap-1 hover:opacity-80"><Download size={12} /> Export</button>
         </div>
       </div>
       <table className="w-full text-xs">
         <thead>
-          <tr className="border-b border-[#e8eaf0] bg-[#f9f9fc]">
-            <th className="py-2.5 px-5 text-left font-semibold text-[#8a8fa8] w-[40%]">Members</th>
-            <th className="py-2.5 px-4 text-left font-semibold text-[#8a8fa8]">Hours</th>
-            <th className="py-2.5 px-4 text-left font-semibold text-[#8a8fa8]">Pay rate</th>
-            <th className="py-2.5 px-4 text-left font-semibold text-[#8a8fa8]">Status</th>
-            <th className="py-2.5 px-5 text-right font-semibold text-[#8a8fa8]">Total amount</th>
+          <tr className="border-b border-[#e5e7eb] bg-[#f9fafb]">
+            <th className="py-2.5 px-5 text-left font-semibold text-[#6b7280] w-[40%]">Members</th>
+            <th className="py-2.5 px-4 text-left font-semibold text-[#6b7280]">Hours</th>
+            <th className="py-2.5 px-4 text-left font-semibold text-[#6b7280]">Pay rate</th>
+            <th className="py-2.5 px-4 text-left font-semibold text-[#6b7280]">Status</th>
+            <th className="py-2.5 px-5 text-right font-semibold text-[#6b7280]">Total amount</th>
           </tr>
         </thead>
         {v2WeeklyMembers.map((m) => {
             const isOpen = expanded.includes(m.name);
             return (
               <tbody key={m.name}>
-                <tr className="border-b border-[#e8eaf0] cursor-pointer hover:bg-[#f9f9fc] transition-colors" onClick={() => toggle(m.name)}>
+                <tr className="border-b border-[#e5e7eb] cursor-pointer hover:bg-[#f9fafb] transition-colors" onClick={() => toggle(m.name)}>
                   <td className="py-3 px-5">
                     <div className="flex items-center gap-2">
-                      <ChevronRight size={14} className={`text-[#8a8fa8] transition-transform flex-shrink-0 ${isOpen ? "rotate-90" : ""}`} />
+                      <ChevronRight size={14} className={`text-[#6b7280] transition-transform flex-shrink-0 ${isOpen ? "rotate-90" : ""}`} />
                       <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0" style={{ background: m.color }}>{m.avatar}</div>
-                      <div><p className="font-semibold text-[#1a1e35]">{m.name}</p><p className="text-[10px] text-[#8a8fa8]">{m.email}</p></div>
+                      <div><p className="font-semibold text-[#111827]">{m.name}</p><p className="text-[10px] text-[#6b7280]">{m.email}</p></div>
                     </div>
                   </td>
-                  <td className="py-3 px-4 text-[#8a8fa8]">—</td>
-                  <td className="py-3 px-4 text-[#8a8fa8]">—</td>
+                  <td className="py-3 px-4 text-[#6b7280]">—</td>
+                  <td className="py-3 px-4 text-[#6b7280]">—</td>
                   <td className="py-3 px-4">
                     {m.items.some(i => i.status === "Projected") ? <ItemStatusBadge status="Projected" /> : m.items.some(i => i.status === "Planned") ? <ItemStatusBadge status="Planned" /> : <ItemStatusBadge status="Confirmed" />}
                   </td>
-                  <td className="py-3 px-5 text-right font-semibold text-[#1a1e35]">{fmt2(m.total)}</td>
+                  <td className="py-3 px-5 text-right font-semibold text-[#111827]">{fmt2(m.total)}</td>
                 </tr>
                 {isOpen && m.items.map((item, idx) => (
-                  <tr key={idx} className={`border-b border-[#e8eaf0] ${item.status === "Projected" ? "bg-[#f0f7ff]" : "bg-white"} hover:bg-[#f9f9fc] transition-colors`}>
-                    <td className="py-2.5 px-5 pl-14"><p className="font-medium text-[#1a1e35]">{item.label}</p><p className="text-[10px] text-[#8a8fa8]">{item.sub}</p></td>
-                    <td className="py-2.5 px-4 text-[#1a1e35]">{item.hours}</td>
-                    <td className="py-2.5 px-4 text-[#8a8fa8]">{item.rate}</td>
+                  <tr key={idx} className={`border-b border-[#e5e7eb] ${item.status === "Projected" ? "bg-[#f0f7ff]" : "bg-white"} hover:bg-[#f9fafb] transition-colors`}>
+                    <td className="py-2.5 px-5 pl-14"><p className="font-medium text-[#111827]">{item.label}</p><p className="text-[10px] text-[#6b7280]">{item.sub}</p></td>
+                    <td className="py-2.5 px-4 text-[#111827]">{item.hours}</td>
+                    <td className="py-2.5 px-4 text-[#6b7280]">{item.rate}</td>
                     <td className="py-2.5 px-4"><ItemStatusBadge status={item.status} /></td>
-                    <td className={`py-2.5 px-5 text-right font-medium ${item.status === "Projected" ? "text-[#85baf5]" : item.status === "Planned" ? "text-[#0168dd]" : "text-[#1a1e35]"}`}>
+                    <td className={`py-2.5 px-5 text-right font-medium ${item.status === "Projected" ? "text-[#85baf5]" : item.status === "Planned" ? "text-[#0168dd]" : "text-[#111827]"}`}>
                       {item.status === "Projected" ? "~" : ""}{fmt2(item.amount)}
                     </td>
                   </tr>
@@ -6820,8 +7501,8 @@ function MembersTable({ cycle }: { cycle: typeof v2Cycles[0] }) {
             );
           })}
           <tbody>
-            <tr className="border-t border-dashed border-[#e8eaf0] bg-[#f9f9fc]">
-              <td colSpan={5} className="py-2.5 px-5 text-[11px] text-[#8a8fa8]">
+            <tr className="border-t border-dashed border-[#e5e7eb] bg-[#f9fafb]">
+              <td colSpan={5} className="py-2.5 px-5 text-[11px] text-[#6b7280]">
                 + {cycle.members - v2WeeklyMembers.length} more members · <span className="text-[#0168dd] cursor-pointer hover:underline">View all</span>
               </td>
             </tr>
@@ -6842,7 +7523,7 @@ function V2DetailView({ cycleId, onBack }: { cycleId: string; onBack: () => void
   const confirmedPct = Math.round((cycle.confirmed / totalWithBuffer) * 100);
   const plannedPct   = Math.round((cycle.planned   / totalWithBuffer) * 100);
   const projectedPct = 100 - confirmedPct - plannedPct;
-  const provColor = v2ProviderColors[cycle.provider] ?? "#8a8fa8";
+  const provColor = v2ProviderColors[cycle.provider] ?? "#6b7280";
   const wiseBalance = 48000;
   const wiseRequired = totalWithBuffer;
   const wiseDiff = wiseBalance - wiseRequired;
@@ -6850,22 +7531,22 @@ function V2DetailView({ cycleId, onBack }: { cycleId: string; onBack: () => void
     <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <button onClick={onBack} className="flex items-center gap-1.5 text-xs text-[#8a8fa8] hover:text-[#1a1e35] transition-colors"><ArrowLeft size={14} /> Back</button>
-          <div className="w-px h-4 bg-[#e8eaf0]" />
-          <span className="text-base font-semibold text-[#1a1e35]">{cycle.id}</span>
-          <button className="text-[#8a8fa8] hover:text-[#1a1e35]"><Pencil size={13} /></button>
+          <button onClick={onBack} className="flex items-center gap-1.5 text-xs text-[#6b7280] hover:text-[#111827] transition-colors"><ArrowLeft size={14} /> Back</button>
+          <div className="w-px h-4 bg-[#e5e7eb]" />
+          <span className="text-base font-semibold text-[#111827]">{cycle.id}</span>
+          <button className="text-[#6b7280] hover:text-[#111827]"><Pencil size={13} /></button>
           <V2StatusBadge status="Projected" />
         </div>
         <div className="flex items-center gap-2">
-          <button className="flex items-center gap-1.5 text-xs border border-[#e8eaf0] rounded px-3 py-1.5 text-[#1a1e35] hover:bg-[#f5f6fa] transition-colors"><Download size={12} /> Export payment</button>
+          <button className="flex items-center gap-1.5 text-xs border border-[#e5e7eb] rounded px-3 py-1.5 text-[#111827] hover:bg-[#f9fafb] transition-colors"><Download size={12} /> Export payment</button>
           <button className="flex items-center gap-1.5 text-xs bg-[#0168dd] text-white rounded px-3 py-1.5 hover:bg-[#0057bb] transition-colors"><Send size={12} /> Schedule</button>
         </div>
       </div>
-      <div className="bg-white rounded-lg border border-[#e8eaf0] px-5 py-4 flex items-center gap-5">
+      <div className="bg-white rounded-lg border border-[#e5e7eb] px-5 py-4 flex items-center gap-5">
         <div className="flex-shrink-0 min-w-[140px]">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8]">Total projected</p>
-          <p className="text-3xl font-bold text-[#1a1e35] tracking-tight mt-0.5">{fmt2(totalWithBuffer)}</p>
-          {buffer > 0 && <p className="text-[10px] text-[#8a8fa8] mt-0.5">incl. {fmt2(buffer)} buffer</p>}
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6b7280]">Total projected</p>
+          <p className="text-3xl font-bold text-[#111827] tracking-tight mt-0.5">{fmt2(totalWithBuffer)}</p>
+          {buffer > 0 && <p className="text-[10px] text-[#6b7280] mt-0.5">incl. {fmt2(buffer)} buffer</p>}
         </div>
         <div className="flex-1">
           <div className="flex justify-between text-[10px] mb-1.5">
@@ -6879,31 +7560,31 @@ function V2DetailView({ cycleId, onBack }: { cycleId: string; onBack: () => void
             <div className="h-full flex-1" style={{ background: "repeating-linear-gradient(90deg,#85baf5 0px,#85baf5 5px,#bfdbfe 5px,#bfdbfe 9px)" }} />
           </div>
         </div>
-        <div className="flex-shrink-0 border-l border-[#e8eaf0] pl-5">
+        <div className="flex-shrink-0 border-l border-[#e5e7eb] pl-5">
           <p className="text-lg font-bold mb-1" style={{ color: provColor }}>{cycle.provider}</p>
-          <div className="space-y-0.5 text-[11px] text-[#8a8fa8]">
+          <div className="space-y-0.5 text-[11px] text-[#6b7280]">
             <div className="flex items-center gap-1"><CalendarDays size={11} />{cycle.dateRange}</div>
             <div className="flex items-center gap-1"><Users size={11} />{cycle.members} members · {cycle.cycle}</div>
           </div>
         </div>
       </div>
-      <div className="bg-white rounded-lg border border-[#e8eaf0] overflow-hidden">
-        <div className="px-5 py-3.5 border-b border-[#e8eaf0]">
-          <p className="text-sm font-semibold text-[#1a1e35]">Payment breakdown</p>
-          <p className="text-[11px] text-[#8a8fa8] mt-0.5">What makes up this payment and how certain each part is</p>
+      <div className="bg-white rounded-lg border border-[#e5e7eb] overflow-hidden">
+        <div className="px-5 py-3.5 border-b border-[#e5e7eb]">
+          <p className="text-sm font-semibold text-[#111827]">Payment breakdown</p>
+          <p className="text-[11px] text-[#6b7280] mt-0.5">What makes up this payment and how certain each part is</p>
         </div>
-        <div className="grid grid-cols-3 divide-x divide-[#e8eaf0]">
+        <div className="grid grid-cols-3 divide-x divide-[#e5e7eb]">
           <div className="px-5 py-4">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-emerald-500" /><span className="text-[10px] font-bold uppercase tracking-widest text-emerald-700">Confirmed</span></div>
               <span className="text-base font-bold text-emerald-600">{fmt2(cycle.confirmed)}</span>
             </div>
             <div className="space-y-2.5 text-xs">
-              {cb.hourlyTracked > 0 && <div className="flex justify-between items-baseline"><span className="text-[#8a8fa8]">Hourly tracked</span><span className="font-semibold text-[#1a1e35]">{fmt2(cb.hourlyTracked)}</span></div>}
-              {cb.overtime > 0 && <div className="flex justify-between items-baseline"><span className="text-[#8a8fa8]">Overtime</span><span className="font-semibold text-[#1a1e35]">{fmt2(cb.overtime)}</span></div>}
-              {cb.pastPTO > 0 && <div className="flex justify-between items-baseline"><span className="text-[#8a8fa8]">Past PTO / Holidays</span><span className="font-semibold text-[#1a1e35]">{fmt2(cb.pastPTO)}</span></div>}
+              {cb.hourlyTracked > 0 && <div className="flex justify-between items-baseline"><span className="text-[#6b7280]">Hourly tracked</span><span className="font-semibold text-[#111827]">{fmt2(cb.hourlyTracked)}</span></div>}
+              {cb.overtime > 0 && <div className="flex justify-between items-baseline"><span className="text-[#6b7280]">Overtime</span><span className="font-semibold text-[#111827]">{fmt2(cb.overtime)}</span></div>}
+              {cb.pastPTO > 0 && <div className="flex justify-between items-baseline"><span className="text-[#6b7280]">Past PTO / Holidays</span><span className="font-semibold text-[#111827]">{fmt2(cb.pastPTO)}</span></div>}
             </div>
-            <p className="text-[10px] text-[#8a8fa8] mt-4 leading-relaxed">Hours tracked and approved — these amounts are final.</p>
+            <p className="text-[10px] text-[#6b7280] mt-4 leading-relaxed">Hours tracked and approved — these amounts are final.</p>
           </div>
           <div className="px-5 py-4">
             <div className="flex items-center justify-between mb-3">
@@ -6911,60 +7592,60 @@ function V2DetailView({ cycleId, onBack }: { cycleId: string; onBack: () => void
               <span className="text-base font-bold text-[#0168dd]">{fmt2(cycle.planned)}</span>
             </div>
             <div className="space-y-2.5 text-xs">
-              {pl.fixedPay > 0 && <div className="flex justify-between items-baseline"><span className="text-[#8a8fa8]">Fixed pay</span><span className="font-semibold text-[#1a1e35]">{fmt2(pl.fixedPay)}</span></div>}
-              {pl.futurePTO > 0 && <div className="flex justify-between items-baseline"><span className="text-[#8a8fa8]">PTO / Holidays (remaining)</span><span className="font-semibold text-[#1a1e35]">{fmt2(pl.futurePTO)}</span></div>}
-              {pl.additions > 0 && <div className="flex justify-between items-baseline"><span className="text-[#8a8fa8]">Scheduled additions</span><span className="font-semibold text-[#1a1e35]">{fmt2(pl.additions)}</span></div>}
+              {pl.fixedPay > 0 && <div className="flex justify-between items-baseline"><span className="text-[#6b7280]">Fixed pay</span><span className="font-semibold text-[#111827]">{fmt2(pl.fixedPay)}</span></div>}
+              {pl.futurePTO > 0 && <div className="flex justify-between items-baseline"><span className="text-[#6b7280]">PTO / Holidays (remaining)</span><span className="font-semibold text-[#111827]">{fmt2(pl.futurePTO)}</span></div>}
+              {pl.additions > 0 && <div className="flex justify-between items-baseline"><span className="text-[#6b7280]">Scheduled additions</span><span className="font-semibold text-[#111827]">{fmt2(pl.additions)}</span></div>}
             </div>
-            <p className="text-[10px] text-[#8a8fa8] mt-4 leading-relaxed">Committed — will be included unless cancelled.</p>
+            <p className="text-[10px] text-[#6b7280] mt-4 leading-relaxed">Committed — will be included unless cancelled.</p>
           </div>
           <div className="px-5 py-4 bg-[#f0f7ff]">
             <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full border-2 border-dashed border-[#85baf5]" /><span className="text-[10px] font-bold uppercase tracking-widest text-[#8a8fa8]">Projected</span></div>
+              <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full border-2 border-dashed border-[#85baf5]" /><span className="text-[10px] font-bold uppercase tracking-widest text-[#6b7280]">Projected</span></div>
               <span className="text-base font-bold text-[#85baf5]">~{fmt2(cycle.projected + buffer)}</span>
             </div>
             <div className="space-y-2.5 text-xs mb-4">
-              <div className="flex justify-between items-baseline"><span className="text-[#8a8fa8]">~Remaining hourly (est.)</span><span className="font-semibold text-[#85baf5]">~{fmt2(pb.hourly)}</span></div>
-              <p className="text-[10px] text-[#8a8fa8]">Avg daily rate × {cycle.daysLeft} days remaining</p>
+              <div className="flex justify-between items-baseline"><span className="text-[#6b7280]">~Remaining hourly (est.)</span><span className="font-semibold text-[#85baf5]">~{fmt2(pb.hourly)}</span></div>
+              <p className="text-[10px] text-[#6b7280]">Avg daily rate × {cycle.daysLeft} days remaining</p>
             </div>
             <div className="border-t border-dashed border-[#bfdbfe] pt-3 space-y-2">
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8]">Add buffer</p>
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6b7280]">Add buffer</p>
               <div className="flex items-center gap-2">
                 <div className="flex items-center border border-[#bfdbfe] rounded-md bg-white overflow-hidden flex-1">
-                  <span className="px-2 text-xs text-[#8a8fa8] border-r border-[#bfdbfe] py-1.5">+$</span>
-                  <input type="number" min={0} value={buffer || ""} onChange={e => setBuffer(Math.max(0, Number(e.target.value)))} placeholder="0" className="flex-1 px-2 py-1.5 text-xs text-[#1a1e35] outline-none bg-transparent w-0" />
+                  <span className="px-2 text-xs text-[#6b7280] border-r border-[#bfdbfe] py-1.5">+$</span>
+                  <input type="number" min={0} value={buffer || ""} onChange={e => setBuffer(Math.max(0, Number(e.target.value)))} placeholder="0" className="flex-1 px-2 py-1.5 text-xs text-[#111827] outline-none bg-transparent w-0" />
                 </div>
-                {buffer > 0 && <button onClick={() => { setBuffer(0); setBufferNote(""); }} className="text-[10px] text-[#8a8fa8] hover:text-red-500 transition-colors">✕</button>}
+                {buffer > 0 && <button onClick={() => { setBuffer(0); setBufferNote(""); }} className="text-[10px] text-[#6b7280] hover:text-red-500 transition-colors">✕</button>}
               </div>
-              <textarea value={bufferNote} onChange={e => setBufferNote(e.target.value)} placeholder="Reason for buffer (optional)…" rows={2} className="w-full text-xs border border-[#bfdbfe] rounded-md px-2.5 py-1.5 text-[#1a1e35] placeholder-[#93c5fd] outline-none resize-none bg-white focus:border-[#85baf5] transition-colors" />
+              <textarea value={bufferNote} onChange={e => setBufferNote(e.target.value)} placeholder="Reason for buffer (optional)…" rows={2} className="w-full text-xs border border-[#bfdbfe] rounded-md px-2.5 py-1.5 text-[#111827] placeholder-[#93c5fd] outline-none resize-none bg-white focus:border-[#85baf5] transition-colors" />
               {buffer > 0 && <p className="text-[10px] text-[#85baf5]">Total projected bumped to {fmt2(cycle.projected + buffer)}</p>}
             </div>
-            <p className="text-[10px] text-[#8a8fa8] mt-3 leading-relaxed">Estimate — updates as members track time.</p>
+            <p className="text-[10px] text-[#6b7280] mt-3 leading-relaxed">Estimate — updates as members track time.</p>
           </div>
         </div>
       </div>
       {cycle.provider === "Wise" && (
-        <div className="bg-white rounded-lg border border-[#e8eaf0] overflow-hidden">
-          <div className="flex items-center gap-2.5 px-5 py-3 border-b border-[#e8eaf0]">
+        <div className="bg-white rounded-lg border border-[#e5e7eb] overflow-hidden">
+          <div className="flex items-center gap-2.5 px-5 py-3 border-b border-[#e5e7eb]">
             <div className="w-5 h-5 rounded-full bg-[#0168dd] flex items-center justify-center"><span className="text-white text-[9px] font-bold">W</span></div>
-            <span className="text-sm font-semibold text-[#1a1e35]">Wise Wallet</span>
-            <span className="text-xs text-[#8a8fa8]">— current balance vs payment required</span>
+            <span className="text-sm font-semibold text-[#111827]">Wise Wallet</span>
+            <span className="text-xs text-[#6b7280]">— current balance vs payment required</span>
           </div>
           <div className="px-5 py-4 flex items-center gap-8">
-            <div><p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-1">Wallet balance</p><p className="text-2xl font-bold text-[#1a1e35]">{fmt2(wiseBalance)}</p></div>
-            <div className="text-2xl text-[#e8eaf0]">→</div>
-            <div><p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-1">Payment required</p><p className="text-2xl font-bold text-[#1a1e35]">{fmt2(wiseRequired)}</p></div>
-            <div className="flex-1 border-l border-[#e8eaf0] pl-8">
+            <div><p className="text-[10px] font-semibold uppercase tracking-widest text-[#6b7280] mb-1">Wallet balance</p><p className="text-2xl font-bold text-[#111827]">{fmt2(wiseBalance)}</p></div>
+            <div className="text-2xl text-[#e5e7eb]">→</div>
+            <div><p className="text-[10px] font-semibold uppercase tracking-widest text-[#6b7280] mb-1">Payment required</p><p className="text-2xl font-bold text-[#111827]">{fmt2(wiseRequired)}</p></div>
+            <div className="flex-1 border-l border-[#e5e7eb] pl-8">
               {wiseDiff >= 0 ? (
-                <div><p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-1">Surplus</p><p className="text-2xl font-bold text-emerald-600">+{fmt2(wiseDiff)}</p><p className="text-xs text-[#8a8fa8] mt-1">Wallet has sufficient funds</p></div>
+                <div><p className="text-[10px] font-semibold uppercase tracking-widest text-[#6b7280] mb-1">Surplus</p><p className="text-2xl font-bold text-emerald-600">+{fmt2(wiseDiff)}</p><p className="text-xs text-[#6b7280] mt-1">Wallet has sufficient funds</p></div>
               ) : (
-                <div><p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] mb-1">Shortfall</p><p className="text-2xl font-bold text-red-500">−{fmt2(Math.abs(wiseDiff))}</p><p className="text-xs text-[#8a8fa8] mt-1">Additional funds needed before payment</p></div>
+                <div><p className="text-[10px] font-semibold uppercase tracking-widest text-[#6b7280] mb-1">Shortfall</p><p className="text-2xl font-bold text-red-500">−{fmt2(Math.abs(wiseDiff))}</p><p className="text-xs text-[#6b7280] mt-1">Additional funds needed before payment</p></div>
               )}
             </div>
             <div>
               {wiseDiff < 0 ? (
                 <button className="flex items-center gap-2 bg-[#0168dd] text-white text-sm font-semibold px-4 py-2.5 rounded-lg hover:bg-[#0057bb] transition-colors"><span className="text-lg leading-none">+</span>Add {fmt2(Math.abs(wiseDiff))} to Wise</button>
               ) : (
-                <button className="flex items-center gap-2 border border-[#e8eaf0] text-[#8a8fa8] text-sm px-4 py-2.5 rounded-lg hover:bg-[#f5f6fa] transition-colors">View wallet</button>
+                <button className="flex items-center gap-2 border border-[#e5e7eb] text-[#6b7280] text-sm px-4 py-2.5 rounded-lg hover:bg-[#f9fafb] transition-colors">View wallet</button>
               )}
             </div>
           </div>
@@ -6979,57 +7660,57 @@ function V2FuturePaymentTab({ onView }: { onView: (id: string) => void }) {
   const confirmedPct = Math.round((v2TotalConfirmed / v2TotalAll) * 100);
   return (
     <div className="space-y-4">
-      <div className="bg-white rounded-lg border border-[#e8eaf0] overflow-hidden">
+      <div className="bg-white rounded-lg border border-[#e5e7eb] overflow-hidden">
         <div className="px-6 py-5 flex items-start justify-between">
           <div>
-            <p className="text-xs text-[#8a8fa8] mb-1">Next payouts across all providers · Jun 2026</p>
-            <p className="text-4xl font-bold text-[#1a1e35] tracking-tight">{fmt2(v2TotalAll)}</p>
-            <p className="text-xs text-[#8a8fa8] mt-1">{v2Cycles.length} providers · one payout each</p>
+            <p className="text-xs text-[#6b7280] mb-1">Next payouts across all providers · Jun 2026</p>
+            <p className="text-4xl font-bold text-[#111827] tracking-tight">{fmt2(v2TotalAll)}</p>
+            <p className="text-xs text-[#6b7280] mt-1">{v2Cycles.length} providers · one payout each</p>
           </div>
           <div className="flex items-center gap-6 ml-8">
-            <div className="text-right"><p className="text-[10px] text-[#8a8fa8] uppercase tracking-widest">Confirmed</p><p className="text-xl font-bold text-[#1a1e35] mt-0.5">{fmt2(v2TotalConfirmed)}</p><p className="text-[10px] text-[#8a8fa8]">tracked &amp; guaranteed</p></div>
-            <div className="text-right"><p className="text-[10px] text-[#8a8fa8] uppercase tracking-widest">Projected</p><p className="text-xl font-bold text-[#85baf5] mt-0.5">{fmt2(v2TotalProjected)}</p><p className="text-[10px] text-[#8a8fa8]">estimated remaining</p></div>
+            <div className="text-right"><p className="text-[10px] text-[#6b7280] uppercase tracking-widest">Confirmed</p><p className="text-xl font-bold text-[#111827] mt-0.5">{fmt2(v2TotalConfirmed)}</p><p className="text-[10px] text-[#6b7280]">tracked &amp; guaranteed</p></div>
+            <div className="text-right"><p className="text-[10px] text-[#6b7280] uppercase tracking-widest">Projected</p><p className="text-xl font-bold text-[#85baf5] mt-0.5">{fmt2(v2TotalProjected)}</p><p className="text-[10px] text-[#6b7280]">estimated remaining</p></div>
           </div>
         </div>
         <div className="px-6 pb-4">
           <div className="flex items-center gap-2 mb-1">
-            <div className="flex-1 h-2 bg-[#f0f1f5] rounded-full overflow-hidden flex">
+            <div className="flex-1 h-2 bg-[#f3f4f6] rounded-full overflow-hidden flex">
               <div className="h-full bg-[#0168dd] rounded-l-full" style={{ width: `${confirmedPct}%` }} />
               <div className="h-full flex-1 rounded-r-full" style={{ background: "repeating-linear-gradient(90deg,#85baf5 0px,#85baf5 6px,#bfdbfe 6px,#bfdbfe 10px)" }} />
             </div>
-            <span className="text-[10px] text-[#8a8fa8] flex-shrink-0">{confirmedPct}% confirmed</span>
+            <span className="text-[10px] text-[#6b7280] flex-shrink-0">{confirmedPct}% confirmed</span>
           </div>
         </div>
       </div>
-      <div className="bg-white rounded-lg border border-[#e8eaf0] overflow-hidden">
-        <div className="grid grid-cols-[1fr_100px_160px_200px_110px] gap-4 px-5 py-2.5 border-b border-[#e8eaf0] bg-[#f9f9fc]">
+      <div className="bg-white rounded-lg border border-[#e5e7eb] overflow-hidden">
+        <div className="grid grid-cols-[1fr_100px_160px_200px_110px] gap-4 px-5 py-2.5 border-b border-[#e5e7eb] bg-[#f9fafb]">
           {["Provider · next payout", "Cycle", "Members", "Confirmed → Projected", "Total"].map(h => (
-            <p key={h} className={`text-[10px] font-semibold uppercase tracking-widest text-[#8a8fa8] ${h === "Total" ? "text-right" : ""}`}>{h}</p>
+            <p key={h} className={`text-[10px] font-semibold uppercase tracking-widest text-[#6b7280] ${h === "Total" ? "text-right" : ""}`}>{h}</p>
           ))}
         </div>
         {v2Cycles.map((c, idx) => {
-          const provColor = v2ProviderColors[c.provider] ?? "#8a8fa8";
+          const provColor = v2ProviderColors[c.provider] ?? "#6b7280";
           const cPct = Math.round((c.confirmed / c.total) * 100);
           return (
-            <div key={c.id} onClick={() => onView(c.id)} className={`grid grid-cols-[1fr_100px_160px_200px_110px] gap-4 px-5 py-4 items-center cursor-pointer hover:bg-[#f9f9fc] transition-colors ${idx < v2Cycles.length - 1 ? "border-b border-[#e8eaf0]" : ""}`}>
+            <div key={c.id} onClick={() => onView(c.id)} className={`grid grid-cols-[1fr_100px_160px_200px_110px] gap-4 px-5 py-4 items-center cursor-pointer hover:bg-[#f9fafb] transition-colors ${idx < v2Cycles.length - 1 ? "border-b border-[#e5e7eb]" : ""}`}>
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: provColor + "18" }}><div className="w-3 h-3 rounded-sm" style={{ background: provColor }} /></div>
                 <div>
-                  <div className="flex items-center gap-2"><span className="text-sm font-bold text-[#1a1e35]">{c.provider}</span><V2StatusBadge status="Projected" /></div>
-                  <p className="text-xs text-[#8a8fa8] mt-0.5">{c.dateRange}</p>
+                  <div className="flex items-center gap-2"><span className="text-sm font-bold text-[#111827]">{c.provider}</span><V2StatusBadge status="Projected" /></div>
+                  <p className="text-xs text-[#6b7280] mt-0.5">{c.dateRange}</p>
                   <p className="text-[10px] text-amber-600">{c.daysLeft} days remaining · {c.pctTracked}% tracked</p>
                 </div>
               </div>
               <div><span className="text-[11px] font-semibold px-2 py-0.5 rounded-full" style={{ background: c.cycleColor + "18", color: c.cycleColor }}>{c.cycle}</span></div>
-              <div className="flex items-center gap-1.5 text-xs text-[#1a1e35]"><Users size={12} className="text-[#8a8fa8]" /><span className="font-semibold">{c.members}</span><span className="text-[#8a8fa8]">members</span></div>
+              <div className="flex items-center gap-1.5 text-xs text-[#111827]"><Users size={12} className="text-[#6b7280]" /><span className="font-semibold">{c.members}</span><span className="text-[#6b7280]">members</span></div>
               <div className="space-y-1">
-                <div className="flex items-center gap-1 text-[10px]"><span className="font-semibold text-[#1a1e35]">{fmt0(c.confirmed)}</span><span className="text-[#8a8fa8]">+</span><span className="font-semibold text-[#85baf5]">~{fmt0(c.projected)}</span></div>
-                <div className="h-1.5 bg-[#f0f1f5] rounded-full overflow-hidden flex">
+                <div className="flex items-center gap-1 text-[10px]"><span className="font-semibold text-[#111827]">{fmt0(c.confirmed)}</span><span className="text-[#6b7280]">+</span><span className="font-semibold text-[#85baf5]">~{fmt0(c.projected)}</span></div>
+                <div className="h-1.5 bg-[#f3f4f6] rounded-full overflow-hidden flex">
                   <div className="h-full rounded-l-full" style={{ width: `${cPct}%`, background: provColor }} />
                   <div className="h-full flex-1 rounded-r-full" style={{ background: "repeating-linear-gradient(90deg,#85baf5 0px,#85baf5 4px,#bfdbfe 4px,#bfdbfe 7px)" }} />
                 </div>
               </div>
-              <div className="text-right flex items-center justify-end gap-2"><p className="text-sm font-bold text-[#1a1e35]">{fmt2(c.total)}</p><ChevronRight size={14} className="text-[#8a8fa8]" /></div>
+              <div className="text-right flex items-center justify-end gap-2"><p className="text-sm font-bold text-[#111827]">{fmt2(c.total)}</p><ChevronRight size={14} className="text-[#6b7280]" /></div>
             </div>
           );
         })}
@@ -7040,27 +7721,27 @@ function V2FuturePaymentTab({ onView }: { onView: (id: string) => void }) {
 
 function V2PaymentList({ rows, showPaidOn }: { rows: any[]; showPaidOn?: boolean }) {
   return (
-    <div className="bg-white rounded-lg border border-[#e8eaf0] overflow-hidden">
+    <div className="bg-white rounded-lg border border-[#e5e7eb] overflow-hidden">
       <table className="w-full text-xs">
         <thead>
-          <tr className="border-b border-[#e8eaf0] bg-[#f9f9fc]">
+          <tr className="border-b border-[#e5e7eb] bg-[#f9fafb]">
             {["ID","Name","Date range","Members","Amount","Status",...(showPaidOn?["Paid on"]:[]),"Provider",""].map(h => (
-              <th key={h} className="py-2.5 px-4 text-left font-semibold text-[#8a8fa8]">{h}</th>
+              <th key={h} className="py-2.5 px-4 text-left font-semibold text-[#6b7280]">{h}</th>
             ))}
           </tr>
         </thead>
         <tbody>
           {rows.map((row, i) => (
-            <tr key={row.id} className={`hover:bg-[#f9f9fc] cursor-pointer ${i < rows.length - 1 ? "border-b border-[#e8eaf0]" : ""}`}>
+            <tr key={row.id} className={`hover:bg-[#f9fafb] cursor-pointer ${i < rows.length - 1 ? "border-b border-[#e5e7eb]" : ""}`}>
               <td className="py-3 px-4 text-[#0168dd] font-medium">{row.id}</td>
-              <td className="py-3 px-4 text-[#1a1e35] font-medium">{row.name}</td>
-              <td className="py-3 px-4 text-[#8a8fa8]">{row.range}</td>
-              <td className="py-3 px-4"><div className="flex items-center gap-1 text-[#8a8fa8]"><Users size={11} />{row.members}</div></td>
-              <td className="py-3 px-4 font-semibold text-[#1a1e35]">{fmt2(row.amount)}</td>
+              <td className="py-3 px-4 text-[#111827] font-medium">{row.name}</td>
+              <td className="py-3 px-4 text-[#6b7280]">{row.range}</td>
+              <td className="py-3 px-4"><div className="flex items-center gap-1 text-[#6b7280]"><Users size={11} />{row.members}</div></td>
+              <td className="py-3 px-4 font-semibold text-[#111827]">{fmt2(row.amount)}</td>
               <td className="py-3 px-4"><V2StatusBadge status={row.status} /></td>
-              {showPaidOn && <td className="py-3 px-4 text-[#8a8fa8]">{row.paidOn}</td>}
+              {showPaidOn && <td className="py-3 px-4 text-[#6b7280]">{row.paidOn}</td>}
               <td className="py-3 px-4"><V2ProviderChip name={row.provider} /></td>
-              <td className="py-3 px-4 text-[#8a8fa8]"><MoreHorizontal size={14} /></td>
+              <td className="py-3 px-4 text-[#6b7280]"><MoreHorizontal size={14} /></td>
             </tr>
           ))}
         </tbody>
@@ -7082,14 +7763,14 @@ function Version2({ initialDetailId = null, onExitDetail }: { initialDetailId?: 
   ) : (
     <div className="flex-1 overflow-y-auto px-6 py-5">
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-xl font-semibold text-[#1a1e35]">Payments</h1>
+        <h1 className="text-xl font-semibold text-[#111827]">Payments</h1>
         <button className="flex items-center gap-1.5 text-xs bg-[#0168dd] text-white rounded px-3 py-1.5 hover:bg-[#0057bb]"><Plus size={13} /> Create payment</button>
       </div>
-      <div className="flex items-center gap-0 border-b border-[#e8eaf0] mb-4">
+      <div className="flex items-center gap-0 border-b border-[#e5e7eb] mb-4">
         {tabs.map(t => (
-          <button key={t.id} onClick={() => setMainTab(t.id)} className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${mainTab === t.id ? "border-[#0168dd] text-[#0168dd]" : "border-transparent text-[#8a8fa8] hover:text-[#1a1e35]"}`}>
+          <button key={t.id} onClick={() => setMainTab(t.id)} className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${mainTab === t.id ? "border-[#0168dd] text-[#0168dd]" : "border-transparent text-[#6b7280] hover:text-[#111827]"}`}>
             {t.label}
-            {t.count !== null && <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${mainTab === t.id ? "bg-[#e8f2fd] text-[#0168dd]" : "bg-[#f0f1f5] text-[#8a8fa8]"}`}>{t.count}</span>}
+            {t.count !== null && <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${mainTab === t.id ? "bg-[#e8f2fd] text-[#0168dd]" : "bg-[#f3f4f6] text-[#6b7280]"}`}>{t.count}</span>}
           </button>
         ))}
       </div>
@@ -7120,7 +7801,7 @@ const FINAL_VERSIONS: [string, string][] = [["v1","1"],["v1c","1C"],["v1d","1D"]
 // and served from /public/hubstaff-template. The shell injects fixed chrome into
 // <body> and offsets #shell-content; there is no teardown API, so we clean it up
 // manually when leaving this version.
-function FinalUIShell({ children, onVersionChange }: { children: ReactNode; onVersionChange: (v: string) => void }) {
+function FinalUIShell({ children, onVersionChange, finalState, onFinalStateChange }: { children: ReactNode; onVersionChange: (v: string) => void; finalState: string; onFinalStateChange: (s: string) => void }) {
   useEffect(() => {
     const base = (import.meta as any).env.BASE_URL as string;
     let cancelled = false;
@@ -7184,10 +7865,17 @@ function FinalUIShell({ children, onVersionChange }: { children: ReactNode; onVe
   return (
     <>
       <div id="shell-content">{children}</div>
-      <div className="fixed bottom-4 left-4 z-[9999] flex items-center gap-1.5 bg-white/95 backdrop-blur border border-[#e8eaf0] rounded-lg shadow-lg px-2.5 py-1.5">
-        <span className="text-[9px] font-semibold uppercase tracking-widest text-[#8a8fa8]">Version</span>
-        <select value="final" onChange={e => onVersionChange(e.target.value)} className="text-[11px] font-medium text-[#1a1e35] bg-transparent outline-none cursor-pointer">
+      <div className="fixed bottom-4 left-4 z-[9999] flex items-center gap-1.5 bg-white/95 backdrop-blur border border-[#e5e7eb] rounded-lg shadow-lg px-2.5 py-1.5">
+        <span className="text-[9px] font-semibold uppercase tracking-widest text-[#6b7280]">Version</span>
+        <select value="final" onChange={e => onVersionChange(e.target.value)} className="text-[11px] font-medium text-[#111827] bg-transparent outline-none cursor-pointer">
           {FINAL_VERSIONS.map(([v, label]) => <option key={v} value={v}>{label}</option>)}
+        </select>
+        <span className="w-px h-3.5 bg-[#e5e7eb]" />
+        <span className="text-[9px] font-semibold uppercase tracking-widest text-[#6b7280]">State</span>
+        <select value={finalState} onChange={e => onFinalStateChange(e.target.value)} className="text-[11px] font-medium text-[#111827] bg-transparent outline-none cursor-pointer">
+          <option value="filled">Filled state</option>
+          <option value="initial">Initial state</option>
+          <option value="empty">Empty state</option>
         </select>
       </div>
     </>
@@ -7198,11 +7886,12 @@ export default function App() {
   const [version, setVersion] = useState<"v1"|"v1c"|"v1d"|"v1e"|"v1f"|"v1g"|"v1h"|"v1i"|"v1j"|"v1k"|"v1l"|"v1m"|"v1n"|"final"|"v2">("final");
   const [showStatusBreakdown, setShowStatusBreakdown] = useState(false);
   const [seasonalityOn, setSeasonalityOn] = useState(true);
+  const [finalState, setFinalState] = useState<"filled" | "initial" | "empty">("filled"); // Final UI state variant (filled = the one being built)
 
   if (version === "final") {
     return (
-      <FinalUIShell onVersionChange={(v) => setVersion(v as typeof version)}>
-        <VersionFinalUI showStatusBreakdown={showStatusBreakdown} seasonalityOn={seasonalityOn} />
+      <FinalUIShell onVersionChange={(v) => setVersion(v as typeof version)} finalState={finalState} onFinalStateChange={(s) => setFinalState(s as typeof finalState)}>
+        <VersionFinalUI showStatusBreakdown={showStatusBreakdown} seasonalityOn={seasonalityOn} state={finalState} />
       </FinalUIShell>
     );
   }
@@ -7210,24 +7899,24 @@ export default function App() {
   return (
     <div className="flex h-screen w-full overflow-hidden font-[Inter,sans-serif]">
       <Sidebar active={version} />
-      <div className="flex-1 flex flex-col overflow-hidden bg-[#f5f6fa]">
-        <div className="flex items-center justify-between px-6 py-2.5 bg-white border-b border-[#e8eaf0] flex-shrink-0">
-          <div className="flex items-center gap-1 text-xs text-[#8a8fa8]">
+      <div className="flex-1 flex flex-col overflow-hidden bg-[#f9fafb]">
+        <div className="flex items-center justify-between px-6 py-2.5 bg-white border-b border-[#e5e7eb] flex-shrink-0">
+          <div className="flex items-center gap-1 text-xs text-[#6b7280]">
             {(version === "v1" || version === "v1c" || version === "v1d" || version === "v1e" || version === "v1f" || version === "v1g" || version === "v1h" || version === "v1i" || version === "v1j" || version === "v1k" || version === "v1l" || version === "v1m" || version === "v1n") ? (
-              <><span className="hover:text-[#0168dd] cursor-pointer">Reports</span><ChevronRight size={12} /><span className="text-[#1a1e35] font-medium">Payments report</span></>
+              <><span className="hover:text-[#0168dd] cursor-pointer">Reports</span><ChevronRight size={12} /><span className="text-[#111827] font-medium">Payments report</span></>
             ) : (
-              <><span className="hover:text-[#0168dd] cursor-pointer">Financials</span><ChevronRight size={12} /><span className="text-[#1a1e35] font-medium">Team Payments</span></>
+              <><span className="hover:text-[#0168dd] cursor-pointer">Financials</span><ChevronRight size={12} /><span className="text-[#111827] font-medium">Team Payments</span></>
             )}
           </div>
           <div className="flex items-center gap-3">
             {(version === "v1c" || version === "v1d" || version === "v1e" || version === "v1f" || version === "v1g" || version === "v1h" || version === "v1i" || version === "v1j" || version === "v1k" || version === "v1l" || version === "v1m" || version === "v1n") && (
-              <div className="flex items-center gap-4 border-r border-[#e8eaf0] pr-4">
+              <div className="flex items-center gap-4 border-r border-[#e5e7eb] pr-4">
                 {[
                   { label: "Status breakdown", val: showStatusBreakdown, set: setShowStatusBreakdown },
                   { label: "Seasonality",      val: seasonalityOn,       set: setSeasonalityOn       },
                 ].map(({ label, val, set }) => (
-                  <button key={label} onClick={() => set(p => !p)} className="flex items-center gap-1.5 text-[11px] text-[#8a8fa8] select-none">
-                    <span className={`relative w-7 h-4 rounded-full transition-colors flex-shrink-0 inline-flex ${val ? "bg-[#0168dd]" : "bg-[#c8cad4]"}`}>
+                  <button key={label} onClick={() => set(p => !p)} className="flex items-center gap-1.5 text-[11px] text-[#6b7280] select-none">
+                    <span className={`relative w-7 h-4 rounded-full transition-colors flex-shrink-0 inline-flex ${val ? "bg-[#0168dd]" : "bg-[#d1d5db]"}`}>
                       <span className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow-sm transition-transform ${val ? "translate-x-3.5" : "translate-x-0.5"}`} />
                     </span>
                     {label}
@@ -7235,24 +7924,24 @@ export default function App() {
                 ))}
               </div>
             )}
-            <div className="flex items-center bg-[#f0f1f5] rounded-lg p-0.5">
-              <button onClick={() => setVersion("v1")}  className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${version === "v1"  ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>1</button>
-              <button onClick={() => setVersion("v1c")} className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${version === "v1c" ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>1C</button>
-              <button onClick={() => setVersion("v1d")} className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${version === "v1d" ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>1D</button>
-              <button onClick={() => setVersion("v1e")} className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${version === "v1e" ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>1E</button>
-              <button onClick={() => setVersion("v1f")} className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${version === "v1f" ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>1F</button>
-              <button onClick={() => setVersion("v1g")} className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${version === "v1g" ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>1G</button>
-              <button onClick={() => setVersion("v1h")} className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${version === "v1h" ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>1H</button>
-              <button onClick={() => setVersion("v1i")} className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${version === "v1i" ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>1I</button>
-              <button onClick={() => setVersion("v1j")} className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${version === "v1j" ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>1J</button>
-              <button onClick={() => setVersion("v1k")} className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${version === "v1k" ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>1K</button>
-              <button onClick={() => setVersion("v1l")} className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${version === "v1l" ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>1L</button>
-              <button onClick={() => setVersion("v1m")} className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${version === "v1m" ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>1M</button>
-              <button onClick={() => setVersion("v1n")} className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${version === "v1n" ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>1N</button>
-              <button onClick={() => setVersion("final")} className={`px-3 py-1 rounded-md text-xs font-semibold transition-all whitespace-nowrap ${(version as string) === "final" ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>Final UI</button>
-              <button onClick={() => setVersion("v2")}  className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${version === "v2"  ? "bg-white text-[#0168dd] shadow-sm" : "text-[#8a8fa8] hover:text-[#1a1e35]"}`}>2</button>
+            <div className="flex items-center bg-[#f3f4f6] rounded-lg p-0.5">
+              <button onClick={() => setVersion("v1")}  className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${version === "v1"  ? "bg-white text-[#0168dd] shadow-sm" : "text-[#6b7280] hover:text-[#111827]"}`}>1</button>
+              <button onClick={() => setVersion("v1c")} className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${version === "v1c" ? "bg-white text-[#0168dd] shadow-sm" : "text-[#6b7280] hover:text-[#111827]"}`}>1C</button>
+              <button onClick={() => setVersion("v1d")} className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${version === "v1d" ? "bg-white text-[#0168dd] shadow-sm" : "text-[#6b7280] hover:text-[#111827]"}`}>1D</button>
+              <button onClick={() => setVersion("v1e")} className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${version === "v1e" ? "bg-white text-[#0168dd] shadow-sm" : "text-[#6b7280] hover:text-[#111827]"}`}>1E</button>
+              <button onClick={() => setVersion("v1f")} className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${version === "v1f" ? "bg-white text-[#0168dd] shadow-sm" : "text-[#6b7280] hover:text-[#111827]"}`}>1F</button>
+              <button onClick={() => setVersion("v1g")} className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${version === "v1g" ? "bg-white text-[#0168dd] shadow-sm" : "text-[#6b7280] hover:text-[#111827]"}`}>1G</button>
+              <button onClick={() => setVersion("v1h")} className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${version === "v1h" ? "bg-white text-[#0168dd] shadow-sm" : "text-[#6b7280] hover:text-[#111827]"}`}>1H</button>
+              <button onClick={() => setVersion("v1i")} className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${version === "v1i" ? "bg-white text-[#0168dd] shadow-sm" : "text-[#6b7280] hover:text-[#111827]"}`}>1I</button>
+              <button onClick={() => setVersion("v1j")} className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${version === "v1j" ? "bg-white text-[#0168dd] shadow-sm" : "text-[#6b7280] hover:text-[#111827]"}`}>1J</button>
+              <button onClick={() => setVersion("v1k")} className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${version === "v1k" ? "bg-white text-[#0168dd] shadow-sm" : "text-[#6b7280] hover:text-[#111827]"}`}>1K</button>
+              <button onClick={() => setVersion("v1l")} className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${version === "v1l" ? "bg-white text-[#0168dd] shadow-sm" : "text-[#6b7280] hover:text-[#111827]"}`}>1L</button>
+              <button onClick={() => setVersion("v1m")} className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${version === "v1m" ? "bg-white text-[#0168dd] shadow-sm" : "text-[#6b7280] hover:text-[#111827]"}`}>1M</button>
+              <button onClick={() => setVersion("v1n")} className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${version === "v1n" ? "bg-white text-[#0168dd] shadow-sm" : "text-[#6b7280] hover:text-[#111827]"}`}>1N</button>
+              <button onClick={() => setVersion("final")} className={`px-3 py-1 rounded-md text-xs font-semibold transition-all whitespace-nowrap ${(version as string) === "final" ? "bg-white text-[#0168dd] shadow-sm" : "text-[#6b7280] hover:text-[#111827]"}`}>Final UI</button>
+              <button onClick={() => setVersion("v2")}  className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${version === "v2"  ? "bg-white text-[#0168dd] shadow-sm" : "text-[#6b7280] hover:text-[#111827]"}`}>2</button>
             </div>
-            <div className="flex items-center gap-2 text-xs text-[#8a8fa8]"><Clock size={13} /><span>0:00:00</span></div>
+            <div className="flex items-center gap-2 text-xs text-[#6b7280]"><Clock size={13} /><span>0:00:00</span></div>
           </div>
         </div>
         {version === "v1"  && <Version1  />}

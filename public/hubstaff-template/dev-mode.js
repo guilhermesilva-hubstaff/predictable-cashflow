@@ -40,7 +40,7 @@
   var ZONE_LABEL = {"AvatarStack":"Avatar stack","BarChart":"Bar chart","ConfirmationModal":"Confirmation modal","DataTable":"Data table","DatePicker":"Date picker","DateRangePicker":"Date range picker","DayPicker":"Day picker","GlobalAlert":"Global alert","HiddenField":"Hidden field","IconButton":"Icon button","NumberField":"Number field","PhoneField":"Phone field","PillGroup":"Pill group","RadioButton":"Radio button","SegmentedControls":"Segmented controls","TextArea":"Text area","TextField":"Text field","TimeField":"Time field"};
 
   /* CSS style-property targeted by each editable color row. */
-  var PICK_PROP = { color: 'color', background: 'backgroundColor', border: 'borderColor' };
+  var PICK_PROP = { color: 'color', background: 'backgroundColor', border: 'borderColor', fill: 'fill', stroke: 'stroke' };
 
   /* ── state ───────────────────────────────────────────────────────────── */
   var S = { cfg: null, on: false, panel: null, ov: null, toggle: null, pop: null, tip: null, dlg: null,
@@ -56,6 +56,14 @@
   /* rgb(a) string → { hex, alpha }. Returns {hex:null} for none/transparent. */
   function parseColor(str) {
     if (!str) return null;
+    str = String(str).trim();
+    if (str.charAt(0) === '#') {
+      var h = str.toLowerCase();
+      if (h.length === 4) h = '#' + h[1] + h[1] + h[2] + h[2] + h[3] + h[3];
+      if (h.length === 9) { var a8 = parseInt(h.slice(7, 9), 16) / 255; return a8 === 0 ? { hex: null, alpha: 0 } : { hex: h.slice(0, 7), alpha: a8 }; }
+      if (h.length === 7) return { hex: h, alpha: 1 };
+      return null;
+    }
     var m = str.match(/rgba?\(([^)]+)\)/);
     if (!m) return null;
     var parts = m[1].split(/[,\/\s]+/).map(function (p) { return parseFloat(p); }).filter(function (n) { return !isNaN(n); });
@@ -69,6 +77,47 @@
   }
   function colorToken(hex) { return hex && COLOR[hex] ? COLOR[hex] : null; }
   function pxToken(map, v) { var k = round(px(v)); return map[k] != null ? map[k] : null; }
+  /* Closest token name for an off-palette hex (RGB distance) — a *suggestion*, not gospel. */
+  function nearestToken(hex) {
+    if (!hex || hex.charAt(0) !== '#' || hex.length < 7) return null;
+    var r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
+    var best = null, bd = Infinity;
+    Object.keys(COLOR).forEach(function (t) {
+      var R = parseInt(t.slice(1, 3), 16), G = parseInt(t.slice(3, 5), 16), B = parseInt(t.slice(5, 7), 16);
+      var d = (r - R) * (r - R) + (g - G) * (g - G) + (b - B) * (b - B);
+      if (d < bd) { bd = d; best = COLOR[t]; }
+    });
+    return best;
+  }
+  function hasDirectText(el) {
+    for (var i = 0; i < el.childNodes.length; i++) { var n = el.childNodes[i]; if (n.nodeType === 3 && n.textContent.trim()) return true; }
+    return false;
+  }
+  /* Walk a subtree → { hex → {hex, alpha, count, hits:[{el,prop,jsProp}]} } for the
+     Selection-colours list + bulk remap. Fully generic: text/bg/border/fill/stroke. */
+  function computeSelectionColors(root) {
+    var map = {};
+    function add(el, raw, prop, jsProp) {
+      var c = parseColor(raw); if (!c || !c.hex) return;
+      var m = map[c.hex] || (map[c.hex] = { hex: c.hex, alpha: c.alpha, count: 0, hits: [] });
+      m.count++; if (c.alpha < m.alpha) m.alpha = c.alpha;
+      m.hits.push({ el: el, prop: prop, jsProp: jsProp });
+    }
+    var els = [root], kids = root.querySelectorAll('*');
+    for (var i = 0; i < kids.length; i++) els.push(kids[i]);
+    els.forEach(function (el) {
+      if (isDmUI(el)) return;
+      var cs = getComputedStyle(el);
+      if (hasDirectText(el)) add(el, cs.color, 'color', 'color');
+      add(el, cs.backgroundColor, 'background', 'backgroundColor');
+      if (px(cs.borderTopWidth) > 0 && cs.borderTopStyle !== 'none') add(el, cs.borderTopColor, 'border', 'borderColor');
+      if (el.namespaceURI === 'http://www.w3.org/2000/svg') {
+        add(el, el.getAttribute('fill') || cs.fill, 'fill', 'fill');
+        add(el, el.getAttribute('stroke') || cs.stroke, 'stroke', 'stroke');
+      }
+    });
+    return map;
+  }
 
   /* value cell + optional token pill */
   function valCell(v, tok) {
@@ -228,7 +277,19 @@
 
     /* Box / layout */
     var boxRows = row('Display', valCell(cs.display));
-    boxRows += row('Background', colorCell(cs.backgroundColor, 'background'));
+    /* SVG shapes (chart bars, icons) paint via fill/stroke, not CSS background — surface those. */
+    if (el.namespaceURI === 'http://www.w3.org/2000/svg') {
+      var fillRaw = el.getAttribute('fill') || cs.fill;
+      var strokeRaw = el.getAttribute('stroke') || cs.stroke;
+      var fc = parseColor(fillRaw);
+      boxRows += row('Fill', (fc && fc.hex) ? colorCell(fillRaw, 'fill') : valCell(fillRaw || 'none'));
+      var sc = parseColor(strokeRaw);
+      if (sc && sc.hex) boxRows += row('Stroke', colorCell(strokeRaw, 'stroke'));
+      var bgc = parseColor(cs.backgroundColor);
+      if (bgc && bgc.hex) boxRows += row('Background', colorCell(cs.backgroundColor, 'background'));
+    } else {
+      boxRows += row('Background', colorCell(cs.backgroundColor, 'background'));
+    }
     var bw = px(cs.borderTopWidth);
     if (bw > 0 && cs.borderTopStyle !== 'none') {
       boxRows += row('Border', valCell(round(bw) + 'px ' + cs.borderTopStyle));
@@ -254,11 +315,28 @@
       boxRows += row('Align', valCell(cs.alignItems + ' / ' + cs.justifyContent));
     }
 
+    /* Selection colours — every colour in this element's subtree, with token or nearest suggestion + bulk remap */
+    S.selRoot = el;
+    S.selColorsMap = computeSelectionColors(el);
+    var scList = Object.keys(S.selColorsMap).map(function (k) { return S.selColorsMap[k]; });
+    scList.sort(function (a, b) { var at = colorToken(a.hex) ? 1 : 0, bt = colorToken(b.hex) ? 1 : 0; return at !== bt ? at - bt : b.count - a.count; });
+    var scRows = scList.map(function (m) {
+      var tok = colorToken(m.hex);
+      var alphaTxt = m.alpha < 1 ? ' · ' + Math.round(m.alpha * 100) + '%' : '';
+      return '<div class="dm-row dm-selc" data-dmsel="' + m.hex + '"><span class="dm-v dm-v--pick">' +
+        '<span class="dm-swatch" style="background:' + m.hex + '"></span>' + esc(m.hex) + alphaTxt +
+        (tok ? '<span class="dm-tok">' + esc(tok) + '</span>'
+             : '<span class="dm-tok dm-tok--none">no token</span><span class="dm-tok dm-tok--near">≈ ' + esc(nearestToken(m.hex) || '') + '</span>') +
+        '<span class="dm-selc-n">×' + m.count + '</span>' +
+        '<span class="material-symbols-rounded dm-pick-ic">edit</span></span></div>';
+    }).join('');
+    var scHtml = scList.length ? '<div class="dm-sec"><div class="dm-sec-hd">Selection colours (' + scList.length + ')</div>' + scRows + '</div>' : '';
+
     var order = hasText ? [['Typography', typeHtml], ['Box & layout', boxRows]]
                         : [['Box & layout', boxRows], ['Typography', typeHtml]];
     return compHtml + idHtml + order.map(function (s) {
       return '<div class="dm-sec"><div class="dm-sec-hd">' + esc(s[0]) + '</div>' + s[1] + '</div>';
-    }).join('');
+    }).join('') + scHtml;
   }
 
   function buildPanel() {
@@ -278,6 +356,8 @@
     el.querySelector('.dm-close').addEventListener('click', function () { API.disable(); });
     // delegate color-row clicks → open picker
     el.querySelector('#dm-body').addEventListener('click', function (e) {
+      var selEl = e.target.closest('[data-dmsel]');
+      if (selEl) { e.stopPropagation(); openBulkPicker(selEl.getAttribute('data-dmsel'), selEl); return; }
       var pickEl = e.target.closest('[data-dmprop]');
       if (pickEl) { e.stopPropagation(); openPicker(pickEl.getAttribute('data-dmprop'), pickEl); }
     });
@@ -294,7 +374,7 @@
   }
 
   /* ── live Zone color picker ──────────────────────────────────────────── */
-  function openPicker(prop, anchorEl) {
+  function openPicker(prop, anchorEl, onPick) {
     closePicker();
     if (!S.selected) return;
     var groups = {}; var order = [];
@@ -323,7 +403,7 @@
     pop.style.top = Math.max(56, Math.min(ar.top, window.innerHeight - 360)) + 'px';
     pop.querySelector('.dm-pop-close').addEventListener('click', closePicker);
     pop.querySelectorAll('.dm-sw').forEach(function (sw) {
-      sw.addEventListener('click', function () { applyColor(prop, this.getAttribute('data-hex')); });
+      sw.addEventListener('click', function () { var hx = this.getAttribute('data-hex'); if (onPick) onPick(hx); else applyColor(prop, hx); });
     });
   }
   function closePicker() { if (S.pop) { S.pop.remove(); S.pop = null; } }
@@ -338,6 +418,16 @@
     closePicker();
     renderPanel(S.selected);   // reflect the new value + token
     drawOverlay(S.selected, true);
+  }
+  /* Selection-colours bulk remap: recolour EVERY element that uses `hex` in the selection. */
+  function openBulkPicker(hex, anchorEl) { openPicker(null, anchorEl, function (newHex) { applyBulkColor(hex, newHex); }); }
+  function applyBulkColor(hex, newHex) {
+    var m = S.selColorsMap && S.selColorsMap[hex]; if (!m) return;
+    m.hits.forEach(function (h) { h.el.style[h.jsProp] = newHex; recordChange(h.el, h.prop, h.jsProp, hex, newHex); });
+    try { navigator.clipboard && navigator.clipboard.writeText(colorToken(newHex) || newHex); } catch (e) {}
+    closePicker();
+    var root = S.selRoot || S.selected;   // re-render the list from its own root (mirrors handleClick's refresh path)
+    if (root) { S.selected = root; drawOverlay(root, true); renderPanel(root); }
   }
 
   /* ── change log (explore live → curate → apply to code) ──────────────── */
@@ -705,6 +795,10 @@
       '.dm-swatch{width:12px;height:12px;border-radius:3px;border:1px solid rgba(0,0,0,.12);flex-shrink:0;}',
       '.dm-tok{font-size:10px;font-weight:600;color:#0168dd;background:#eff6ff;padding:1px 6px;border-radius:99px;white-space:nowrap;}',
       '.dm-tok--none{color:#9ca3af;background:#f3f4f6;}',
+      '.dm-tok--near{color:#6b7280;background:#f3f4f6;font-weight:500;}',
+      '.dm-selc{cursor:pointer;}',
+      '.dm-selc .dm-v{width:100%;cursor:pointer;flex-wrap:wrap;}',
+      '.dm-selc-n{margin-left:auto;color:#9ca3af;font-size:11px;font-variant-numeric:tabular-nums;}',
       /* color picker popover */
       '.dm-pop{position:fixed;z-index:1170;width:236px;max-height:340px;background:#fff;border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 12px 40px rgba(0,0,0,.18);display:flex;flex-direction:column;font-family:Roboto,system-ui,sans-serif;overflow:hidden;}',
       '.dm-pop-hd{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-bottom:1px solid #f3f4f6;font-size:12px;font-weight:600;color:#111827;flex-shrink:0;}',

@@ -5,26 +5,26 @@
 
 :root {
   --font-size: 16px;
-  --background: #f5f6fa;
-  --foreground: #1a1e35;
+  --background: #f9fafb;
+  --foreground: #111827;
   --card: #ffffff;
-  --card-foreground: #1a1e35;
+  --card-foreground: #111827;
   --popover: #ffffff;
-  --popover-foreground: #1a1e35;
+  --popover-foreground: #111827;
   --primary: #0168dd;
   --primary-foreground: #ffffff;
-  --secondary: #e8f2fd;
+  --secondary: #eaf6ff;
   --secondary-foreground: #0168dd;
-  --muted: #f0f1f5;
-  --muted-foreground: #8a8fa8;
-  --accent: #e8f2fd;
+  --muted: #f3f4f6;
+  --muted-foreground: #6b7280;
+  --accent: #eaf6ff;
   --accent-foreground: #0168dd;
   --destructive: #d4183d;
   --destructive-foreground: #ffffff;
   --border: rgba(0, 0, 0, 0.1);
   --input: transparent;
-  --input-background: #f3f3f5;
-  --switch-background: #cbced4;
+  --input-background: #f3f4f6;
+  --switch-background: #d1d5db;
   --font-weight-medium: 500;
   --font-weight-normal: 400;
   --ring: oklch(0.708 0 0);
