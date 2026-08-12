@@ -11,8 +11,18 @@ import {
   Settings, Wallet, MonitorSmartphone, Plus, TrendingUp,
   TrendingDown, MoreHorizontal, Columns, Columns3, X,
   Banknote, Gift, Umbrella, Minus, AlertTriangle, SlidersHorizontal, Info,
-  FileSpreadsheet, Filter, ListFilter, ExternalLink,
+  FileSpreadsheet, Filter, ListFilter, ExternalLink, Lock, ArrowDown,
+  ArrowRight, Eye, Sparkles, Play, Film, PlayCircle,
 } from "lucide-react";
+// Hubstaff shell chrome (topbar, sidebar, design annotations, dev mode). Bundled as raw
+// source and injected as classic scripts at runtime, so it rides inside the app bundle and
+// works on any deploy path — the prototype-hub worker only serves index.html + assets/, not
+// extra folders like /hubstaff-template/ (which is why runtime-fetching them 404'd on deploy).
+import hubstaffShellSrc from "../shell/hubstaff-shell.js?raw";
+import designAnnotationsSrc from "../shell/design-annotations.js?raw";
+import designAnnotationsDataSrc from "../shell/design-annotations.data.js?raw";
+import devModeSrc from "../shell/dev-mode.js?raw";
+import mvpPreview from "../assets/mvpPreview";
 
 const fmt0 = (n: number) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0 }).format(Math.abs(n));
@@ -418,7 +428,7 @@ function ChevronLeft({ size = 16, className = "" }: { size?: number; className?:
   return <ChevronRight size={size} className={`rotate-180 ${className}`} />;
 }
 
-function Sidebar({ active }: { active: "v1" | "v1c" | "v1d" | "v1e" | "v1f" | "v1g" | "v1h" | "v1i" | "v1j" | "v1k" | "v1l" | "v1m" | "v1n" | "final" | "v2" }) {
+function Sidebar({ active }: { active: "v1" | "v1c" | "v1d" | "v1e" | "v1f" | "v1g" | "v1h" | "v1i" | "v1j" | "v1k" | "v1l" | "v1m" | "v1n" | "final" | "mvp" | "v2" }) {
   const topNav = [
     { icon: LayoutDashboard, label: "Dashboard" },
     { icon: ClipboardList,   label: "Timesheets" },
@@ -660,14 +670,14 @@ function V1PaymentHistoryZone() {
             <button aria-label="Next period" className={`${ZBTN_BASE} h-10 w-10 ${barGray}`}><ChevronRight size={18} /></button>
           </div>
           <div className="flex items-center gap-2">
-            <button className={`relative inline-flex items-center justify-between h-10 pl-4 pr-3 gap-3 text-sm font-normal rounded-[6px] transition-colors select-none min-w-[300px] ${barGray}`}><span className="text-[#374151]">Sun, May 24, 2026 – Wed, Jun 24, 2026</span><CalendarDays size={16} className="text-[#2aa7ff]" /></button>
+            <button data-zone="date_range_picker" className={`relative inline-flex items-center justify-between h-10 pl-4 pr-3 gap-3 text-sm font-normal rounded-[6px] transition-colors select-none min-w-[300px] ${barGray}`}><span className="text-[#374151]">Sun, May 24, 2026 – Wed, Jun 24, 2026</span><CalendarDays size={16} className="text-[#2aa7ff]" /></button>
             <button className={zbtn("ghostGray", "md")}>Today</button>
           </div>
           <button className={zbtn("outlinePrimary", "md")}><ListFilter size={16} /> Filters</button>
         </div>
       </div>
       {/* Summary */}
-      <div className="flex items-stretch bg-white rounded-lg border border-[#e5e7eb] overflow-hidden">
+      <div data-zone="card" className="flex items-stretch bg-white rounded-lg border border-[#e5e7eb] overflow-hidden">
         <div className="flex-1 px-6 py-4 border-r border-[#e5e7eb]">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-[#6b7280]">Payments</p>
           <p className="text-2xl font-bold text-[#111827] mt-0.5">47</p>
@@ -683,17 +693,17 @@ function V1PaymentHistoryZone() {
           <label className="flex items-center gap-2">
             <span className="text-[11px] font-semibold uppercase tracking-wide text-[#6b7280]">Group by</span>
             <span className="relative inline-flex">
-              <select aria-label="Group by" className="appearance-none h-8 rounded-[6px] border border-gray-300 bg-white pl-3 pr-8 text-sm text-gray-700 cursor-pointer focus:outline-none focus:border-[#2aa7ff] focus:ring-1 focus:ring-[#2aa7ff]">
+              <select data-zone="select" aria-label="Group by" className="appearance-none h-8 rounded-[6px] border border-gray-300 bg-white pl-3 pr-8 text-sm text-gray-700 cursor-pointer focus:outline-none focus:border-[#2aa7ff] focus:ring-1 focus:ring-[#2aa7ff]">
                 <option>Members</option>
                 <option>Currency</option>
               </select>
               <span className="material-symbols-rounded absolute right-1.5 top-1/2 -translate-y-1/2 text-[#6b7280] pointer-events-none" style={{ fontSize: 18 }}>keyboard_arrow_down</span>
             </span>
           </label>
-          <button aria-label="Columns" title="Columns" className={`${ZBTN_BASE} h-8 w-8 ${ZBTN_VARIANT.outlineGray}`}><Columns3 size={16} /></button>
+          <button data-zone="dropdown" aria-label="Columns" title="Columns" className={`${ZBTN_BASE} h-8 w-8 ${ZBTN_VARIANT.outlineGray}`}><Columns3 size={16} /></button>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm border-separate border-spacing-0 min-w-[1120px]">
+          <table data-zone="data_table" className="w-full text-sm border-separate border-spacing-0 min-w-[1120px]">
             <thead>
               <tr>
                 <th className={`${hCls} min-w-[280px]`}>Payment type</th>
@@ -717,7 +727,7 @@ function V1PaymentHistoryZone() {
                       <td colSpan={9} className={`px-3 py-2 border-r border-t border-[#e5e7eb] ${open ? "bg-[#f9fafb]" : "group-hover/row:bg-[#f9fafb]"}`}>
                         <div className="flex items-center gap-2.5">
                           <ChevronRight size={16} className={`text-[#9ca3af] shrink-0 transition-transform ${open ? "rotate-90" : ""}`} />
-                          <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-[10px] font-semibold shrink-0" style={{ background: v1AvatarColors[m.avatar] ?? "#6b7280" }}>{m.avatar}</div>
+                          <div data-zone="avatar" className="w-7 h-7 rounded-full flex items-center justify-center text-white text-[10px] font-semibold shrink-0" style={{ background: v1AvatarColors[m.avatar] ?? "#6b7280" }}>{m.avatar}</div>
                           <div className="min-w-0">
                             <div className="flex items-center gap-1.5 leading-tight">
                               <span className="text-[#111827] text-sm font-semibold">{m.name}</span>
@@ -754,13 +764,13 @@ function V1PaymentHistoryZone() {
         <div className="flex items-center justify-between gap-3 px-5 py-3 border-t border-[#e5e7eb]">
           <div className="flex items-center gap-3 text-sm text-[#6b7280]">
             <span>Showing {rangeFrom}–{rangeTo} items</span>
-            <span className="inline-flex items-center gap-0.5 border border-[#e5e7eb] rounded-[4px] pl-2.5 pr-1 py-1 text-[#111827] select-none"><span className="font-medium">10</span><span className="material-symbols-rounded" style={{ fontSize: 18 }}>keyboard_arrow_down</span></span>
+            <span data-zone="select" className="inline-flex items-center gap-0.5 border border-[#e5e7eb] rounded-[4px] pl-2.5 pr-1 py-1 text-[#111827] select-none"><span className="font-medium">10</span><span className="material-symbols-rounded" style={{ fontSize: 18 }}>keyboard_arrow_down</span></span>
             <span>Per page</span>
           </div>
           <div className="flex items-center gap-1">
             {safePage > 0 && (<button onClick={() => setPage(p => Math.max(0, p - 1))} className="inline-flex items-center gap-0.5 h-8 pl-1 pr-2.5 rounded-[4px] text-sm text-[#6b7280] hover:text-[#111827] transition-colors"><span className="material-symbols-rounded" style={{ fontSize: 18 }}>chevron_left</span>Previous</button>)}
             {Array.from({ length: pageCount }, (_, i) => (
-              <button key={i} onClick={() => setPage(i)} className={`relative h-8 min-w-[32px] px-2 rounded-[4px] text-sm transition-colors ${i === safePage ? "bg-[#eaf6ff] text-[#0168dd] font-medium" : "text-[#6b7280] font-normal hover:bg-[#f9fafb]"}`}>{i + 1}{i === safePage && <span className="absolute left-1/2 -translate-x-1/2 -bottom-[1.5px] w-[18px] h-[3px] rounded-full bg-[#0168dd]" />}</button>
+              <button data-zone="pagination" key={i} onClick={() => setPage(i)} className={`relative h-8 min-w-[32px] px-2 rounded-[4px] text-sm transition-colors ${i === safePage ? "bg-[#eaf6ff] text-[#0168dd] font-medium" : "text-[#6b7280] font-normal hover:bg-[#f9fafb]"}`}>{i + 1}{i === safePage && <span className="absolute left-1/2 -translate-x-1/2 -bottom-[1.5px] w-[18px] h-[3px] rounded-full bg-[#0168dd]" />}</button>
             ))}
             <button onClick={() => setPage(p => Math.min(pageCount - 1, p + 1))} disabled={safePage >= pageCount - 1} className="inline-flex items-center gap-0.5 h-8 pl-2.5 pr-1 rounded-[4px] text-sm text-[#6b7280] hover:text-[#111827] disabled:opacity-40 disabled:cursor-not-allowed transition-colors">Next<span className="material-symbols-rounded" style={{ fontSize: 18 }}>chevron_right</span></button>
           </div>
@@ -778,7 +788,7 @@ function V1PaymentHistory() {
   return (
     <div className="space-y-3">
       <V1DateBar tab={tab} onTab={setTab} />
-      <div className="flex items-stretch bg-white rounded-lg border border-[#e5e7eb] overflow-hidden">
+      <div data-zone="card" className="flex items-stretch bg-white rounded-lg border border-[#e5e7eb] overflow-hidden">
         <div className="flex-1 px-6 py-4 border-r border-[#e5e7eb]">
           <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6b7280]">Payments</p>
           <p className="text-2xl font-bold text-[#111827] mt-0.5">47</p>
@@ -849,7 +859,7 @@ function V1FutureTracked() {
   return (
     <div className="space-y-3">
       <V1DateBar tab={tab} onTab={setTab} />
-      <div className="flex items-stretch bg-white rounded-lg border border-[#e5e7eb] overflow-hidden">
+      <div data-zone="card" className="flex items-stretch bg-white rounded-lg border border-[#e5e7eb] overflow-hidden">
         <div className="px-6 py-4 border-r border-[#e5e7eb] flex-1">
           <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6b7280]">Hours</p>
           <p className="text-2xl font-bold text-[#0e9f6e] mt-0.5">248:00:00</p>
@@ -1686,9 +1696,9 @@ function AddAdjustmentDialog({
     <>
       <div className="fixed inset-0 z-40 bg-black/30" onClick={onClose} />
       <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
-        <div className={`relative bg-white pointer-events-auto ${zone ? "rounded-lg shadow-xl w-[520px] p-5" : "rounded-xl shadow-2xl w-96 p-6"}`}>
+        <div data-zone="dialog" className={`relative bg-white pointer-events-auto ${zone ? "rounded-lg shadow-xl w-[520px] p-5" : "rounded-xl shadow-2xl w-96 p-6"}`}>
           {zone && (
-            <button onClick={onClose} aria-label="Close"
+            <button data-zone="icon_button" onClick={onClose} aria-label="Close"
               className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-[6px] text-[#9ca3af] hover:bg-[#f3f4f6] hover:text-[#4b5563] transition-colors">
               <span className="material-symbols-rounded" style={{ fontSize: 20 }}>close</span>
             </button>
@@ -1703,7 +1713,7 @@ function AddAdjustmentDialog({
           {/* Label */}
           <div className="mb-4">
             <p className={lblCls}>Label</p>
-            <input type="text" value={label} onChange={e => setLabel(e.target.value)}
+            <input data-zone="text_field" type="text" value={label} onChange={e => setLabel(e.target.value)}
               className={`w-full ${fieldCls()}`} />
           </div>
 
@@ -1755,7 +1765,7 @@ function AddAdjustmentDialog({
                 <p className={lblCls}>{unit === "dollar" ? "Amount" : "Percentage"}</p>
                 <div className="relative">
                   {unit === "dollar" && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[#9ca3af] pointer-events-none">$</span>}
-                  <input type="text" inputMode="decimal" value={rawValue}
+                  <input data-zone="text_field" type="text" inputMode="decimal" value={rawValue}
                     onChange={e => setRawValue(e.target.value)}
                     onBlur={() => setAmountTouched(true)}
                     placeholder={unit === "pct" ? "e.g. 9" : "e.g. 5000"}
@@ -1792,7 +1802,7 @@ function AddAdjustmentDialog({
                       </button>
                     ))}
                   </div>
-                  <input type="text" inputMode="decimal" value={rawValue}
+                  <input data-zone="text_field" type="text" inputMode="decimal" value={rawValue}
                     onChange={e => setRawValue(e.target.value)}
                     onBlur={() => setAmountTouched(true)}
                     placeholder={unit === "pct" ? "e.g. 9" : "e.g. 5000"}
@@ -1811,8 +1821,8 @@ function AddAdjustmentDialog({
           )}
 
           {/* Warnings */}
-          {showSanityWarn && <p className="text-[11px] text-amber-600 mt-1.5">Large adjustment — double-check the amount.</p>}
-          {showClampWarn  && <p className="text-[11px] text-red-500 mt-1.5">This reduction would bring the projection below $0.</p>}
+          {showSanityWarn && <p data-zone="alert" className="text-[11px] text-amber-600 mt-1.5">Large adjustment — double-check the amount.</p>}
+          {showClampWarn  && <p data-zone="alert" className="text-[11px] text-red-500 mt-1.5">This reduction would bring the projection below $0.</p>}
 
           {/* Footer */}
           <div className={`flex items-center justify-between ${zone ? "mt-6 pt-5" : "mt-6 pt-4 border-t border-[#e5e7eb]"}`}>
@@ -3452,7 +3462,7 @@ function V1ePredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
       {/* ── Alert banner — only when status breakdown is on ──────────────── */}
       {showStatusBreakdown && (
         <div className="px-5 pt-1">
-          <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5 text-[11px]">
+          <div data-zone="alert" className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5 text-[11px]">
             <div className="flex items-center gap-2 text-amber-800">
               <AlertTriangle size={12} className="text-amber-500 flex-shrink-0" />
 3 pending ($3.6k) · 1 failed ($1.2k) from Weeks 1–2 need attention
@@ -3964,7 +3974,7 @@ function V1fPredictivePanel({ showStatusBreakdown, seasonalityOn }: { showStatus
       {/* ── Alert banner — only when status breakdown is on ──────────────── */}
       {showStatusBreakdown && (
         <div className="px-5 pt-1">
-          <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5 text-[11px]">
+          <div data-zone="alert" className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5 text-[11px]">
             <div className="flex items-center gap-2 text-amber-800">
               <AlertTriangle size={12} className="text-amber-500 flex-shrink-0" />
 3 pending ($3.6k) · 1 failed ($1.2k) from Weeks 1–2 need attention
@@ -4174,7 +4184,7 @@ function V1gManageAdjustmentsDialog({
           className="w-full border border-[#e5e7eb] rounded-md px-2 py-1 text-[12px] text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#0168dd]/20 focus:border-[#0168dd] transition-colors" />
       </td>
       <td className="py-2 px-3">
-        <div className="flex bg-[#f3f4f6] rounded-md p-0.5 w-fit">
+        <div data-zone="segmented_controls" className="flex bg-[#f3f4f6] rounded-md p-0.5 w-fit">
           {(["add", "reduce"] as const).map(t => (
             <button key={t} onClick={() => setDType(t)} className={`px-2 py-0.5 rounded text-[11px] font-semibold transition-all ${dType === t ? "bg-white text-[#0168dd] shadow-sm" : "text-[#6b7280]"}`}>{t === "add" ? "Add" : "Reduce"}</button>
           ))}
@@ -4213,7 +4223,7 @@ function V1gManageAdjustmentsDialog({
               <h2 className="text-lg font-semibold text-[#111827]">Adjustments</h2>
               <p className="text-[11px] text-[#6b7280] mt-0.5 max-w-[440px] leading-snug">How we get from your baseline to the recommended figure. Auto rows come from your payment history; add or remove your own below.</p>
             </div>
-            <button onClick={onClose} className="p-1 rounded-md text-[#6b7280] hover:text-[#111827] hover:bg-[#f3f4f6] transition-colors flex-shrink-0"><X size={16} /></button>
+            <button data-zone="icon_button" onClick={onClose} className="p-1 rounded-md text-[#6b7280] hover:text-[#111827] hover:bg-[#f3f4f6] transition-colors flex-shrink-0"><X size={16} /></button>
           </div>
 
           <div className="px-6 py-4">
@@ -4566,7 +4576,7 @@ const ZONE_CHART_TRACKED_LABEL = "Tracked";
 // Small hover tooltip on an info icon — explains a figure or label in place.
 function InfoTip({ text, width = 200 }: { text: string; width?: number }) {
   return (
-    <span className="group relative inline-flex align-middle leading-none">
+    <span data-zone="tooltip" className="group relative inline-flex align-middle leading-none">
       <Info size={11} className="text-[#9ca3af] hover:text-[#4b5563] transition-colors cursor-help" />
       <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1.5 hidden group-hover:block z-30 pointer-events-none" style={{ width }}>
         <span className="block bg-[#111827] text-white text-[11px] font-normal normal-case tracking-normal whitespace-normal leading-snug text-left rounded-md px-2.5 py-1.5 shadow-lg">{text}</span>
@@ -4589,7 +4599,7 @@ const v1SourceLegendInfo: Record<string, string> = { Confirmed: v1InfoText.confi
 const v1gManualProviders = new Set(["bitwage", "gusto", "export"]);
 const v1gTriggerTime = "9:00 AM PST"; // scheduled auto-trigger time (adjustable via the pencil)
 
-function V1kFundDateCard({ e, v1l = false, zone = false, condensed = false, onProviderClick }: { e: V1gFundDate; v1l?: boolean; zone?: boolean; condensed?: boolean; onProviderClick?: (providerId: string) => void }) {
+function V1kFundDateCard({ e, v1l = false, zone = false, condensed = false, mvp = false, onProviderClick }: { e: V1gFundDate; v1l?: boolean; zone?: boolean; condensed?: boolean; mvp?: boolean; onProviderClick?: (providerId: string) => void }) {
   const wiseVer = useContext(WiseVerContext);
   // Zone typography (from app.hubstaff.com/zone/docs/typography + real staging table):
   // body text = 14px (text-sm), labels = 12px (text-xs), Roboto, gray-900/700/500.
@@ -4617,13 +4627,13 @@ function V1kFundDateCard({ e, v1l = false, zone = false, condensed = false, onPr
   const [showDialog, setShowDialog] = useState(false);
 
   const providerTable = (
-    <table className="w-full">
+    <table data-zone="table" className="w-full">
       <thead>
         <tr className={`${zt.head} font-semibold uppercase tracking-wide`}>
           <th className={`text-left font-semibold ${headPad} border-b border-[#e5e7eb]`}>Payout method</th>
-          <th className={`text-right font-semibold ${headPad} pl-4 border-b border-[#e5e7eb]`}>Balance</th>
+          {!mvp && <th className={`text-right font-semibold ${headPad} pl-4 border-b border-[#e5e7eb]`}>Balance</th>}
           <th className={`text-right font-semibold ${headPad} pl-4 border-b border-[#e5e7eb]`}>Due</th>
-          <th className={`text-right font-semibold ${headPad} pl-4 border-b border-[#e5e7eb]`}>{e.funded ? "Status" : "Fund"}</th>
+          {!mvp && <th className={`text-right font-semibold ${headPad} pl-4 border-b border-[#e5e7eb]`}>{e.funded ? "Status" : "Fund"}</th>}
         </tr>
       </thead>
       <tbody>
@@ -4656,8 +4666,9 @@ function V1kFundDateCard({ e, v1l = false, zone = false, condensed = false, onPr
                   </a>
                 )}
               </td>
-              <td className={`${rowPad} pl-4 text-right whitespace-nowrap tabular-nums ${v1l ? zt.num : "text-[11px] font-semibold text-[#4b5563]"}`}>{/* v3 — balance-anchored Wise-interest tag (icon-only, left of the number so the amount stays column-aligned) */}{wiseVer === 3 && p.id === "wise" && bal !== undefined && (<span title="This balance earns interest" aria-label="This balance earns interest" className="mr-1.5 inline-flex items-center align-middle text-[#0e9f6e]"><Gift size={13} aria-hidden="true" /></span>)}{bal !== undefined ? fmt0(bal) : (v1l ? <span className={`inline-flex items-center gap-1 justify-end ${zone ? "text-[#9ca3af]" : "text-[#9ca3af]"}`}>Unknown <InfoTip text={v1InfoText.unknown} /></span> : "—")}</td>
+              {!mvp && <td className={`${rowPad} pl-4 text-right whitespace-nowrap tabular-nums ${v1l ? zt.num : "text-[11px] font-semibold text-[#4b5563]"}`}>{/* v3 — balance-anchored Wise-interest tag (icon-only, left of the number so the amount stays column-aligned) */}{wiseVer === 3 && p.id === "wise" && bal !== undefined && (<span title="This balance earns interest" aria-label="This balance earns interest" className="mr-1.5 inline-flex items-center align-middle text-[#0e9f6e]"><Gift size={13} aria-hidden="true" /></span>)}{bal !== undefined ? fmt0(bal) : (v1l ? <span className={`inline-flex items-center gap-1 justify-end ${zone ? "text-[#9ca3af]" : "text-[#9ca3af]"}`}>Unknown <InfoTip text={v1InfoText.unknown} /></span> : "—")}</td>}
               <td className={`${rowPad} pl-4 text-right whitespace-nowrap tabular-nums ${v1l ? zt.num : "text-[11px] font-semibold text-[#4b5563]"}`}>{fmt0(p.amount)}</td>
+              {!mvp && (
               <td className={`${rowPad} pl-4 text-right whitespace-nowrap`}>
                 {e.funded ? (
                   <span className="text-[11px] font-semibold text-emerald-600 inline-flex items-center gap-1 justify-end">{check} paid</span>
@@ -4667,6 +4678,7 @@ function V1kFundDateCard({ e, v1l = false, zone = false, condensed = false, onPr
                   <span className={v1l ? `${zt.numStrong} tabular-nums` : "text-xs font-bold text-amber-600"}>{fmt0(res.amount)}</span>
                 )}
               </td>
+              )}
             </tr>
           );
         })}
@@ -4675,7 +4687,7 @@ function V1kFundDateCard({ e, v1l = false, zone = false, condensed = false, onPr
   );
 
   return (
-    <div data-component={zone ? "Fund-by card" : undefined} className={`rounded-lg border bg-white ${zone ? "p-4" : "px-4 py-3"} flex flex-col h-full ${zone ? "border-[#e5e7eb]" : (isNext ? "border-[#d1d5db]" : "border-[#e5e7eb]")}`}>
+    <div data-zone="card" data-component={zone ? "Fund-by card" : undefined} className={`rounded-lg border bg-white ${zone ? "p-4" : "px-4 py-3"} flex flex-col h-full ${zone ? "border-[#e5e7eb]" : (isNext ? "border-[#d1d5db]" : "border-[#e5e7eb]")}`}>
       {zone ? (
         /* Final UI — title + cycle caption stacked on the left, pill on the right */
         <div className="flex justify-between items-start gap-2 mb-4">
@@ -4734,8 +4746,8 @@ function V1kFundDateCard({ e, v1l = false, zone = false, condensed = false, onPr
       {showTable && <div className={zone ? "" : "mt-3"}>{providerTable}</div>}
 
       <div className={`${showTable ? "mt-auto" : "mt-4"} pt-2 border-t border-[#e5e7eb] flex items-center justify-between gap-2`}>
-        <span className={v1l ? `${zt.numStrong} font-medium` : "text-[#111827] text-[11px] font-semibold"}>{e.funded ? "Total paid" : "Total to fund"}{condensed && <span className="font-normal text-[#6b7280]"> · {e.providers.length} payment method{e.providers.length > 1 ? "s" : ""}</span>}</span>
-        <span className={v1l ? `${zt.numStrong} font-semibold tabular-nums` : `text-xs font-bold ${e.funded ? "text-emerald-600" : "text-[#111827]"}`}>{fmt0(e.funded ? dueTotal : fundTotal)}</span>
+        <span className={v1l ? `${zt.numStrong} font-medium` : "text-[#111827] text-[11px] font-semibold"}>{e.funded ? "Total paid" : (mvp ? "Total due" : "Total to fund")}{condensed && <span className="font-normal text-[#6b7280]"> · {e.providers.length} payment method{e.providers.length > 1 ? "s" : ""}</span>}</span>
+        <span className={v1l ? `${zt.numStrong} font-semibold tabular-nums` : `text-xs font-bold ${e.funded ? "text-emerald-600" : "text-[#111827]"}`}>{fmt0(e.funded ? dueTotal : (mvp ? dueTotal : fundTotal))}</span>
       </div>
 
       {showDialog && (
@@ -4810,12 +4822,12 @@ function V1kLearnMoreDialog({ open, onClose, v1l = false, zone = false }: { open
     <>
       <div className="fixed inset-0 z-40 bg-black/30" onClick={onClose} />
       <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none p-4">
-        <div className="bg-white rounded-xl shadow-2xl w-[520px] max-w-full max-h-[85vh] flex flex-col pointer-events-auto">
+        <div data-zone="dialog" className="bg-white rounded-xl shadow-2xl w-[520px] max-w-full max-h-[85vh] flex flex-col pointer-events-auto">
           <div className="flex items-start justify-between px-5 py-5 flex-shrink-0">
             <div>
               <h2 className="text-lg font-semibold text-[#111827]">How funding works</h2>
             </div>
-            <button onClick={onClose} className="p-1 rounded-md text-[#6b7280] hover:text-[#111827] hover:bg-[#f3f4f6] transition-colors flex-shrink-0"><X size={16} /></button>
+            <button data-zone="icon_button" onClick={onClose} className="p-1 rounded-md text-[#6b7280] hover:text-[#111827] hover:bg-[#f3f4f6] transition-colors flex-shrink-0"><X size={16} /></button>
           </div>
 
           <div className="px-5 py-2.5 overflow-y-auto space-y-5">
@@ -4869,7 +4881,7 @@ function V1kLearnMoreDialog({ open, onClose, v1l = false, zone = false }: { open
   );
 }
 
-function V1kNextPaymentsCard({ onViewSchedule, v1l = false, zone = false, condensed = false, onProviderClick }: { onViewSchedule: () => void; v1l?: boolean; zone?: boolean; condensed?: boolean; onProviderClick?: (providerId: string) => void }) {
+function V1kNextPaymentsCard({ onViewSchedule, v1l = false, zone = false, condensed = false, mvp = false, onProviderClick }: { onViewSchedule: () => void; v1l?: boolean; zone?: boolean; condensed?: boolean; mvp?: boolean; onProviderClick?: (providerId: string) => void }) {
   const upcoming = v1gFundSchedule.filter(e => !e.funded && e.daysOut > 0).slice(0, 2);
   const wiseVer = useContext(WiseVerContext);
   const [showLearn, setShowLearn] = useState(false);
@@ -4881,7 +4893,7 @@ function V1kNextPaymentsCard({ onViewSchedule, v1l = false, zone = false, conden
     <div className="col-span-9 flex flex-col gap-3">
       {/* v2 — prominent, dismissible Wise-interest banner above the schedule */}
       {wiseVer === 2 && !wiseBannerDismissed && (
-        <div className="rounded-lg border border-[#bcd4f2] bg-[#f0f6ff] px-4 py-3 flex items-start gap-3">
+        <div data-zone="alert" className="rounded-lg border border-[#bcd4f2] bg-[#f0f6ff] px-4 py-3 flex items-start gap-3">
           <TrendingUp size={18} aria-hidden="true" className="text-[#0168dd] flex-shrink-0 mt-0.5" />
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-[#0168dd]">You're paying with Wise — earn interest on your balance</p>
@@ -4890,7 +4902,7 @@ function V1kNextPaymentsCard({ onViewSchedule, v1l = false, zone = false, conden
           <button onClick={() => setWiseBannerDismissed(true)} aria-label="Dismiss Wise interest banner" className="flex-shrink-0 p-1 rounded-md text-[#9ca3af] hover:text-[#4b5563] hover:bg-white/60 transition-colors"><X size={16} aria-hidden="true" /></button>
         </div>
       )}
-      <div className="flex-1 bg-white rounded-lg border border-[#e5e7eb] flex flex-col">
+      <div data-zone="card" className="flex-1 bg-white rounded-lg border border-[#e5e7eb] flex flex-col">
         {v1l ? (
           /* 1L — Learn more sits next to the title; no full-schedule link */
           <div className={`px-4 flex items-center gap-3 border-b bg-white rounded-t-lg ${zone ? "h-[60px] border-[#e5e7eb]" : "h-[55px] border-[#e5e7eb]"}`}>
@@ -4898,7 +4910,7 @@ function V1kNextPaymentsCard({ onViewSchedule, v1l = false, zone = false, conden
             {learnMoreBtn}
             {/* v4 — green Wise-interest pill using the empty right side of the schedule header */}
             {wiseVer === 4 && (
-              <a href={WISE_INTEREST_URL} target="_blank" rel="noopener noreferrer" title="Availability and rates vary by country" className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-[#a7d3b8] bg-[#e6f6ee] px-2.5 py-1 text-[12px] font-medium text-[#0e9f6e] hover:bg-[#d7f0e2] transition-colors">
+              <a data-zone="pill" href={WISE_INTEREST_URL} target="_blank" rel="noopener noreferrer" title="Availability and rates vary by country" className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-[#a7d3b8] bg-[#e6f6ee] px-2.5 py-1 text-[12px] font-medium text-[#0e9f6e] hover:bg-[#d7f0e2] transition-colors">
                 <ProviderLogo id="wise" size={14} />
                 Earn interest on your balance
                 <ExternalLink size={12} aria-hidden="true" className="flex-shrink-0" />
@@ -4917,11 +4929,11 @@ function V1kNextPaymentsCard({ onViewSchedule, v1l = false, zone = false, conden
         <V1kLearnMoreDialog open={showLearn} onClose={() => setShowLearn(false)} v1l={v1l} zone={zone} />
         <div className="px-4 py-4 flex-1">
           <div className="grid grid-cols-2 gap-4 items-stretch">
-            {upcoming.map(e => <V1kFundDateCard key={e.date} e={e} v1l={v1l} zone={zone} condensed={condensed} onProviderClick={onProviderClick} />)}
+            {upcoming.map(e => <V1kFundDateCard key={e.date} e={e} v1l={v1l} zone={zone} condensed={condensed} mvp={mvp} onProviderClick={onProviderClick} />)}
           </div>
           {/* v3 — one-line tip below the table */}
           {wiseVer === 3 && (
-            <div className="mt-3 rounded-lg border border-[#e5e7eb] bg-[#f9fafb] px-3.5 py-2.5 flex items-start gap-2">
+            <div data-zone="alert" className="mt-3 rounded-lg border border-[#e5e7eb] bg-[#f9fafb] px-3.5 py-2.5 flex items-start gap-2">
               <Gift size={15} aria-hidden="true" className="text-[#0e9f6e] flex-shrink-0 mt-0.5" />
               <p className="text-[12px] text-[#4b5563] leading-snug">The balance you keep in Wise can earn interest (USD, EUR, GBP). <a href={WISE_INTEREST_URL} target="_blank" rel="noopener noreferrer" className="font-medium text-[#0168dd] underline underline-offset-2 hover:text-[#0057bb]">See how to opt in</a> <span className="text-[#d1d5db]" aria-hidden="true">·</span> rates vary, terms apply.</p>
             </div>
@@ -4930,7 +4942,7 @@ function V1kNextPaymentsCard({ onViewSchedule, v1l = false, zone = false, conden
       </div>
       {/* v5 — persistent, contained opportunity card below the schedule */}
       {wiseVer === 5 && (
-        <div className="rounded-lg border border-[#a7d3b8] bg-[#e6f6ee] px-4 py-3 flex items-start gap-3">
+        <div data-zone="alert" className="rounded-lg border border-[#a7d3b8] bg-[#e6f6ee] px-4 py-3 flex items-start gap-3">
           <TrendingUp size={18} aria-hidden="true" className="text-[#0e9f6e] flex-shrink-0 mt-0.5" />
           <div className="min-w-0">
             <p className="text-sm font-semibold text-[#0e9f6e]">Put your idle Wise balance to work</p>
@@ -4959,19 +4971,19 @@ function V1kFundingScheduleDialog({ open, onClose }: { open: boolean; onClose: (
     <>
       <div className="fixed inset-0 z-40 bg-black/30" onClick={onClose} />
       <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none p-4">
-        <div className="bg-white rounded-xl shadow-2xl w-[560px] max-w-full max-h-[82vh] flex flex-col pointer-events-auto">
+        <div data-zone="dialog" className="bg-white rounded-xl shadow-2xl w-[560px] max-w-full max-h-[82vh] flex flex-col pointer-events-auto">
           <div className="px-6 pt-5 pb-3 border-b border-[#e5e7eb] flex-shrink-0">
             <div className="flex items-start justify-between">
               <div>
                 <h2 className="text-lg font-semibold text-[#111827]">Funding schedule</h2>
                 <p className="text-[11px] text-[#6b7280] mt-0.5">When to fund each account · dates reflect payout delay</p>
               </div>
-              <button onClick={onClose} className="p-1 rounded-md text-[#6b7280] hover:text-[#111827] hover:bg-[#f3f4f6] transition-colors flex-shrink-0"><X size={16} /></button>
+              <button data-zone="icon_button" onClick={onClose} className="p-1 rounded-md text-[#6b7280] hover:text-[#111827] hover:bg-[#f3f4f6] transition-colors flex-shrink-0"><X size={16} /></button>
             </div>
             <div className="flex items-start gap-6 mt-3">
               <div>
                 <span className="block text-[10px] font-semibold uppercase tracking-wide text-[#6b7280] mb-1">Account</span>
-                <div className="flex bg-[#f3f4f6] rounded-md p-0.5 w-fit">
+                <div data-zone="segmented_controls" className="flex bg-[#f3f4f6] rounded-md p-0.5 w-fit">
                   {([["all","All"],["wise","Wise"],["paypal","PayPal"],["bitwage","Bitwage"]] as const).map(([k,label]) => (
                     <button key={k} onClick={() => setFProvider(k)} className={`px-2 py-0.5 rounded text-[11px] font-medium transition-all ${fProvider===k?"bg-white text-[#0168dd] shadow-sm":"text-[#6b7280] hover:text-[#111827]"}`}>{label}</button>
                   ))}
@@ -4979,7 +4991,7 @@ function V1kFundingScheduleDialog({ open, onClose }: { open: boolean; onClose: (
               </div>
               <div>
                 <span className="block text-[10px] font-semibold uppercase tracking-wide text-[#6b7280] mb-1">Status</span>
-                <div className="flex bg-[#f3f4f6] rounded-md p-0.5 w-fit">
+                <div data-zone="segmented_controls" className="flex bg-[#f3f4f6] rounded-md p-0.5 w-fit">
                   {([["upcoming","All upcoming"],["unfunded","Unfunded only"]] as const).map(([k,label]) => (
                     <button key={k} onClick={() => setFStatus(k)} className={`px-2 py-0.5 rounded text-[11px] font-medium transition-all ${fStatus===k?"bg-white text-[#0168dd] shadow-sm":"text-[#6b7280] hover:text-[#111827]"}`}>{label}</button>
                   ))}
@@ -5022,7 +5034,9 @@ function V1kFundingScheduleDialog({ open, onClose }: { open: boolean; onClose: (
 
 // 1I — read-only "How we get there": baseline + adjustment rules → total, in a dialog.
 function V1iHowWeGetThereDialog({
-  open, onClose, base, memberPct, memberNote, seasonPct, adjPct, total, manualAdjustments, zone = false,
+  open, onClose, base, memberPct, memberNote, seasonPct, adjPct, total, manualAdjustments,
+  scenario = 2, projection = 0, trendPct = 0, trend2Pct = 0, scen1Total = 0,
+  initial = false, scen3Tracked = 0, scen3Remaining = 0, scen3Total = 0, zone = false,
 }: {
   open: boolean;
   onClose: () => void;
@@ -5031,6 +5045,15 @@ function V1iHowWeGetThereDialog({
   seasonPct: number;
   adjPct: number; total: number;
   manualAdjustments: ManualAdjustment[];
+  scenario?: 1 | 2;
+  projection?: number;
+  trendPct?: number;
+  trend2Pct?: number;
+  scen1Total?: number;
+  initial?: boolean;
+  scen3Tracked?: number;
+  scen3Remaining?: number;
+  scen3Total?: number;
   zone?: boolean;
 }) {
   if (!open) return null;
@@ -5038,64 +5061,187 @@ function V1iHowWeGetThereDialog({
     <>
       <div className="fixed inset-0 z-40 bg-black/30" onClick={onClose} />
       <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none p-4">
-        <div className="bg-white rounded-xl shadow-2xl w-[440px] max-w-full pointer-events-auto">
+        <div data-zone="dialog" className="bg-white rounded-xl shadow-2xl w-[640px] max-w-full pointer-events-auto">
           <div className="flex items-start justify-between px-5 py-5">
             <div>
               <h2 className="text-lg font-semibold text-[#111827]">How we get there</h2>
             </div>
-            <button onClick={onClose} className="p-1 rounded-md text-[#6b7280] hover:text-[#111827] hover:bg-[#f3f4f6] transition-colors flex-shrink-0"><X size={16} /></button>
+            <button data-zone="icon_button" onClick={onClose} className="p-1 rounded-md text-[#6b7280] hover:text-[#111827] hover:bg-[#f3f4f6] transition-colors flex-shrink-0"><X size={16} /></button>
           </div>
 
+          {initial ? (
           <div className="px-5 py-2.5 space-y-4">
-            {/* At-a-glance math: monthly average + adjustments = payout */}
-            <div className="flex items-stretch gap-1.5">
-              <div className="flex-1 rounded-lg border border-[#e5e7eb] bg-[#f9fafb] px-2.5 py-2">
-                <p className="text-xs font-semibold uppercase tracking-wider text-[#6b7280] leading-tight">Monthly avg</p>
-                <p className="text-base font-bold text-[#111827] mt-1.5 leading-none tracking-tight">{fmt0(base)}</p>
-                <p className="text-xs text-[#6b7280] mt-1.5 leading-tight">Last 5 months</p>
-              </div>
-              <span className="flex items-center text-[#9ca3af] font-semibold text-sm flex-shrink-0 px-0.5">+</span>
-              <div className="flex-1 rounded-lg border border-[#e5e7eb] bg-[#f9fafb] px-2.5 py-2">
-                <p className="text-xs font-semibold uppercase tracking-wider text-[#6b7280] leading-tight">Adjustments</p>
-                <p className={`text-base font-bold mt-1.5 leading-none tracking-tight ${adjPct >= 0 ? "text-[#0e9f6e]" : "text-red-500"}`}>{adjPct >= 0 ? "+" : ""}{adjPct}%</p>
-                <p className="text-xs text-[#6b7280] mt-1.5 leading-tight">Headcount + season</p>
-              </div>
-              <span className="flex items-center text-[#9ca3af] font-semibold text-sm flex-shrink-0 px-0.5">=</span>
-              <div className="flex-1 rounded-lg border border-[#a7d9fc] bg-[#eaf6ff] px-2.5 py-2">
-                <p className="text-xs font-semibold uppercase tracking-wider text-[#0168dd] leading-tight">Est. payroll</p>
-                <p className="text-base font-bold text-[#111827] mt-1.5 leading-none tracking-tight">{fmt0(total)}</p>
-                <p className="text-xs text-[#6b7280] mt-1.5 leading-tight">To fund in June</p>
+            {/* Scenario 3 (Initial) — Step 1 locked (needs 3+ months), Step 2 = current pace only */}
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-[#9ca3af] mb-2 flex items-center gap-1.5"><Lock size={12} /> Step 1 · From your history <span data-zone="pill" className="normal-case tracking-normal text-[10px] font-semibold text-[#9ca3af] border border-[#e5e7eb] rounded-full px-1.5 py-0.5">Available at 3+ months</span></p>
+              <div className="flex items-stretch gap-1.5">
+                <div className="flex-1 rounded-lg border border-dashed border-[#d1d5db] bg-[#f9fafb] px-2.5 py-2">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-[#9ca3af] leading-tight">Monthly avg</p>
+                  <p className="text-base font-bold text-[#9ca3af] mt-1.5 leading-none tracking-tight">—</p>
+                  <p className="text-xs text-[#9ca3af] mt-1.5 leading-tight">Needs history</p>
+                </div>
+                <span className="flex items-center text-[#d1d5db] font-semibold text-sm flex-shrink-0 px-0.5">+</span>
+                <div className="flex-1 rounded-lg border border-dashed border-[#d1d5db] bg-[#f9fafb] px-2.5 py-2">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-[#9ca3af] leading-tight">Adjustments</p>
+                  <p className="text-base font-bold text-[#9ca3af] mt-1.5 leading-none tracking-tight">—</p>
+                  <p className="text-xs text-[#9ca3af] mt-1.5 leading-tight">Headcount + season</p>
+                </div>
+                <span className="flex items-center text-[#d1d5db] font-semibold text-sm flex-shrink-0 px-0.5">=</span>
+                <div className="flex-1 rounded-lg border border-dashed border-[#d1d5db] bg-[#f9fafb] px-2.5 py-2">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-[#9ca3af] leading-tight">Projection</p>
+                  <p className="text-base font-bold text-[#9ca3af] mt-1.5 leading-none tracking-tight">Locked</p>
+                  <p className="text-xs text-[#9ca3af] mt-1.5 leading-tight">Not enough data yet</p>
+                </div>
               </div>
             </div>
 
-            {/* Adjustment detail — sits directly under the cards (same group) */}
+            {/* Connector */}
+            <p className="text-sm text-[#6b7280] leading-snug mb-8 flex items-center gap-1.5"><ArrowDown size={14} className="text-[#9ca3af] flex-shrink-0" /> For now, we use only your pace this month.</p>
+
+            {/* Step 2 — this month's pace (active) */}
             <div>
-              <p className="text-sm text-[#6b7280] leading-snug"><span className="font-semibold text-[#0e9f6e]">+{adjPct}%</span> comes from trends in your payment history:</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-[#6b7280] mb-2">Step 2 · This month's pace</p>
+              <div className="flex items-stretch gap-1.5">
+                <div className="flex-1 rounded-lg border border-[#e5e7eb] bg-[#f9fafb] px-2.5 py-2">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-[#6b7280] leading-tight">Tracked + planned</p>
+                  <p className="text-base font-bold text-[#111827] mt-1.5 leading-none tracking-tight">{fmt0(scen3Tracked)}</p>
+                  <p className="text-xs text-[#6b7280] mt-1.5 leading-tight">So far · 12 of 30 days</p>
+                </div>
+                <span className="flex items-center text-[#9ca3af] font-semibold text-sm flex-shrink-0 px-0.5">+</span>
+                <div className="flex-1 rounded-lg border border-[#e5e7eb] bg-[#f9fafb] px-2.5 py-2">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-[#6b7280] leading-tight">Remaining days</p>
+                  <p className="text-base font-bold text-[#111827] mt-1.5 leading-none tracking-tight">+{fmt0(scen3Remaining)}</p>
+                  <p className="text-xs text-[#6b7280] mt-1.5 leading-tight">18 days at current pace</p>
+                </div>
+                <span className="flex items-center text-[#9ca3af] font-semibold text-sm flex-shrink-0 px-0.5">=</span>
+                <div className="flex-1 rounded-lg border border-[#a7d9fc] bg-[#eaf6ff] px-2.5 py-2">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-[#0168dd] leading-tight">Est. payroll</p>
+                  <p className="text-base font-bold text-[#111827] mt-1.5 leading-none tracking-tight">{fmt0(scen3Total)}</p>
+                  <p className="text-xs text-[#6b7280] mt-1.5 leading-tight">To fund in June</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Explanation */}
+            <div>
+              <p className="text-sm text-[#111827] leading-snug">You don't have 3+ months of history yet, so we can't build a projection — this estimate uses only your current pace. Once you reach 3+ months, we'll add headcount &amp; seasonality and use the higher of history vs. pace.</p>
+              <p className="text-sm text-[#6b7280] leading-snug mt-1.5">Tip: use Adjust for anything we can't see yet, like a one-off bonus.</p>
+            </div>
+
+            {/* Caveat */}
+            <p className="text-sm text-[#6b7280] leading-snug border-t border-[#e5e7eb] pt-4 mb-2">{fmt0(scen3Total)} is an early estimate from your current pace — not a guaranteed figure. Add a buffer, or <a href="#" onClick={e => e.preventDefault()} className="font-medium text-[#6b7280] underline decoration-dotted decoration-[#d1d5db] underline-offset-2 hover:text-[#111827] transition-colors">see how to improve accuracy</a>.</p>
+          </div>
+          ) : (
+          <div className="px-5 py-2.5 space-y-4">
+            {/* Step 1 — historical projection: monthly avg + adjustments = projection (shared) */}
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-[#6b7280] mb-2">Step 1 · From your history</p>
+              <div className="flex items-stretch gap-1.5">
+                <div className="flex-1 rounded-lg border border-[#e5e7eb] bg-[#f9fafb] px-2.5 py-2">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-[#6b7280] leading-tight">Monthly avg</p>
+                  <p className="text-base font-bold text-[#111827] mt-1.5 leading-none tracking-tight">{fmt0(base)}</p>
+                  <p className="text-xs text-[#6b7280] mt-1.5 leading-tight">Last 5 months</p>
+                </div>
+                <span className="flex items-center text-[#9ca3af] font-semibold text-sm flex-shrink-0 px-0.5">+</span>
+                <div className="flex-1 rounded-lg border border-[#e5e7eb] bg-[#f9fafb] px-2.5 py-2">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-[#6b7280] leading-tight">Adjustments</p>
+                  <p className={`text-base font-bold mt-1.5 leading-none tracking-tight ${adjPct >= 0 ? "text-[#0168dd]" : "text-red-500"}`}>{adjPct >= 0 ? "+" : ""}{adjPct}%</p>
+                  <p className="text-xs text-[#6b7280] mt-1.5 leading-tight">Headcount + seasonality</p>
+                </div>
+                <span className="flex items-center text-[#9ca3af] font-semibold text-sm flex-shrink-0 px-0.5">=</span>
+                <div className="flex-1 rounded-lg border border-[#e5e7eb] bg-[#f9fafb] px-2.5 py-2">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-[#6b7280] leading-tight">Projection</p>
+                  <p className="text-base font-bold text-[#111827] mt-1.5 leading-none tracking-tight">{fmt0(projection)}</p>
+                  <p className="text-xs text-[#6b7280] mt-1.5 leading-tight">Based on historical numbers</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Adjustment detail — explains the +{adjPct}%, same pattern as the historical dialog */}
+            <div>
+              <p className="text-sm text-[#6b7280] leading-snug"><span className="font-semibold text-[#0168dd]">+{adjPct}%</span> comes from trends in your payment history:</p>
               <div className="mt-2 space-y-1.5 text-sm">
                 <div className="flex items-baseline gap-1.5">
-                  <span className="font-semibold text-[#0e9f6e] w-[34px] flex-shrink-0">+{memberPct}%</span>
-                  <span className="text-[#111827] font-medium flex-shrink-0">Headcount change</span>
+                  <span className="font-normal text-[#0168dd] w-[34px] flex-shrink-0">+{memberPct}%</span>
+                  <span className="text-[#111827] font-normal flex-shrink-0">Headcount change</span>
                   <span className="text-[#6b7280] truncate">· {memberNote}</span>
                 </div>
                 {seasonPct !== 0 && (
                   <div className="flex items-baseline gap-1.5">
-                    <span className="font-semibold text-[#0e9f6e] w-[34px] flex-shrink-0">+{seasonPct}%</span>
-                    <span className="text-[#111827] font-medium flex-shrink-0">Seasonality</span>
+                    <span className="font-normal text-[#0168dd] w-[34px] flex-shrink-0">+{seasonPct}%</span>
+                    <span className="text-[#111827] font-normal flex-shrink-0">Seasonality</span>
                     <span className="text-[#6b7280] truncate">· June is typically above average</span>
                   </div>
                 )}
-                {manualAdjustments.map(adj => (
-                  <div key={adj.id} className="flex items-baseline gap-1.5">
-                    <span className={`font-semibold w-[34px] flex-shrink-0 ${adj.type === "add" ? "text-[#0e9f6e]" : "text-red-500"}`}>{adj.type === "add" ? "+" : "−"}{adj.unit === "pct" ? `${adj.value}%` : `≈${Math.round(adj.pct)}%`}</span>
-                    <span className="text-[#111827] font-medium truncate">{adj.label}</span>
-                  </div>
-                ))}
               </div>
             </div>
 
-            {/* Caveat — separated from the math by a divider, with room before the footer */}
-            <p className="text-sm text-[#6b7280] leading-snug border-t border-[#e5e7eb] pt-4 mb-2">{fmt0(total)} is an estimate from your payment history — not a guaranteed figure. Add a buffer, or <a href="#" onClick={e => e.preventDefault()} className="font-medium text-[#6b7280] underline decoration-dotted decoration-[#d1d5db] underline-offset-2 hover:text-[#111827] transition-colors">see how to improve accuracy</a>.</p>
+            {/* Connector */}
+            <p className="text-sm text-[#6b7280] leading-snug mb-8">Then we compare it to your pace this month, and use whichever is higher.</p>
+
+            {/* Step 2 — this month's pace: projection + current trend = est. payroll */}
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-[#6b7280] mb-2">Step 2 · This month's pace</p>
+              {scenario === 1 ? (
+              <div className="flex items-stretch gap-1.5">
+                <div className="flex-1 rounded-lg border border-[#e5e7eb] bg-[#f9fafb] px-2.5 py-2">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-[#6b7280] leading-tight">Projection</p>
+                  <p className="text-base font-bold text-[#111827] mt-1.5 leading-none tracking-tight">{fmt0(projection)}</p>
+                  <p className="text-xs text-[#6b7280] mt-1.5 leading-tight">Based on historical numbers</p>
+                </div>
+                <span className="flex items-center text-[#9ca3af] font-semibold text-sm flex-shrink-0 px-0.5">+</span>
+                <div className="flex-1 rounded-lg border border-[#e5e7eb] bg-[#f9fafb] px-2.5 py-2">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-[#6b7280] leading-tight">Current trend</p>
+                  <p className="text-base font-bold text-[#0168dd] mt-1.5 leading-none tracking-tight">+{trendPct}%</p>
+                  <p className="text-xs text-[#6b7280] mt-1.5 leading-tight">Your pace is higher</p>
+                </div>
+                <span className="flex items-center text-[#9ca3af] font-semibold text-sm flex-shrink-0 px-0.5">=</span>
+                <div className="flex-1 rounded-lg border border-[#a7d9fc] bg-[#eaf6ff] px-2.5 py-2">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-[#0168dd] leading-tight">Est. payroll</p>
+                  <p className="text-base font-bold text-[#111827] mt-1.5 leading-none tracking-tight">{fmt0(scen1Total)}</p>
+                  <p className="text-xs text-[#6b7280] mt-1.5 leading-tight">To fund in June</p>
+                </div>
+              </div>
+              ) : (
+              <div className="flex items-stretch gap-1.5">
+                <div className="flex-1 rounded-lg border border-[#e5e7eb] bg-[#f9fafb] px-2.5 py-2">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-[#6b7280] leading-tight">Projection</p>
+                  <p className="text-base font-bold text-[#111827] mt-1.5 leading-none tracking-tight">{fmt0(projection)}</p>
+                  <p className="text-xs text-[#6b7280] mt-1.5 leading-tight">Higher — we use this</p>
+                </div>
+                <span className="flex items-center text-[#9ca3af] font-semibold text-xs flex-shrink-0 px-0.5">vs</span>
+                <div className="flex-1 rounded-lg border border-[#e5e7eb] bg-[#f9fafb] px-2.5 py-2">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-[#9ca3af] leading-tight">Current trend</p>
+                  <p className="text-base font-bold text-[#9ca3af] mt-1.5 leading-none tracking-tight">−{trend2Pct}%</p>
+                  <p className="text-xs text-[#9ca3af] mt-1.5 leading-tight">Not applied</p>
+                </div>
+                <span className="flex items-center text-[#9ca3af] font-semibold text-sm flex-shrink-0 px-0.5">→</span>
+                <div className="flex-1 rounded-lg border border-[#a7d9fc] bg-[#eaf6ff] px-2.5 py-2">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-[#0168dd] leading-tight">Est. payroll</p>
+                  <p className="text-base font-bold text-[#111827] mt-1.5 leading-none tracking-tight">{fmt0(total)}</p>
+                  <p className="text-xs text-[#6b7280] mt-1.5 leading-tight">To fund in June</p>
+                </div>
+              </div>
+              )}
+            </div>
+
+            {/* Why — the reason sits right below the Step 2 cards, per scenario */}
+            {scenario === 1 ? (
+              <div>
+                <p className="text-sm text-[#111827] leading-snug">You're paying more this month than usual for the elapsed period. We recommend adjusting total expected costs for the month accordingly.</p>
+                <p className="text-sm text-[#6b7280] leading-snug mt-1.5">If your pace were lower, we'd keep the historical number.</p>
+              </div>
+            ) : (
+              <div>
+                <p className="text-sm text-[#111827] leading-snug">Your pace this month is trending −{trend2Pct}% below your historical costs — but a slow start doesn't guarantee a lighter month, and under-funding risks a failed payment.</p>
+                <p className="text-sm text-[#6b7280] leading-snug mt-1.5">So we keep the higher historical number. It's safer to over-fund and carry the surplus than to come up short.</p>
+              </div>
+            )}
+
+            {/* Caveat — total + wording mirror the scenario */}
+            <p className="text-sm text-[#6b7280] leading-snug border-t border-[#e5e7eb] pt-4 mb-2">{scenario === 1 ? `${fmt0(scen1Total)} is an estimate from your payment history and current pace` : `${fmt0(total)} is an estimate from your payment history`} — not a guaranteed figure. Add a buffer, or <a href="#" onClick={e => e.preventDefault()} className="font-medium text-[#6b7280] underline decoration-dotted decoration-[#d1d5db] underline-offset-2 hover:text-[#111827] transition-colors">see how to improve accuracy</a>.</p>
           </div>
+          )}
 
           <div className="flex items-center justify-end px-5 py-5">
             <button onClick={onClose} className={zone ? zbtn("solidPrimary", "md") : "px-5 py-2 rounded-lg text-sm font-semibold bg-[#0168dd] text-white hover:bg-[#0057bb] transition-colors"}>Done</button>
@@ -5106,7 +5252,8 @@ function V1iHowWeGetThereDialog({
   );
 }
 
-function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = false, v1i = false, v1j = false, v1k = false, v1l = false, v1m = false, zone = false, condensed = false, onProviderClick }: { showStatusBreakdown: boolean; seasonalityOn: boolean; sideFund?: boolean; v1i?: boolean; v1j?: boolean; v1k?: boolean; v1l?: boolean; v1m?: boolean; zone?: boolean; condensed?: boolean; onProviderClick?: (providerId: string) => void }) {
+function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = false, v1i = false, v1j = false, v1k = false, v1l = false, v1m = false, zone = false, condensed = false, state = "filled", variant = "final", onProviderClick }: { showStatusBreakdown: boolean; seasonalityOn: boolean; sideFund?: boolean; v1i?: boolean; v1j?: boolean; v1k?: boolean; v1l?: boolean; v1m?: boolean; zone?: boolean; condensed?: boolean; state?: "filled" | "initial" | "empty"; variant?: "final" | "mvp"; onProviderClick?: (providerId: string) => void }) {
+  const mvp = variant === "mvp"; // MVP strip: chart → Payroll breakdown + 3M only; funding → Due only
   // Zone theme tokens (real Zone hexes) — applied only when `zone` is set (Final UI).
   // These map the prototype's hand-picked greys to Zone's gray/primary scale.
   const zc = {
@@ -5130,7 +5277,7 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
   const [range, setRange]           = useState<V1eRange>(v1l || v1m ? "3M" : "1M"); // 1L/1M drop the 1M view
   const [showYoY, setShowYoY]       = useState(false);
   const [drillMonth, setDrillMonth] = useState<string | null>(null);
-  const [segTab, setSegTab]         = useState<V1eSeg>("source");
+  const [segTab, setSegTab]         = useState<V1eSeg>(mvp ? "type" : "source"); // MVP defaults to Payroll breakdown
   const [oneMonth, setOneMonth]     = useState<string>("Jun '26"); // selected month for the 1M view
   const [monthPickerOpen, setMonthPickerOpen] = useState(false);
   const [manualAdjustments, setManualAdjustments] = useState<ManualAdjustment[]>([]);
@@ -5139,9 +5286,11 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
   const [mathOpen, setMathOpen] = useState(false); // inline "+28% adjustments" detail popover
   const [showAutoPop, setShowAutoPop] = useState(false); // 1L auto-adjustments "Details" popover
   const [showMathDialog, setShowMathDialog] = useState(false); // 1I "How we get there" dialog
+  const [scenario, setScenario] = useState<1 | 2>(1); // Estimated Payroll: 1 = trending higher (pace wins), 2 = historical only (click "· June 2026" to toggle)
   const [driversOpen, setDriversOpen] = useState(false); // 1J "+X% vs typical" drivers popover
   const [showAddDialog, setShowAddDialog] = useState(false); // 1K single "Add adjustment" dialog (1F-style)
   const [editingAdj, setEditingAdj] = useState<ManualAdjustment | null>(null);
+  const [showPaceBanner, setShowPaceBanner] = useState(true); // Initial-state "current pace only" notice — dismissible
 
   const [loading, setLoading] = useState(false);
 
@@ -5169,6 +5318,21 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
   const v1lAutoAmt = memberAmt + seasonAmt;
   const v1lAutoPct = Math.round(v1lAutoAmt / v1AvgMonthly * 100);
   const v1lEstimate = v1AvgMonthly + v1lAutoAmt;
+  // Scenario 1 — current pace runs higher than the historical projection, so we fund to the trend.
+  const scenTrendPct = 16;
+  const scenTrendTotal = Math.round(v1lEstimate * (1 + scenTrendPct / 100)); // 150k → 174k
+  const scen1Total = scenTrendTotal + (adjProj - v1lEstimate); // trend + any manual buffer
+  // Scenario 2 — current pace runs LOWER than the historical projection. We show the
+  // trend for transparency but do NOT apply it: total = max(projection, trend) = projection.
+  const scen2TrendPct = 9; // shown as −9%, struck through, "not applied"
+  // Scenario 3 — < 3 months of history (the Initial state). No projection/adjustments;
+  // estimate from current pace only: tracked+planned so far + remaining days at that pace.
+  const initial = state === "initial";
+  const scen3Tracked   = 52000;  // tracked + planned so far · 12 of 30 days
+  const scen3Remaining = 80000;  // remaining 18 days at the current run-rate
+  const scen3Total     = scen3Tracked + scen3Remaining + manualNet; // + any manual buffer
+  // Initial state has < 3 months of data → the chart shows only the months we have (Jun + Jul).
+  const barsView = initial ? cfg.bars.slice(0, 2) : cfg.bars;
   const adjPctC = Math.round(v1cConfirmed / adjProj * 100);
   const adjPctP = Math.round(v1cPlanned   / adjProj * 100);
 
@@ -5176,11 +5340,13 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
 
   // Monthly rows — every month split by channel + earning; confidence fades on projections.
   let futureStep = 0;
-  const monthlyRows = cfg.bars.map((b, i) => {
-    // Current month's bar total must equal the hero estimate (adjProj) so the chart
-    // and the "Estimated payout" number agree; keep actuals-paid, flex the remainder.
+  const monthlyRows = barsView.map((b, i) => {
+    // Current month's bar total must equal the hero estimate so the chart and the
+    // "Estimated payout" number agree; keep actuals-paid, flex the remainder.
+    // In the Initial state the hero is the pace-only total (scen3Total), not adjProj.
+    const heroTotal = initial ? scen3Total : adjProj;
     const actual = b.actual;
-    const projected = b.isCurrent ? Math.max(0, adjProj - actual) : b.projected;
+    const projected = b.isCurrent ? Math.max(0, heroTotal - actual) : b.projected;
     const total = actual + projected;
     const isFut = actual === 0 && projected > 0;
     const isCur = !!b.isCurrent;
@@ -5316,16 +5482,16 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
       /* ══ 1J TOP ROW — Estimated-to-fund as its own narrow card + brief card ══ */
       <div className="grid grid-cols-12 gap-6 items-stretch">
         {/* Left — Estimated to fund, sized like the old Fund-your-accounts card */}
-        <div data-component={zone ? "Estimated payroll card" : undefined} className={`col-span-3 bg-white rounded-lg border ${zc.border} flex flex-col`}>
+        <div data-zone="card" data-component={zone ? "Estimated payroll card" : undefined} className={`col-span-3 bg-white rounded-lg border ${zc.border} flex flex-col`}>
           <div className={`px-4 flex items-center border-b bg-white rounded-t-lg ${zone ? "h-[60px] border-[#e5e7eb]" : "h-[55px] border-[#e5e7eb]"}`}>
-            <p className={zone ? "text-lg font-medium text-[#111827]" : "text-sm font-semibold text-[#111827]"}>{zone ? "Estimated Payroll" : "Estimated payout"} <span className="text-[#6b7280] font-normal whitespace-nowrap">· June 2026</span></p>
+            <p className={zone ? "text-lg font-medium text-[#111827]" : "text-sm font-semibold text-[#111827]"}>{zone ? "Estimated Payroll" : "Estimated payout"} <button onClick={() => setScenario(s => (s === 1 ? 2 : 1))} title="Toggle scenario (trend vs. historical)" className="text-[#6b7280] font-normal whitespace-nowrap hover:text-[#0168dd] transition-colors cursor-pointer">· June 2026</button></p>
           </div>
           <div className={`px-4 py-4 flex-1 ${v1l ? "flex flex-col" : ""}`}>
             {/* non-1L keeps the explainer at the top; 1L moves it to the bottom */}
             {!v1l && <p className="text-[11px] text-[#6b7280] leading-snug mb-2.5">Estimated from your payment history. Gets more accurate as the month fills with real data.</p>}
             {/* number + trend chip — chip opens the drivers popover */}
             <div className={`flex items-center min-w-0 ${v1l ? "gap-4" : "gap-2"}`}>
-              <p className="text-3xl font-bold text-[#111827] tracking-tight leading-none">{fmt0(adjProj)}</p>
+              <p className="text-3xl font-bold text-[#111827] tracking-tight leading-none">{fmt0(v1l && initial ? scen3Total : (v1l && scenario === 1 ? scen1Total : adjProj))}</p>
               {v1l ? (
                 /* 1L — Adjust sits to the right of the number */
                 <button onClick={() => { setEditingAdj(null); setShowAddDialog(true); }} className={zone ? zbtn("outlinePrimary", "sm", "flex-shrink-0") : "flex-shrink-0 flex items-center gap-1 text-[11px] font-medium text-[#0168dd] border border-[#0168dd]/40 rounded-md px-2.5 py-1 hover:bg-[#0168dd]/5 transition-colors select-none"}><SlidersHorizontal size={zone ? 16 : 12} /> Adjust</button>
@@ -5371,6 +5537,12 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
                 </div>
               )}
             </div>
+            {v1l && initial && showPaceBanner && (
+              <div data-zone="alert" className="mt-3 flex items-center gap-2 rounded-md border border-[#e5e7eb] bg-[#f9fafb] px-2.5 py-1.5">
+                <span className="text-[12px] font-medium text-[#374151] leading-snug flex-1">Based on current pace only — not enough history yet</span>
+                <button onClick={() => setShowPaceBanner(false)} aria-label="Dismiss" title="Dismiss" className="flex-shrink-0 -my-0.5 -mr-1 p-1 rounded text-[#9ca3af] hover:text-[#111827] hover:bg-[#f3f4f6] transition-colors"><X size={14} /></button>
+              </div>
+            )}
             {!v1l && <V1cBreakdownPopover dark align="right" />}
             {!v1l && (
             /* actions — side by side under View breakdown */
@@ -5385,62 +5557,105 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
               </button>
             </div>
             )}
-            {v1l && !condensed && (
-              /* 1L — the math, on-screen: base → auto adjustments → estimate → manual → total */
-              <div className={`mt-4 pt-3 border-t border-[#f3f4f6] ${zone ? "space-y-2.5" : "space-y-1.5"}`}>
+            {v1l && !condensed && initial && (
+              /* Scenario 3 (Initial) — pace only: tracked+planned + remaining days = total */
+              <div className="mt-4 pt-3 border-t border-[#f3f4f6] space-y-2.5">
                 <div className="flex items-center justify-between gap-2 mb-3">
-                  <p className={zone ? "text-[11px] font-semibold uppercase tracking-wide text-[#6b7280]" : "text-[10px] font-semibold uppercase tracking-widest text-[#6b7280]"}>How this adds up</p>
-                  <button onClick={() => setShowMathDialog(true)} className={zone ? "inline-flex items-center gap-1 text-[12px] font-medium text-[#6b7280] hover:text-[#111827] transition-colors select-none" : "inline-flex items-center gap-1 text-[10px] font-medium text-[#4b5563] hover:text-[#111827] transition-colors select-none"}>{zone ? <><Info size={14} /> Learn more</> : <><Info size={11} /> Details</>}</button>
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-[#6b7280]">How this adds up</p>
+                  <button data-zone="button" onClick={() => setShowMathDialog(true)} className="inline-flex items-center gap-1 text-[12px] font-medium text-[#6b7280] hover:text-[#111827] transition-colors select-none"><Info size={14} /> Learn more</button>
                 </div>
                 <div className="flex items-baseline gap-3 text-[12px]">
-                  <span className="w-16 flex-shrink-0 font-medium text-[#111827] tabular-nums">{fmt0(v1AvgMonthly)}</span>
-                  <span className="text-[#6b7280]">Monthly average</span>
+                  <span className="w-16 flex-shrink-0 font-medium text-[#111827] tabular-nums">{fmt0(scen3Tracked)}</span>
+                  <span className="text-[#6b7280]">Tracked + planned so far</span>
                 </div>
                 <div className="flex items-baseline gap-3 text-[12px]">
-                  <span className="w-16 flex-shrink-0 font-medium text-emerald-600 tabular-nums">+{v1lAutoPct}%</span>
-                  <span className="relative inline-flex self-center">
-                    <button onClick={() => setShowAutoPop(o => !o)} className="text-[12px] font-normal text-[#6b7280] underline underline-offset-2 hover:text-[#111827] transition-colors select-none">Auto adjustments</button>
-                    {showAutoPop && (<>
-                      <div className="fixed inset-0 z-20" onClick={() => setShowAutoPop(false)} />
-                      <div className="absolute top-6 left-0 z-30 bg-white rounded-lg border border-[#e5e7eb] shadow-xl w-96 p-3.5">
-                        <p className="text-xs font-semibold uppercase tracking-widest text-[#6b7280]">+{v1lAutoPct}% vs a typical month</p>
-                        <div className="mt-1 divide-y divide-[#f3f4f6]">
-                          <div className="flex items-center gap-1.5 text-xs py-1.5"><span className="font-semibold flex-shrink-0 text-emerald-600">+{memberPct}%</span><span className="text-[#111827] font-medium flex-shrink-0">Headcount change</span><span className="text-[#d1d5db] flex-shrink-0">—</span><span className="text-[#6b7280] whitespace-nowrap">{memberNote}</span></div>
-                          {seasonPct > 0 && <div className="flex items-center gap-1.5 text-xs py-1.5"><span className="font-semibold flex-shrink-0 text-emerald-600">+{seasonPct}%</span><span className="text-[#111827] font-medium flex-shrink-0">Seasonality</span><span className="text-[#d1d5db] flex-shrink-0">—</span><span className="text-[#6b7280] whitespace-nowrap">June is typically above average</span></div>}
-                        </div>
-                      </div>
-                    </>)}
-                  </span>
-                </div>
-                <div className="flex items-baseline gap-3 text-[12px] pt-1.5 border-t border-[#f3f4f6]">
-                  <span className="w-16 flex-shrink-0 font-semibold text-[#111827] tabular-nums">{fmt0(v1lEstimate)}</span>
+                  <span className="w-16 flex-shrink-0 font-medium text-[#111827] tabular-nums">+{fmt0(scen3Remaining)}</span>
+                  <span className="text-[#6b7280]">Remaining days at current pace</span>
                 </div>
                 {manualAdjustments.map(adj => (
                   <div key={adj.id} className="flex items-center gap-3 text-[12px]">
                     <span className={`w-16 flex-shrink-0 font-medium tabular-nums ${adj.type === "add" ? "text-emerald-600" : "text-red-500"}`}>{adj.type === "add" ? "+" : "−"}{adj.unit === "pct" ? `${adj.value}%` : `≈${Math.round(adj.pct)}%`}</span>
                     <span className="text-[#6b7280] truncate flex-1">{adj.label}</span>
                     <span className="flex items-center gap-0.5 flex-shrink-0">
-                      <button onClick={() => { setEditingAdj(adj); setShowAddDialog(true); }} title="Edit name or amount" className="p-1 rounded-md text-[#9ca3af] hover:text-[#111827] hover:bg-[#f3f4f6] transition-colors"><Pencil size={13} /></button>
-                      <button onClick={() => setManualAdjustments(prev => prev.filter(a => a.id !== adj.id))} title="Remove" className="p-1 rounded-md text-[#9ca3af] hover:text-red-600 hover:bg-[#f3f4f6] transition-colors"><X size={13} /></button>
+                      <button onClick={() => { setEditingAdj(adj); setShowAddDialog(true); }} title="Edit name or amount" aria-label="Edit name or amount" className={`${ZBTN_BASE} h-5 w-5 ${ZBTN_VARIANT.ghostGray}`}><Pencil size={14} aria-hidden="true" /></button>
+                      <button onClick={() => setManualAdjustments(prev => prev.filter(a => a.id !== adj.id))} title="Remove" aria-label="Remove" className={`${ZBTN_BASE} h-5 w-5 ${ZBTN_VARIANT.ghostGray} hover:text-red-600`}><X size={14} aria-hidden="true" /></button>
                     </span>
                   </div>
                 ))}
-                {manualAdjustments.length > 0 && (
-                  <div className="flex items-baseline gap-3 text-[13px] pt-1.5 border-t border-[#e5e7eb]">
-                    <span className="w-16 flex-shrink-0 font-bold text-[#111827] tabular-nums">{fmt0(adjProj)}</span>
-                    <span className="font-bold text-[#111827]">Total to fund</span>
+                <div className="flex items-baseline gap-3 text-[13px] pt-1.5 border-t border-[#e5e7eb]">
+                  <span className="w-16 flex-shrink-0 font-bold text-[#111827] tabular-nums">{fmt0(scen3Total)}</span>
+                  <span className="font-bold text-[#111827]">Total to fund</span>
+                </div>
+              </div>
+            )}
+            {v1l && !condensed && !initial && (
+              /* 1L — the math, on-screen: base → auto adjustments → estimate → manual → total */
+              <div className={`mt-4 pt-3 border-t border-[#f3f4f6] ${zone ? "space-y-2.5" : "space-y-1.5"}`}>
+                <div className="flex items-center justify-between gap-2 mb-3">
+                  <p className={zone ? "text-[11px] font-semibold uppercase tracking-wide text-[#6b7280]" : "text-[10px] font-semibold uppercase tracking-widest text-[#6b7280]"}>How this adds up</p>
+                  <button data-zone="button" onClick={() => setShowMathDialog(true)} className={zone ? "inline-flex items-center gap-1 text-[12px] font-medium text-[#6b7280] hover:text-[#111827] transition-colors select-none" : "inline-flex items-center gap-1 text-[10px] font-medium text-[#4b5563] hover:text-[#111827] transition-colors select-none"}>{zone ? <><Info size={14} /> Learn more</> : <><Info size={11} /> Details</>}</button>
+                </div>
+                <div className="flex items-baseline gap-3 text-[12px]">
+                  <span className="w-28 flex-shrink-0 font-medium text-[#111827] tabular-nums"><span className="inline-block w-3.5" />{fmt0(v1AvgMonthly)}</span>
+                  <span className="text-[#6b7280]">Monthly average</span>
+                </div>
+                <div className="flex items-baseline gap-3 text-[12px]">
+                  <span className="w-28 flex-shrink-0 font-medium text-[#111827] tabular-nums"><span className="inline-block w-3.5 text-[#9ca3af] font-normal">+</span>{fmt0(v1lEstimate - v1AvgMonthly)} <span className="text-[#0168dd]">({v1lAutoPct}%)</span></span>
+                  <span className="relative inline-flex self-center">
+                    <button onClick={() => setShowAutoPop(o => !o)} className="text-[12px] font-normal text-[#6b7280] underline underline-offset-2 hover:text-[#111827] transition-colors select-none">Auto adjustments</button>
+                    {showAutoPop && (<>
+                      <div className="fixed inset-0 z-20" onClick={() => setShowAutoPop(false)} />
+                      <div data-zone="popover" className="absolute top-6 left-0 z-30 bg-white rounded-lg border border-[#e5e7eb] shadow-xl w-96 p-3.5">
+                        <p className="text-xs font-semibold uppercase tracking-widest text-[#6b7280]">+{v1lAutoPct}% vs a typical month</p>
+                        <div className="mt-1 divide-y divide-[#f3f4f6]">
+                          <div className="flex items-center gap-1.5 text-xs py-1.5"><span className="font-semibold flex-shrink-0 text-[#0168dd]">+{memberPct}%</span><span className="text-[#111827] font-medium flex-shrink-0">Headcount change</span><span className="text-[#d1d5db] flex-shrink-0">—</span><span className="text-[#6b7280] whitespace-nowrap">{memberNote}</span></div>
+                          {seasonPct > 0 && <div className="flex items-center gap-1.5 text-xs py-1.5"><span className="font-semibold flex-shrink-0 text-[#0168dd]">+{seasonPct}%</span><span className="text-[#111827] font-medium flex-shrink-0">Seasonality</span><span className="text-[#d1d5db] flex-shrink-0">—</span><span className="text-[#6b7280] whitespace-nowrap">June is typically above average</span></div>}
+                        </div>
+                      </div>
+                    </>)}
+                  </span>
+                </div>
+                <div className="flex items-baseline gap-3 text-[12px] pt-1.5 border-t border-[#f3f4f6]">
+                  <span className="w-28 flex-shrink-0 font-semibold text-[#111827] tabular-nums"><span className="inline-block w-3.5 text-[#9ca3af] font-normal">=</span>{fmt0(v1lEstimate)}</span>
+                  <span className="text-[#6b7280]">Projection based on historical numbers</span>
+                </div>
+                {scenario === 1 ? (
+                  <div className="flex items-center gap-3 text-[12px]">
+                    <span className="w-28 flex-shrink-0 font-medium text-[#111827] tabular-nums"><span className="inline-block w-3.5 text-[#9ca3af] font-normal">+</span>{fmt0(Math.round(v1lEstimate * scenTrendPct / 100))} <span className="text-[#0168dd]">({scenTrendPct}%)</span></span>
+                    <span className="text-[#111827] font-medium">Current trend</span>
+                    <span className={zpill("primary", "md", "ml-auto")}>Applied</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3 text-[12px]">
+                    <span className="w-28 flex-shrink-0 font-medium text-[#9ca3af] tabular-nums"><span className="inline-block w-3.5" />−{scen2TrendPct}%</span>
+                    <span className="text-[#6b7280]">Current trend</span>
+                    <span title="You're paying less than usual for the elapsed period, but a slow start doesn't guarantee a lighter month — and under-funding risks a failed payment. So we keep the higher historical number." className={`${zpill("gray", "md", "ml-auto")} cursor-help`}>Not applied <Info size={11} /></span>
                   </div>
                 )}
+                {manualAdjustments.map(adj => (
+                  <div key={adj.id} className="flex items-center gap-3 text-[12px]">
+                    <span className={`w-16 flex-shrink-0 font-medium tabular-nums ${adj.type === "add" ? "text-emerald-600" : "text-red-500"}`}>{adj.type === "add" ? "+" : "−"}{adj.unit === "pct" ? `${adj.value}%` : `≈${Math.round(adj.pct)}%`}</span>
+                    <span className="text-[#6b7280] truncate flex-1">{adj.label}</span>
+                    <span className="flex items-center gap-0.5 flex-shrink-0">
+                      <button onClick={() => { setEditingAdj(adj); setShowAddDialog(true); }} title="Edit name or amount" aria-label="Edit name or amount" className={`${ZBTN_BASE} h-5 w-5 ${ZBTN_VARIANT.ghostGray}`}><Pencil size={14} aria-hidden="true" /></button>
+                      <button onClick={() => setManualAdjustments(prev => prev.filter(a => a.id !== adj.id))} title="Remove" aria-label="Remove" className={`${ZBTN_BASE} h-5 w-5 ${ZBTN_VARIANT.ghostGray} hover:text-red-600`}><X size={14} aria-hidden="true" /></button>
+                    </span>
+                  </div>
+                ))}
+                <div className="flex items-baseline gap-3 text-[13px] pt-1.5 border-t border-[#e5e7eb]">
+                  <span className="w-28 flex-shrink-0 font-bold text-[#111827] tabular-nums"><span className="inline-block w-3.5 text-[#9ca3af] font-normal">=</span>{fmt0(scenario === 1 ? scen1Total : adjProj)}</span>
+                  <span className="font-bold text-[#111827]">Total to fund</span>
+                </div>
               </div>
             )}
             {v1l && (
-              <p className="mt-auto pt-3 border-t border-[#f3f4f6] text-[11px] text-[#6b7280] leading-snug">Estimated from your payment history. Gets more accurate as the month fills with real data.</p>
+              <p className="mt-auto pt-3 border-t border-[#f3f4f6] text-[11px] text-[#6b7280] leading-snug">{initial ? "We don't have 3+ months of history yet, so no historical adjustments are applied. This gets more accurate as the month fills. Add a buffer via Adjust." : (scenario === 1 ? "Estimated from your history and current pace. Gets more accurate as the month fills. Add a buffer via Adjust." : "You're trending ~9% below your historical costs — but we recommend planning for the higher figure so you don't underfund. Gets more accurate as the month fills. Add a buffer via Adjust.")}</p>
             )}
           </div>
         </div>
         {/* Right — Add to cover: date-card timeline + expandable provider detail */}
         {v1k
-          ? <V1kNextPaymentsCard onViewSchedule={() => setShowScheduleDialog(true)} v1l={v1l} zone={zone} condensed={condensed} onProviderClick={onProviderClick} />
+          ? <V1kNextPaymentsCard onViewSchedule={() => setShowScheduleDialog(true)} v1l={v1l} zone={zone} condensed={condensed} mvp={mvp} onProviderClick={onProviderClick} />
           : <V1jAddToCoverCard onViewSchedule={() => setShowScheduleDialog(true)} />}
       </div>
       ) : (
@@ -5589,21 +5804,22 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
       )}
 
       {/* ══ CHART CARD — separate explorer with its own range control ══════ */}
-      <div className={`bg-white rounded-lg border ${zc.border} overflow-hidden`}>
+      <div data-zone="card" className={`bg-white rounded-lg border ${zc.border} overflow-hidden`}>
         <div className={`flex items-center justify-between gap-3 border-b ${zone ? zc.divider : zc.border} bg-white flex-wrap ${zone ? "px-4 h-[60px]" : "px-5 py-3"}`}>
           <div>
-            <p className={zone ? "text-lg font-medium text-[#111827]" : `text-sm font-semibold ${zc.text}`}>Explore your payments over time</p>
+            <p className={zone ? "text-lg font-medium text-[#111827]" : `text-sm font-semibold ${zc.text}`}>{mvp ? "Payroll by earning type" : "Explore your payments over time"}</p>
             {!zone && <p className={`text-[11px] ${zc.muted}`}>Projected payouts ahead — browsing here doesn't change the numbers above.</p>}
           </div>
           <div className={`flex items-center flex-shrink-0 ${zone ? "gap-4" : "gap-3"}`}>
             {/* Final UI — one control row in the header: view segmented · ranges · YoY toggle (last) */}
-            {zone && (
+            {zone && !mvp && (
               <div className={zc.segWrap}>
                 {([["source","Tracked vs. projected"],["channel","Payout method"],["type","Payroll breakdown"]] as const).map(([id, label]) => (
                   <button key={id} onClick={() => setSegTab(id)} className={zc.seg(segTab === id)}>{label}</button>
                 ))}
               </div>
             )}
+            {!mvp && (
             <div className={zone ? zc.segWrap : `flex items-center ${zc.segTrack} rounded-md p-0.5`}>
               {((v1l || v1m ? ["3M","6M","12M"] : ["1M","3M","6M","12M"]) as V1eRange[]).map(r => (
                 <button key={r} onClick={() => applyRange(r)}
@@ -5612,7 +5828,8 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
                 </button>
               ))}
             </div>
-            {zone && !is1M && !drillMonth && (
+            )}
+            {zone && !mvp && !is1M && !drillMonth && (
               /* Zone Toggle — size sm. Track w-8 h-4 rounded-[24px]; 12px white thumb,
                  2px inset, 16px travel, no shadow. role=switch + data-state.
                  Checked fill = primary-700 #0168dd per the Figma tokens (source of truth).
@@ -5663,7 +5880,9 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
         </div>
       {/* ── Chart controls ───────────────────────────────────────────────── */}
       <div className={`${zone ? "px-4" : "px-5"} pt-4 pb-0`}>
-        {/* Row 1 — distribution title (left) + segmentation tabs (right, segmented-pill style) */}
+        {/* Row 1 — distribution caption (left) + segmentation tabs (right, segmented-pill style).
+            MVP hides it: the card title already reads "Payroll by earning type" and there are no tabs. */}
+        {!mvp && (
         <div className="flex items-start justify-between mb-3 gap-4">
           <div>
             <p className={`text-[11px] ${zc.muted}`}>{zone ? chartCaption.replace(" · click a bar for its weekly breakdown", "") : chartCaption}</p>
@@ -5679,6 +5898,7 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
             </div>
           </div>)}
         </div>
+        )}
 
         {/* Chart-level control — YoY side-by-side comparison (month ranges only). Final UI moves it next to the segmented control above. */}
         {!zone && !is1M && !drillMonth && (
@@ -5704,7 +5924,7 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
       {/* ── Alert banner — only when status breakdown is on ──────────────── */}
       {showStatusBreakdown && (
         <div className="px-5 pt-1">
-          <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5 text-[11px]">
+          <div data-zone="alert" className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5 text-[11px]">
             <div className="flex items-center gap-2 text-amber-800">
               <AlertTriangle size={12} className="text-amber-500 flex-shrink-0" />
 3 pending ($3.6k) · 1 failed ($1.2k) from Weeks 1–2 need attention
@@ -5860,6 +6080,15 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
         seasonPct={seasonPct}
         adjPct={adjPct} total={adjProj}
         manualAdjustments={manualAdjustments}
+        scenario={scenario}
+        projection={v1lEstimate}
+        trendPct={scenTrendPct}
+        trend2Pct={scen2TrendPct}
+        scen1Total={scen1Total}
+        initial={initial}
+        scen3Tracked={scen3Tracked}
+        scen3Remaining={scen3Remaining}
+        scen3Total={scen3Total}
         zone={zone}
       />
     </>
@@ -6008,12 +6237,12 @@ function V1gFundingScheduleDialog({ open, onClose }: { open: boolean; onClose: (
                 <h2 className="text-lg font-semibold text-[#111827]">Funding schedule</h2>
                 <p className="text-[11px] text-[#6b7280] mt-0.5">When to fund each account · dates reflect payout delay</p>
               </div>
-              <button onClick={onClose} className="p-1 rounded-md text-[#6b7280] hover:text-[#111827] hover:bg-[#f3f4f6] transition-colors flex-shrink-0"><X size={16} /></button>
+              <button data-zone="icon_button" onClick={onClose} className="p-1 rounded-md text-[#6b7280] hover:text-[#111827] hover:bg-[#f3f4f6] transition-colors flex-shrink-0"><X size={16} /></button>
             </div>
             <div className="flex items-start gap-6 mt-3">
               <div>
                 <span className="block text-[10px] font-semibold uppercase tracking-wide text-[#6b7280] mb-1">Account</span>
-                <div className="flex bg-[#f3f4f6] rounded-md p-0.5 w-fit">
+                <div data-zone="segmented_controls" className="flex bg-[#f3f4f6] rounded-md p-0.5 w-fit">
                   {([["all", "All"], ["wise", "Wise"], ["paypal", "PayPal"], ["bitwage", "Bitwage"]] as const).map(([k, label]) => (
                     <button key={k} onClick={() => setFProvider(k)} className={`px-2 py-0.5 rounded text-[11px] font-medium transition-all ${fProvider === k ? "bg-white text-[#0168dd] shadow-sm" : "text-[#6b7280] hover:text-[#111827]"}`}>{label}</button>
                   ))}
@@ -6021,7 +6250,7 @@ function V1gFundingScheduleDialog({ open, onClose }: { open: boolean; onClose: (
               </div>
               <div>
                 <span className="block text-[10px] font-semibold uppercase tracking-wide text-[#6b7280] mb-1">Status</span>
-                <div className="flex bg-[#f3f4f6] rounded-md p-0.5 w-fit">
+                <div data-zone="segmented_controls" className="flex bg-[#f3f4f6] rounded-md p-0.5 w-fit">
                   {([["upcoming", "All upcoming"], ["unfunded", "Unfunded only"]] as const).map(([k, label]) => (
                     <button key={k} onClick={() => setFStatus(k)} className={`px-2 py-0.5 rounded text-[11px] font-medium transition-all ${fStatus === k ? "bg-white text-[#0168dd] shadow-sm" : "text-[#6b7280] hover:text-[#111827]"}`}>{label}</button>
                   ))}
@@ -6357,13 +6586,13 @@ const EMPTY_ROSTER: { name: string; initials: string; color: string }[] = [
   { name: "Marta Kowalski", initials: "MK", color: "#f59e0b" },
 ];
 
-function FinalUIEmptyBody({ ver }: { ver: 1 | 2 | 3 }) {
+function FinalUIEmptyBody({ ver }: { ver: 1 | 2 | 3 | 4 | 5 }) {
   const [tab, setTab] = useState<"history" | "future">("history");
   const [showExample, setShowExample] = useState(false); // "See an example" preview modal
   const [learnMore, setLearnMore] = useState<null | "rates" | "tracking">(null); // per-step "Learn more" how-to dialog
-  const [memberList, setMemberList] = useState<null | "rates" | "tracking">(null); // V3 "N members with no …" list popover
+  const [memberList, setMemberList] = useState<string | null>(null); // V3/V4 "N members with no …" list popover (keyed per step)
   // V3 per-step status: a count of who's still missing (opens a member-list popover), or an "all set up" state at 0.
-  const memberStatus = (kind: "rates" | "tracking", missing: number, noun: string) => (
+  const memberStatus = (kind: string, missing: number, noun: string) => (
     missing === 0 ? (
       <p className="inline-flex items-center gap-1.5 text-[13px] font-medium text-[#0e9f6e]"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg> You&apos;re all set up</p>
     ) : (
@@ -6431,6 +6660,129 @@ function FinalUIEmptyBody({ ver }: { ver: 1 | 2 | 3 }) {
   );
   return (
     <>
+      {(ver === 4 || ver === 5) ? (
+      /* Centered, capped width so the welcome reads like a landing page, not a full-bleed app view */
+      <div className="max-w-[1140px] mx-auto pt-6">
+        {/* Hero — welcome / onboarding. 60px below it → 24px below the Get-set-up card (explicit
+            margins instead of a uniform space-y so the two gaps can differ). */}
+        <div className={ver === 5 ? "mb-[60px]" : "bg-white rounded-lg border border-[#e5e7eb] p-8 mb-[60px]"}>
+          <div className="flex flex-col lg:flex-row gap-10 lg:items-center">
+            <div className="flex-1 min-w-0 lg:pt-1">
+              <p className="text-xs font-semibold uppercase tracking-wider text-[#0168dd] mb-2.5">Predictable cash flow</p>
+              <h2 className="text-[28px] font-bold text-[#111827] tracking-tight leading-[1.15] mb-3">See your payroll cash flow before it&apos;s due</h2>
+              <p className="text-base text-[#4b5563] leading-relaxed max-w-[520px]">What’s projected, what’s due and when, and every payment in between. No spreadsheets, no missed payroll.</p>
+              <ul className="mt-6 space-y-3.5">
+                {([
+                  { icon: <ClipboardList size={18} aria-hidden="true" />, title: "Estimated payroll", body: "your month’s cost, projected as it fills in." },
+                  { icon: <CalendarDays size={18} aria-hidden="true" />, title: "Funding schedule", body: "what’s due for each payout method, and by when." },
+                  { icon: <BarChart2 size={18} aria-hidden="true" />, title: "Payments over time", body: "month-over-month trends, split by earning type." },
+                  { icon: <FileSpreadsheet size={18} aria-hidden="true" />, title: "Payment activity", body: "a detailed history and what’s tracked so far." },
+                ]).map(f => (
+                  <li key={f.title} className="flex items-center gap-3">
+                    <span data-zone="icon" className="text-[#0168dd] flex-shrink-0">{f.icon}</span>
+                    <p className="text-sm text-[#4b5563] leading-snug"><span className="font-medium text-[#111827]">{f.title}</span> — {f.body}</p>
+                  </li>
+                ))}
+              </ul>
+              {/* Secondary CTA — a short video walking through what this page does. Grey/outlined
+                  (the real primary action is the "Get set up" steps below). No video wired yet;
+                  for now it opens the live interactive preview as a stand-in. */}
+              <div className="mt-7">
+                <button onClick={() => setShowExample(true)} className={zbtn("outlineGray", "md", "gap-2")} style={{ borderColor: "#4b5563" }}><PlayCircle size={17} /> Watch a demo</button>
+              </div>
+            </div>
+            {/* Sample-data preview — the real screenshot as the hero, framed like a product
+                window (clear, full-opacity). No CTA here — it lives on the left, so the image
+                can be as large and prominent as possible. */}
+            <div className="w-full lg:w-[580px] flex-shrink-0 relative">
+              {/* Base — the report window */}
+              <div className="rounded-xl border border-[#e5e7eb] bg-white shadow-[0_18px_44px_-12px_rgba(17,24,39,0.24)] overflow-hidden">
+                <div className="flex items-center gap-2 h-10 px-4 border-b border-[#e5e7eb] bg-white">
+                  <span className="flex items-center gap-1.5" aria-hidden="true">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#cbd5e1]" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#cbd5e1]" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#cbd5e1]" />
+                  </span>
+                  <span className="ml-auto inline-flex items-center gap-1.5 text-[13px] font-medium text-[#6b7280]"><Eye size={14} aria-hidden="true" /> Sample data</span>
+                </div>
+                <img src={mvpPreview} alt="Preview of the Predictable Cash Flow report with sample data" className="block w-full" />
+              </div>
+
+              {/* Floating feature callouts — up front with soft shadows for depth (decorative, desktop only, don't block the image click) */}
+              <div aria-hidden="true" className="pointer-events-none hidden lg:block absolute -top-5 -right-2 w-[196px] rounded-lg bg-white border border-[#e5e7eb] shadow-[0_12px_30px_-12px_rgba(17,24,39,0.20)] p-3 z-20">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[8px] font-semibold uppercase tracking-wider text-[#9ca3af]">Total projected</p>
+                  <svg viewBox="0 0 88 20" width="53" height="12" fill="none" role="img" aria-label="Wise logo" className="flex-shrink-0"><path fill="#163300" d="M48.9285.2989h5.413L51.6183 19.7263h-5.4131L48.9285.2989Zm-6.8241 0L38.4514 11.4904 36.8573.2989h-3.7858L28.2893 11.4572 27.6917.2989h-5.2472L24.271 19.7263h4.3504L34.0014 7.4389 35.8943 19.7263h4.284L47.2518.2989h-5.1474ZM87.5508 11.59H74.6988c.0665 2.5239 1.5775 4.1844 3.8025 4.1844 1.6771 0 3.0055-.8967 4.035-2.607l4.3382 1.972C85.3833 18.0775 82.2413 19.992 78.3685 19.992 73.0883 19.992 69.5847 16.4386 69.5847 10.7266 69.5847 4.4501 73.7025 0 79.5142 0c5.1145 0 8.3357 3.4538 8.3357 8.8336 0 .8967-.1 1.7933-.299 2.7564Zm-4.8153-3.7194c0-2.2582-1.262-3.6862-3.2877-3.6862-2.0922 0-3.8191 1.4944-4.2841 3.6862h7.5718ZM5.5255 6.1532 0 12.6107h9.8661l1.1086-3.0449H6.747l2.5832-2.9868.0083-.0792L7.6588 3.6085h7.5569l-5.8579 16.1179h4.0087L20.4402.2989H2.166L5.5255 6.1532Zm57.6165-1.9689c1.9095 0 3.5827 1.0269 5.0439 2.7869l.7677-5.4769C67.592.5729 65.7489 0 63.308 0c-4.8485 0-7.5716 2.8394-7.5716 6.4426 0 2.499 1.3948 4.0266 3.6862 5.0146l1.0959.4981c2.0423.8718 2.5904 1.3036 2.5904 2.2251 0 .9547-.9216 1.5608-2.3247 1.5608-2.3164.0083-4.1927-1.1789-5.6041-3.2047l-.7822 5.5803C56.0053 19.3423 58.0657 19.992 60.7842 19.992c4.6077 0 7.4389-2.6568 7.4389-6.343 0-2.5072-1.1125-4.1179-3.9188-5.3798l-1.1954-.5645c-1.6605-.7389-2.225-1.1457-2.225-1.9593 0-.88.7721-1.5609 2.2582-1.5609Z"/></svg>
+                </div>
+                <div className="flex items-center gap-1 mt-0.5">
+                  <span className="text-[16px] font-bold text-[#111827] leading-none tracking-tight">$15,000.00</span>
+                  <Info size={10} className="text-[#9ca3af]" />
+                </div>
+                <div className="flex items-center gap-[2px] mt-2">
+                  <span className="h-1.5 rounded-full bg-[#4ea87a]" style={{ flexGrow: 16, flexBasis: 0 }} />
+                  <span className="h-1.5 rounded-full bg-[#3b82f6]" style={{ flexGrow: 75, flexBasis: 0 }} />
+                  <span className="h-1.5 rounded-full bg-[#9fcdf6]" style={{ flexGrow: 9, flexBasis: 0 }} />
+                </div>
+                <div className="mt-2 space-y-1">
+                  {([["Tracked", "$2,400", "#4ea87a"], ["Planned", "$11,250", "#3b82f6"], ["~Projected", "$1,350", "#9fcdf6"]] as const).map(([l, a, c]) => (
+                    <div key={l} className="flex items-center justify-between">
+                      <span className="inline-flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full" style={{ background: c }} /><span className="text-[9px] text-[#6b7280]">{l}</span></span>
+                      <span className="text-[9px] font-bold text-[#111827]">{a}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div aria-hidden="true" className="pointer-events-none hidden lg:block absolute -bottom-[14px] left-[-34px] w-[150px] rounded-lg bg-white border border-[#e5e7eb] shadow-[0_12px_30px_-12px_rgba(17,24,39,0.20)] p-2 z-20">
+                <p className="text-[11px] font-bold text-[#111827] leading-none">Jun</p>
+                <div className="mt-1 space-y-1">
+                  {([["Hourly pay", "$73,500", "#59a1f6"], ["Fixed pay", "$42,000", "#a5e6ec"], ["Bonuses", "$19,500", "#a24aff"], ["PTO & Holidays", "$8,000", "#ffe1bf"], ["Additions", "$7,000", "#e499c2"]] as const).map(([l, a, c]) => (
+                    <div key={l} className="flex items-center justify-between gap-2">
+                      <span className="inline-flex items-center gap-1.5 min-w-0"><span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: c }} /><span className="text-[9px] text-[#6b7280] truncate">{l}</span></span>
+                      <span className="text-[9px] font-bold text-[#111827] flex-shrink-0">{a}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="h-px bg-[#e5e7eb] my-1" />
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] text-[#6b7280]">Total</span>
+                  <span className="text-[9px] font-bold text-[#111827]">$150,000</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Get set up — 3-step checklist. Header carries the title (no separate label);
+            each step has a subtle "Learn more" that opens V3's how-to dialog. */}
+        <div data-zone="card" className="bg-white rounded-lg border border-[#e5e7eb] overflow-hidden mb-6">
+          <div className="flex items-center justify-between gap-3 px-5 h-[52px] border-b border-[#e5e7eb]">
+            <p className="text-base font-medium text-[#111827]">Get set up — How to turn this on</p>
+            <span className="text-sm text-[#6b7280]">0 of 3 done</span>
+          </div>
+          {([
+            { n: 1, title: "Set members’ pay rates", body: "Add hourly or fixed pay for your members.", learn: "rates", action: <button onClick={e => e.preventDefault()} className={zbtn("outlinePrimary", "sm")}>Set pay rates</button> },
+            { n: 2, title: "Set members’ pay periods", body: "Choose weekly, bi-weekly, twice per month, or monthly.", learn: "rates", action: <button onClick={e => e.preventDefault()} className={zbtn("outlinePrimary", "sm")}>Set pay periods</button> },
+            { n: 3, title: "Get members tracking time", body: "So we can project hourly and overtime costs.", learn: "tracking", action: <button onClick={e => e.preventDefault()} className={zbtn("outlinePrimary", "sm")}>Start tracking time</button> },
+          ]).map((s, i, arr) => (
+            <div key={s.n} className={`flex items-center gap-4 px-5 py-4 ${i < arr.length - 1 ? "border-b border-[#f3f4f6]" : ""}`}>
+              <span className="w-7 h-7 rounded-full bg-[#0168dd] flex items-center justify-center text-[13px] font-semibold text-white flex-shrink-0">{s.n}</span>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-[#111827]">{s.title}</p>
+                <p className="text-[13px] text-[#6b7280] leading-snug">{s.body} <a href="#" onClick={(e) => { e.preventDefault(); setLearnMore(s.learn as "rates" | "tracking"); }} className="font-medium text-[#6b7280] underline underline-offset-2 hover:text-[#111827] transition-colors">Learn more</a></p>
+              </div>
+              <div className="flex-shrink-0">{s.action}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Value banner */}
+        <div data-zone="alert" className="relative border rounded-lg flex items-start gap-2 p-3 bg-[#eaf6ff] border-[#0168dd] text-[#0a4b96]">
+          <Sparkles size={18} className="flex-shrink-0 mt-0.5" aria-hidden="true" />
+          <p className="text-sm leading-snug">Teams that run payroll on Hubstaff <span className="font-semibold">save hours each cycle</span> and stop worrying about failed payments — because they always know what to fund, and when.</p>
+        </div>
+      </div>
+      ) : (<>
       {ver === 1 ? (<>
       <div className="grid grid-cols-12 gap-6 items-stretch">
         {/* Estimated Payroll — compact empty */}
@@ -6474,11 +6826,12 @@ function FinalUIEmptyBody({ ver }: { ver: 1 | 2 | 3 }) {
           )}
         </div>
       </div>
+      </>)}
       {/* "See an example" — live, non-interactive preview of the filled page */}
       {showExample && (<>
         <div className="fixed inset-0 z-40 bg-black/40" onClick={() => setShowExample(false)} />
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
-          <div className="bg-white rounded-xl shadow-2xl w-[980px] max-w-[95vw] max-h-[88vh] flex flex-col pointer-events-auto overflow-hidden">
+          <div data-zone="dialog" className="bg-white rounded-xl shadow-2xl w-[980px] max-w-[95vw] max-h-[88vh] flex flex-col pointer-events-auto overflow-hidden">
             <div className="flex items-start justify-between px-5 py-4 border-b border-[#e5e7eb] flex-shrink-0">
               <div>
                 <h2 className="text-base font-semibold text-[#111827]">Here&apos;s how it&apos;ll look with data</h2>
@@ -6501,7 +6854,7 @@ function FinalUIEmptyBody({ ver }: { ver: 1 | 2 | 3 }) {
       {learnMore && (<>
         <div className="fixed inset-0 z-40 bg-black/30" onClick={() => setLearnMore(null)} />
         <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-[520px] max-w-full max-h-[85vh] flex flex-col pointer-events-auto">
+          <div data-zone="dialog" className="bg-white rounded-xl shadow-2xl w-[520px] max-w-full max-h-[85vh] flex flex-col pointer-events-auto">
             <div className="flex items-start justify-between px-5 py-5 flex-shrink-0">
               <div><h2 className="text-lg font-semibold text-[#111827]">{learnMore === "rates" ? "Set pay rates" : "Start tracking time"}</h2></div>
               <button onClick={() => setLearnMore(null)} aria-label="Close" className="p-1 rounded-md text-[#6b7280] hover:text-[#111827] hover:bg-[#f3f4f6] transition-colors flex-shrink-0"><X size={16} aria-hidden="true" /></button>
@@ -6539,7 +6892,7 @@ function FinalUIEmptyBody({ ver }: { ver: 1 | 2 | 3 }) {
   );
 }
 
-function VersionFinalUI({ showStatusBreakdown, seasonalityOn, state = "filled" }: { showStatusBreakdown: boolean; seasonalityOn: boolean; state?: "filled" | "initial" | "empty" }) {
+function VersionFinalUI({ showStatusBreakdown, seasonalityOn, state = "filled", variant = "final" }: { showStatusBreakdown: boolean; seasonalityOn: boolean; state?: "filled" | "initial" | "empty"; variant?: "final" | "mvp" }) {
   // `state` selects which Final UI variant to render. All three are the same content today
   // (copies) — branch on `state` here as the initial/empty states get built out.
   const dense = false;
@@ -6549,8 +6902,10 @@ function VersionFinalUI({ showStatusBreakdown, seasonalityOn, state = "filled" }
   const [ftVer, setFtVer] = useState<"v1" | "v2" | "v3">("v3"); // Future Tracked layout version — V3 is the live direction; V1/V2 kept for reference
   const SHOW_FT_VERSION_TOGGLE = false; // toggle hidden; flip to true to compare V1/V2/V3 again
   const [wiseVer, setWiseVer] = useState<0 | 1 | 2 | 3 | 4 | 5>(1); // Wise Interest disclosure — 0 = off, 1–5 = the five treatments
-  const [emptyVer, setEmptyVer] = useState<1 | 2 | 3>(1); // Empty-state layout variant — V1 = full, V2 = funding card + tabs, V3 = guided (member counts)
+  const [emptyVer, setEmptyVer] = useState<1 | 2 | 3 | 4 | 5>(5); // Empty-state layout variant — V5 (welcome, bare hero) is the shipped one; V1–V4 kept in code but hidden from the switcher
   const wiseConnected = v1gFundSchedule.some(e => e.providers.some(p => p.id === "wise")); // only surface when Wise is a connected payout method
+  const mvp = variant === "mvp";
+  const effWiseVer = mvp ? 1 : wiseVer; // MVP locks the Wise disclosure to treatment 1 (the inline "earn interest" link); the switcher is hidden
   const activityRef = useRef<HTMLDivElement>(null);
 
   const openFuture = (providerId: string) => {
@@ -6561,22 +6916,13 @@ function VersionFinalUI({ showStatusBreakdown, seasonalityOn, state = "filled" }
   };
 
   return (
-    <WiseVerContext.Provider value={wiseConnected ? wiseVer : 0}>
+    <WiseVerContext.Provider value={wiseConnected ? effWiseVer : 0}>
     <div data-final-state={state} data-wise-ver={wiseVer} className="px-6 pb-5 space-y-6 bg-[#f9fafb] min-h-full" style={{ fontFamily: '"Roboto", "Helvetica Neue", Helvetica, Arial, sans-serif' }}>
       {/* Zone page header — real structure from hubstaff-server (shadow-md, sticky, h2 text-2xl font-light) */}
       <header className="bg-white shadow-md sticky top-12 z-20 -mx-6 px-6">
         <div className="flex justify-between items-center h-8 pt-3 pb-4 box-content">
           <h2 className="text-2xl font-light text-[#111827]">Payments report</h2>
-          {state === "empty" ? (
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-semibold uppercase tracking-widest text-[#9ca3af]">Empty state</span>
-              <div className="flex items-center bg-[#f3f4f6] rounded-lg p-0.5">
-                {([1, 2, 3] as const).map(v => (
-                  <button key={v} onClick={() => setEmptyVer(v)} className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${emptyVer === v ? "bg-white text-[#0168dd] shadow-sm" : "text-[#6b7280] hover:text-[#111827]"}`}>V{v}</button>
-                ))}
-              </div>
-            </div>
-          ) : (
+          {state === "empty" ? null : mvp ? null : (
             <div className="flex items-center gap-2">
               <span className="text-[10px] font-semibold uppercase tracking-widest text-[#9ca3af]">Wise interest</span>
               <div className="flex items-center bg-[#f3f4f6] rounded-lg p-0.5">
@@ -6589,7 +6935,7 @@ function VersionFinalUI({ showStatusBreakdown, seasonalityOn, state = "filled" }
         </div>
       </header>
       {state === "empty" ? <FinalUIEmptyBody ver={emptyVer} /> : (<>
-      <V1gPredictivePanel showStatusBreakdown={showStatusBreakdown} seasonalityOn={seasonalityOn} v1i v1j v1k v1l v1m zone condensed={dense} onProviderClick={openFuture} />
+      <V1gPredictivePanel key={variant} showStatusBreakdown={showStatusBreakdown} seasonalityOn={seasonalityOn} v1i v1j v1k v1l v1m zone condensed={dense} state={state} variant={variant} onProviderClick={openFuture} />
       <div ref={activityRef} className="pt-2">
         <p className="text-lg font-medium text-[#111827] mb-3">Payment Activity</p>
         <div className="flex items-center justify-between gap-0 mb-6 border-b border-[#e5e7eb]">
@@ -6606,7 +6952,7 @@ function VersionFinalUI({ showStatusBreakdown, seasonalityOn, state = "filled" }
             </div>
           )}
         </div>
-        {bottomTab === "history" ? <V1PaymentHistoryZone /> : <V1mFutureTracked provider={futureProvider} period={futurePeriod} onProviderChange={setFutureProvider} onPeriodChange={setFuturePeriod} grouped zone ftVer={ftVer} />}
+        {bottomTab === "history" ? <V1PaymentHistoryZone /> : <V1mFutureTracked provider={futureProvider} period={futurePeriod} onProviderChange={setFutureProvider} onPeriodChange={setFuturePeriod} grouped zone ftVer={ftVer} mvp={mvp} />}
       </div>
       </>)}
     </div>
@@ -6754,7 +7100,7 @@ function V1lFutureDetail({ providerId, onBack }: { providerId: string; onBack: (
                   <td className={`${open ? "pt-3 pb-1" : "py-3"} px-5`}>
                     <div className="flex items-center gap-2">
                       <ChevronRight size={13} className={`text-[#9ca3af] transition-transform flex-shrink-0 ${open ? "rotate-90" : ""}`} />
-                      <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0" style={{ background: m.color }}>{m.avatar}</div>
+                      <div data-zone="avatar" className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0" style={{ background: m.color }}>{m.avatar}</div>
                       <span className="font-semibold text-[#111827]">{m.name}</span>
                     </div>
                   </td>
@@ -6806,7 +7152,7 @@ function V1lFutureDetail({ providerId, onBack }: { providerId: string; onBack: (
         <>
           <div className="fixed inset-0 z-40 bg-black/30" onClick={() => setShowHow(false)} />
           <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none p-4">
-            <div className="bg-white rounded-xl shadow-2xl w-[480px] max-w-full max-h-[85vh] flex flex-col pointer-events-auto">
+            <div data-zone="dialog" className="bg-white rounded-xl shadow-2xl w-[480px] max-w-full max-h-[85vh] flex flex-col pointer-events-auto">
               <div className="flex items-start justify-between px-5 py-5 flex-shrink-0">
                 <div>
                   <h2 className="text-lg font-semibold text-[#111827]">How we get there</h2>
@@ -6865,7 +7211,7 @@ function V1lFutureDetail({ providerId, onBack }: { providerId: string; onBack: (
 }
 
 // item E for 1M — "Future Tracked So Far": all providers in one filterable view.
-function V1mFutureTracked({ provider, period, onProviderChange, onPeriodChange, grouped = false, zone = false, ftVer = "v1" }: { provider: string; period: string; onProviderChange: (id: string) => void; onPeriodChange: (label: string) => void; grouped?: boolean; zone?: boolean; ftVer?: "v1" | "v2" | "v3" }) {
+function V1mFutureTracked({ provider, period, onProviderChange, onPeriodChange, grouped = false, zone = false, ftVer = "v1", mvp = false }: { provider: string; period: string; onProviderChange: (id: string) => void; onPeriodChange: (label: string) => void; grouped?: boolean; zone?: boolean; ftVer?: "v1" | "v2" | "v3"; mvp?: boolean }) {
   const [showHow, setShowHow] = useState(false);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(0);
@@ -6977,7 +7323,7 @@ function V1mFutureTracked({ provider, period, onProviderChange, onPeriodChange, 
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button className={zone ? zbtn("outlineGray", "md") : "flex items-center gap-1.5 text-xs border border-[#e5e7eb] rounded px-3 py-2 text-[#111827] hover:bg-[#f9fafb] transition-colors"}><Download size={zone ? 16 : 12} /> Export</button>
+          {!mvp && <button className={zone ? zbtn("outlineGray", "md") : "flex items-center gap-1.5 text-xs border border-[#e5e7eb] rounded px-3 py-2 text-[#111827] hover:bg-[#f9fafb] transition-colors"}><Download size={zone ? 16 : 12} /> Export</button>}
           {!isAll && <button className={zone ? zbtn("solidPrimary", "md") : "flex items-center gap-1.5 text-xs bg-[#0168dd] text-white rounded px-3 py-2 hover:bg-[#0057bb] transition-colors"}><ExternalLink size={zone ? 16 : 12} /> Go to {provName}</button>}
         </div>
       </div>
@@ -6991,7 +7337,7 @@ function V1mFutureTracked({ provider, period, onProviderChange, onPeriodChange, 
         </div>
         <div className="flex items-center gap-2">
           <div className="relative">
-            <button onClick={() => { setProvOpen(o => !o); setPeriodOpen(false); }} className="flex items-center justify-between gap-2 text-sm border border-[#d1d5db] rounded-[6px] h-8 px-3 bg-white text-[#111827] hover:bg-[#f9fafb] transition-colors min-w-[150px]"><span className="flex items-center gap-2">{!isAll && <ProviderLogo id={provider} size={16} />} {provName}</span> <ChevronDown size={14} className="text-[#6b7280]" /></button>
+            <button data-zone="select" onClick={() => { setProvOpen(o => !o); setPeriodOpen(false); }} className="flex items-center justify-between gap-2 text-sm border border-[#d1d5db] rounded-[6px] h-8 px-3 bg-white text-[#111827] hover:bg-[#f9fafb] transition-colors min-w-[150px]"><span className="flex items-center gap-2">{!isAll && <ProviderLogo id={provider} size={16} />} {provName}</span> <ChevronDown size={14} className="text-[#6b7280]" /></button>
             {provOpen && (<>
               <div className="fixed inset-0 z-20" onClick={() => setProvOpen(false)} />
               <div className="absolute right-0 mt-1 z-30 bg-white border border-[#e5e7eb] rounded-lg shadow-lg py-1 min-w-[210px]">
@@ -7000,7 +7346,7 @@ function V1mFutureTracked({ provider, period, onProviderChange, onPeriodChange, 
             </>)}
           </div>
           <div className="relative">
-            <button onClick={() => { setPeriodOpen(o => !o); setProvOpen(false); }} className="flex items-center justify-between gap-2 text-sm border border-[#d1d5db] rounded-[6px] h-8 px-3 bg-white text-[#111827] hover:bg-[#f9fafb] transition-colors min-w-[140px]"><span>{activePeriod.label}</span> <ChevronDown size={14} className="text-[#6b7280]" /></button>
+            <button data-zone="select" onClick={() => { setPeriodOpen(o => !o); setProvOpen(false); }} className="flex items-center justify-between gap-2 text-sm border border-[#d1d5db] rounded-[6px] h-8 px-3 bg-white text-[#111827] hover:bg-[#f9fafb] transition-colors min-w-[140px]"><span>{activePeriod.label}</span> <ChevronDown size={14} className="text-[#6b7280]" /></button>
             {periodOpen && (<>
               <div className="fixed inset-0 z-20" onClick={() => setPeriodOpen(false)} />
               <div className="absolute right-0 mt-1 z-30 bg-white border border-[#e5e7eb] rounded-lg shadow-lg py-1 min-w-[210px]">
@@ -7009,14 +7355,14 @@ function V1mFutureTracked({ provider, period, onProviderChange, onPeriodChange, 
               </div>
             </>)}
           </div>
-          <button className={zbtn("outlineGray", "sm")}><Download size={16} /> Export</button>
+          {!mvp && <button className={zbtn("outlineGray", "sm")}><Download size={16} /> Export</button>}
         </div>
       </div>
       ) : (
       <div className="bg-white rounded-t-lg border border-[#e5e7eb] flex items-center justify-between gap-3 px-5 h-[60px]">
         <div className="flex items-center gap-4">
           <div className="relative">
-            <button onClick={() => { setProvOpen(o => !o); setPeriodOpen(false); }} className="flex items-center justify-between gap-2 text-sm border border-[#d1d5db] rounded-[6px] h-8 px-3 bg-white text-[#111827] hover:bg-[#f9fafb] transition-colors min-w-[150px]"><span className="flex items-center gap-2">{!isAll && <ProviderLogo id={provider} size={16} />} {provName}</span> <ChevronDown size={14} className="text-[#6b7280]" /></button>
+            <button data-zone="select" onClick={() => { setProvOpen(o => !o); setPeriodOpen(false); }} className="flex items-center justify-between gap-2 text-sm border border-[#d1d5db] rounded-[6px] h-8 px-3 bg-white text-[#111827] hover:bg-[#f9fafb] transition-colors min-w-[150px]"><span className="flex items-center gap-2">{!isAll && <ProviderLogo id={provider} size={16} />} {provName}</span> <ChevronDown size={14} className="text-[#6b7280]" /></button>
             {provOpen && (<>
               <div className="fixed inset-0 z-20" onClick={() => setProvOpen(false)} />
               <div className="absolute left-0 mt-1 z-30 bg-white border border-[#e5e7eb] rounded-lg shadow-lg py-1 min-w-[210px]">
@@ -7025,7 +7371,7 @@ function V1mFutureTracked({ provider, period, onProviderChange, onPeriodChange, 
             </>)}
           </div>
           <div className="relative">
-            <button onClick={() => { setPeriodOpen(o => !o); setProvOpen(false); }} className="flex items-center justify-between gap-2 text-sm border border-[#d1d5db] rounded-[6px] h-8 px-3 bg-white text-[#111827] hover:bg-[#f9fafb] transition-colors min-w-[140px]"><span><span className="text-[#6b7280]">Pay period:</span> {activePeriod.label}</span> <ChevronDown size={14} className="text-[#6b7280]" /></button>
+            <button data-zone="select" onClick={() => { setPeriodOpen(o => !o); setProvOpen(false); }} className="flex items-center justify-between gap-2 text-sm border border-[#d1d5db] rounded-[6px] h-8 px-3 bg-white text-[#111827] hover:bg-[#f9fafb] transition-colors min-w-[140px]"><span><span className="text-[#6b7280]">Pay period:</span> {activePeriod.label}</span> <ChevronDown size={14} className="text-[#6b7280]" /></button>
             {periodOpen && (<>
               <div className="fixed inset-0 z-20" onClick={() => setPeriodOpen(false)} />
               <div className="absolute left-0 mt-1 z-30 bg-white border border-[#e5e7eb] rounded-lg shadow-lg py-1 min-w-[210px]">
@@ -7035,7 +7381,7 @@ function V1mFutureTracked({ provider, period, onProviderChange, onPeriodChange, 
             </>)}
           </div>
         </div>
-        <button className={zbtn("outlineGray", "sm")}><Download size={16} /> Export</button>
+        {!mvp && <button className={zbtn("outlineGray", "sm")}><Download size={16} /> Export</button>}
       </div>
       )}
 
@@ -7084,12 +7430,14 @@ function V1mFutureTracked({ provider, period, onProviderChange, onPeriodChange, 
                 </>)}
               </div>
               <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                {!mvp && (
                 <div className="flex w-fit">
                   {([["source","Tracked vs. projected"],["type","Payroll breakdown"]] as const).map(([k, label]) => (
                     <button key={k} onClick={() => setSegLens(k)} className={`h-8 px-3 flex items-center justify-center whitespace-nowrap text-sm overflow-hidden transition-colors border border-l-0 first:border-l border-[#d1d5db] first:rounded-l-[6px] last:rounded-r-[6px] ${segLens === k ? "bg-[#f0f5ff] text-[#0168dd] font-medium" : "text-[#374151] font-normal hover:bg-[#f9fafb]"}`}>{label}</button>
                   ))}
                 </div>
-                {ftVer === "v3" && (
+                )}
+                {ftVer === "v3" && !mvp && (
                   <p className="text-[11px] text-[#6b7280] leading-snug text-right whitespace-nowrap">
                     {segLens === "source" ? "Tracked is locked in, planned is scheduled, projected is still an estimate." : "The pay types that make up each payout — hourly, fixed pay, PTO, and more."}{" "}
                     <a href="#" onClick={(e) => { e.preventDefault(); setShowBreakdownInfo(true); }} className="font-medium underline underline-offset-2 hover:text-[#111827] transition-colors select-none">Learn more</a>
@@ -7126,6 +7474,12 @@ function V1mFutureTracked({ provider, period, onProviderChange, onPeriodChange, 
                   </div>
                 ))}
               </div>
+              {mvp && (
+                <p className="text-[11px] text-[#6b7280] leading-snug text-right whitespace-nowrap flex-shrink-0">
+                  Tracked is locked in, planned is scheduled, projected is still an estimate.{" "}
+                  <a href="#" onClick={(e) => { e.preventDefault(); setShowBreakdownInfo(true); }} className="font-medium underline underline-offset-2 hover:text-[#111827] transition-colors select-none">Learn more</a>
+                </p>
+              )}
             </div>
           </>) : (<>
             <div className="h-3 rounded-full overflow-hidden flex bg-[#f3f4f6]">
@@ -7162,11 +7516,14 @@ function V1mFutureTracked({ provider, period, onProviderChange, onPeriodChange, 
         <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-[#e5e7eb]">
           <div className="flex items-center gap-3">
             <div className="grow md:grow-0">
-              <input type="text" name="q" placeholder="Search" className="w-full md:min-w-56 h-8 rounded-[6px] border border-gray-300 bg-white px-3 text-sm text-gray-700 placeholder:text-gray-400 focus:outline-none focus:border-[#2aa7ff] focus:ring-1 focus:ring-[#2aa7ff]" />
+              <div className="relative">
+                <span className="material-symbols-rounded absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" style={{ fontSize: 18 }}>search</span>
+                <input data-zone="text_field" type="text" name="q" placeholder="Search" className="w-full md:min-w-56 h-8 rounded-[6px] border border-gray-300 bg-white pl-8 pr-3 text-sm text-gray-700 placeholder:text-gray-400 focus:outline-none focus:border-[#2aa7ff] focus:ring-1 focus:ring-[#2aa7ff]" />
+              </div>
             </div>
             <button className={zbtn("outlineGray", "sm")}><ListFilter size={16} /> Filters</button>
           </div>
-          <button aria-label="Columns" title="Columns" className={`${ZBTN_BASE} h-8 w-8 ${ZBTN_VARIANT.outlineGray}`}><Columns3 size={16} /></button>
+          {!mvp && <button data-zone="dropdown" aria-label="Columns" title="Columns" className={`${ZBTN_BASE} h-8 w-8 ${ZBTN_VARIANT.outlineGray}`}><Columns3 size={16} /></button>}
         </div>
         ) : (
         <div className="flex items-center justify-end gap-3 px-5 py-3 border-b border-[#e5e7eb]">
@@ -7180,10 +7537,10 @@ function V1mFutureTracked({ provider, period, onProviderChange, onPeriodChange, 
         )}
         <div className="overflow-x-auto">
         {grouped ? (
-        <table className={zone ? "w-full text-sm border-separate border-spacing-0 min-w-[1020px]" : "w-full text-xs min-w-[1020px]"}>
+        <table data-zone="data_table" className={zone ? "w-full text-sm border-separate border-spacing-0 min-w-[1020px]" : "w-full text-xs min-w-[1020px]"}>
           <thead>
             <tr>
-              {zone && <th rowSpan={2} className="w-0 px-3 py-2.5 border-r border-[#e5e7eb] bg-[#f9fafb] align-bottom"><input type="checkbox" className="appearance-none shrink-0 w-3.5 h-3.5 rounded-[4px] border border-[#d1d5db] bg-white align-middle relative cursor-pointer checked:bg-[#2aa7ff] checked:border-[#2aa7ff] after:content-[''] after:absolute after:left-1/2 after:top-[45%] after:-translate-x-1/2 after:-translate-y-1/2 after:w-[4px] after:h-[7px] after:border-white after:border-r-2 after:border-b-2 after:rotate-45" /></th>}
+              {zone && !mvp && <th rowSpan={2} className="w-0 px-3 py-2.5 border-r border-[#e5e7eb] bg-[#f9fafb] align-bottom"><input data-zone="checkbox" type="checkbox" className="appearance-none shrink-0 w-3.5 h-3.5 rounded-[4px] border border-[#d1d5db] bg-white align-middle relative cursor-pointer checked:bg-[#2aa7ff] checked:border-[#2aa7ff] after:content-[''] after:absolute after:left-1/2 after:top-[45%] after:-translate-x-1/2 after:-translate-y-1/2 after:w-[4px] after:h-[7px] after:border-white after:border-r-2 after:border-b-2 after:rotate-45" /></th>}
               <th rowSpan={2} className={zone ? "px-3 py-2.5 border-r border-[#e5e7eb] bg-[#f9fafb] text-[#1f2937] text-sm font-semibold text-left align-bottom min-w-[200px]" : `text-left py-2.5 px-5 align-bottom ${th}`}>Member</th>
               <th rowSpan={2} className={zone ? "px-3 py-2.5 border-r border-[#e5e7eb] bg-[#f9fafb] text-[#1f2937] text-sm font-semibold text-left align-bottom whitespace-nowrap" : `text-left py-2.5 px-3 whitespace-nowrap align-bottom ${th}`}>Payment method</th>
               <th colSpan={2} className={zone ? "px-3 py-2.5 border-r border-b border-[#e5e7eb] bg-[#f9fafb] text-[#0e9f6e] text-sm font-semibold text-center" : `text-center py-2 px-3 border-l border-[#e5e7eb] ${th} text-emerald-600`}>Tracked</th>
@@ -7202,10 +7559,10 @@ function V1mFutureTracked({ provider, period, onProviderChange, onPeriodChange, 
           <tbody>
             {paged.map(m => (
               <tr key={m.name} className={zone ? "group/row h-12 [&>td]:align-middle" : "border-t border-[#e5e7eb] hover:bg-[#f9fafb]"}>
-                {zone && <td className="w-0 px-3 py-2 border-r border-t border-[#e5e7eb] group-hover/row:bg-[#f9fafb] align-middle"><input type="checkbox" className="appearance-none shrink-0 w-3.5 h-3.5 rounded-[4px] border border-[#d1d5db] bg-white align-middle relative cursor-pointer checked:bg-[#2aa7ff] checked:border-[#2aa7ff] after:content-[''] after:absolute after:left-1/2 after:top-[45%] after:-translate-x-1/2 after:-translate-y-1/2 after:w-[4px] after:h-[7px] after:border-white after:border-r-2 after:border-b-2 after:rotate-45" /></td>}
+                {zone && !mvp && <td className="w-0 px-3 py-2 border-r border-t border-[#e5e7eb] group-hover/row:bg-[#f9fafb] align-middle"><input data-zone="checkbox" type="checkbox" className="appearance-none shrink-0 w-3.5 h-3.5 rounded-[4px] border border-[#d1d5db] bg-white align-middle relative cursor-pointer checked:bg-[#2aa7ff] checked:border-[#2aa7ff] after:content-[''] after:absolute after:left-1/2 after:top-[45%] after:-translate-x-1/2 after:-translate-y-1/2 after:w-[4px] after:h-[7px] after:border-white after:border-r-2 after:border-b-2 after:rotate-45" /></td>}
                 <td className={zone ? "px-3 py-2 border-r border-t border-[#e5e7eb] group-hover/row:bg-[#f9fafb]" : "py-3 px-5"}>
                   <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0" style={{ background: m.color }}>{m.avatar}</div>
+                    <div data-zone="avatar" className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0" style={{ background: m.color }}>{m.avatar}</div>
                     <span className={zone ? "text-[#2aa7ff] text-sm hover:underline cursor-pointer" : "font-semibold text-[#111827]"}>{m.name}</span>
                   </div>
                 </td>
@@ -7243,7 +7600,7 @@ function V1mFutureTracked({ provider, period, onProviderChange, onPeriodChange, 
                   <td className={`${open ? "pt-3 pb-1" : "py-3"} px-5`}>
                     <div className="flex items-center gap-2">
                       <ChevronRight size={13} className={`text-[#9ca3af] transition-transform flex-shrink-0 ${open ? "rotate-90" : ""}`} />
-                      <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0" style={{ background: m.color }}>{m.avatar}</div>
+                      <div data-zone="avatar" className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0" style={{ background: m.color }}>{m.avatar}</div>
                       <span className="font-semibold text-[#111827]">{m.name}</span>
                     </div>
                   </td>
@@ -7285,7 +7642,7 @@ function V1mFutureTracked({ provider, period, onProviderChange, onPeriodChange, 
         <div className="flex items-center justify-between gap-3 px-5 py-3 border-t border-[#e5e7eb]">
           <div className="flex items-center gap-3 text-sm text-[#6b7280]">
             <span>Showing {rangeFrom}–{rangeTo} items</span>
-            <span className="inline-flex items-center gap-0.5 border border-[#e5e7eb] rounded-[4px] pl-2.5 pr-1 py-1 text-[#111827] select-none"><span className="font-medium">10</span><span className="material-symbols-rounded" style={{ fontSize: 18 }}>keyboard_arrow_down</span></span>
+            <span data-zone="select" className="inline-flex items-center gap-0.5 border border-[#e5e7eb] rounded-[4px] pl-2.5 pr-1 py-1 text-[#111827] select-none"><span className="font-medium">10</span><span className="material-symbols-rounded" style={{ fontSize: 18 }}>keyboard_arrow_down</span></span>
             <span>Per page</span>
           </div>
           <div className="flex items-center gap-1">
@@ -7293,7 +7650,7 @@ function V1mFutureTracked({ provider, period, onProviderChange, onPeriodChange, 
               <button onClick={() => setPage(p => Math.max(0, p - 1))} className="inline-flex items-center gap-0.5 h-8 pl-1 pr-2.5 rounded-[4px] text-sm text-[#6b7280] hover:text-[#111827] transition-colors"><span className="material-symbols-rounded" style={{ fontSize: 18 }}>chevron_left</span>Previous</button>
             )}
             {Array.from({ length: pageCount }, (_, i) => (
-              <button key={i} onClick={() => setPage(i)} className={`relative h-8 min-w-[32px] px-2 rounded-[4px] text-sm transition-colors ${i === safePage ? "bg-[#eaf6ff] text-[#0168dd] font-medium" : "text-[#6b7280] font-normal hover:bg-[#f9fafb]"}`}>{i + 1}{i === safePage && <span className="absolute left-1/2 -translate-x-1/2 -bottom-[1.5px] w-[18px] h-[3px] rounded-full bg-[#0168dd]" />}</button>
+              <button data-zone="pagination" key={i} onClick={() => setPage(i)} className={`relative h-8 min-w-[32px] px-2 rounded-[4px] text-sm transition-colors ${i === safePage ? "bg-[#eaf6ff] text-[#0168dd] font-medium" : "text-[#6b7280] font-normal hover:bg-[#f9fafb]"}`}>{i + 1}{i === safePage && <span className="absolute left-1/2 -translate-x-1/2 -bottom-[1.5px] w-[18px] h-[3px] rounded-full bg-[#0168dd]" />}</button>
             ))}
             <button onClick={() => setPage(p => Math.min(pageCount - 1, p + 1))} disabled={safePage >= pageCount - 1} className="inline-flex items-center gap-0.5 h-8 pl-2.5 pr-1 rounded-[4px] text-sm text-[#6b7280] hover:text-[#111827] disabled:opacity-40 disabled:cursor-not-allowed transition-colors">Next<span className="material-symbols-rounded" style={{ fontSize: 18 }}>chevron_right</span></button>
           </div>
@@ -7317,7 +7674,7 @@ function V1mFutureTracked({ provider, period, onProviderChange, onPeriodChange, 
       {showHow && (<>
         <div className="fixed inset-0 z-40 bg-black/30" onClick={() => setShowHow(false)} />
         <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-[480px] max-w-full max-h-[85vh] flex flex-col pointer-events-auto">
+          <div data-zone="dialog" className="bg-white rounded-xl shadow-2xl w-[480px] max-w-full max-h-[85vh] flex flex-col pointer-events-auto">
             <div className="flex items-start justify-between px-5 py-5 flex-shrink-0">
               <div>
                 <h2 className="text-lg font-semibold text-[#111827]">How we get there</h2>
@@ -7329,15 +7686,15 @@ function V1mFutureTracked({ provider, period, onProviderChange, onPeriodChange, 
               <div className="flex items-stretch gap-1.5">
                 <div className="flex-1 rounded-lg border border-[#e5e7eb] bg-[#f9fafb] px-2.5 py-2"><p className="text-xs font-semibold uppercase tracking-wider text-[#6b7280] leading-tight">Typical period</p><p className="text-base font-bold text-[#111827] mt-1.5 leading-none tracking-tight">{fmt0(typical)}</p><p className="text-xs text-[#6b7280] mt-1.5 leading-tight">recent monthly avg</p></div>
                 <span className="flex items-center text-[#9ca3af] font-semibold text-sm flex-shrink-0 px-0.5">+</span>
-                <div className="flex-1 rounded-lg border border-[#e5e7eb] bg-[#f9fafb] px-2.5 py-2"><p className="text-xs font-semibold uppercase tracking-wider text-[#6b7280] leading-tight">Adjustments</p><p className="text-base font-bold text-[#0e9f6e] mt-1.5 leading-none tracking-tight">+{adjPct}%</p><p className="text-xs text-[#6b7280] mt-1.5 leading-tight">Headcount + season</p></div>
+                <div className="flex-1 rounded-lg border border-[#e5e7eb] bg-[#f9fafb] px-2.5 py-2"><p className="text-xs font-semibold uppercase tracking-wider text-[#6b7280] leading-tight">Adjustments</p><p className="text-base font-bold text-[#0168dd] mt-1.5 leading-none tracking-tight">+{adjPct}%</p><p className="text-xs text-[#6b7280] mt-1.5 leading-tight">Headcount + season</p></div>
                 <span className="flex items-center text-[#9ca3af] font-semibold text-sm flex-shrink-0 px-0.5">=</span>
                 <div className="flex-1 rounded-lg border border-[#bcd4f2] bg-[#f0f6ff] px-2.5 py-2"><p className="text-xs font-semibold uppercase tracking-wider text-[#0168dd] leading-tight">Projected</p><p className="text-base font-bold text-[#111827] mt-1.5 leading-none tracking-tight">{fmt0(total)}</p><p className="text-xs text-[#6b7280] mt-1.5 leading-tight">this period</p></div>
               </div>
               <div className="pt-4">
-                <p className="text-sm text-[#6b7280] leading-snug"><span className="font-semibold text-[#0e9f6e]">+{adjPct}%</span> comes from trends in your payment history:</p>
+                <p className="text-sm text-[#6b7280] leading-snug"><span className="font-semibold text-[#0168dd]">+{adjPct}%</span> comes from trends in your payment history:</p>
                 <div className="mt-2 space-y-1.5 text-sm">
                   <div className="flex items-baseline gap-1.5"><span className="font-semibold text-[#0e9f6e] w-[34px] flex-shrink-0">+{hcPct}%</span><span className="text-[#111827] font-medium flex-shrink-0">Headcount change</span><span className="text-[#6b7280] truncate">· {v1CurrMembers} this cycle vs avg {v1AvgMembers}</span></div>
-                  <div className="flex items-baseline gap-1.5"><span className="font-semibold text-[#0e9f6e] w-[34px] flex-shrink-0">+{seasonPct}%</span><span className="text-[#111827] font-medium flex-shrink-0">Seasonality</span><span className="text-[#6b7280] truncate">· June is typically above average</span></div>
+                  <div className="flex items-baseline gap-1.5"><span className="font-semibold text-[#0168dd] w-[34px] flex-shrink-0">+{seasonPct}%</span><span className="text-[#111827] font-medium flex-shrink-0">Seasonality</span><span className="text-[#6b7280] truncate">· June is typically above average</span></div>
                 </div>
               </div>
               <div className="pt-4">
@@ -7361,7 +7718,7 @@ function V1mFutureTracked({ provider, period, onProviderChange, onPeriodChange, 
       {showBreakdownInfo && (<>
         <div className="fixed inset-0 z-40 bg-black/30" onClick={() => setShowBreakdownInfo(false)} />
         <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-[640px] max-w-full max-h-[85vh] flex flex-col pointer-events-auto">
+          <div data-zone="dialog" className="bg-white rounded-xl shadow-2xl w-[640px] max-w-full max-h-[85vh] flex flex-col pointer-events-auto">
             <div className="flex items-start justify-between px-5 py-5 flex-shrink-0">
               <div>
                 <h2 className="text-lg font-semibold text-[#111827]">{segLens === "source" ? "Tracked vs. projected" : "Payroll breakdown"}</h2>
@@ -7794,18 +8151,15 @@ const v2CycleForProvider: Record<string, string> = {
 // ─── Root ──────────────────────────────────────────────────────────────────────
 
 // Version list for the Final UI floating switcher (the template shell has no switcher).
-const FINAL_VERSIONS: [string, string][] = [["v1","1"],["v1c","1C"],["v1d","1D"],["v1e","1E"],["v1f","1F"],["v1g","1G"],["v1h","1H"],["v1i","1I"],["v1j","1J"],["v1k","1K"],["v1l","1L"],["v1m","1M"],["v1n","1N"],["final","Final UI"],["v2","2"]];
+const FINAL_VERSIONS: [string, string][] = [["v1","1"],["v1c","1C"],["v1d","1D"],["v1e","1E"],["v1f","1F"],["v1g","1G"],["v1h","1H"],["v1i","1I"],["v1j","1J"],["v1k","1K"],["v1l","1L"],["v1m","1M"],["v1n","1N"],["final","Final UI"],["mvp","MVP Final UI"],["v2","2"]];
 
 // Final UI — wraps the payments report in the real Hubstaff shell template
 // (left panel + top header + design annotations), vendored from the design repo
 // and served from /public/hubstaff-template. The shell injects fixed chrome into
 // <body> and offsets #shell-content; there is no teardown API, so we clean it up
 // manually when leaving this version.
-function FinalUIShell({ children, onVersionChange, finalState, onFinalStateChange }: { children: ReactNode; onVersionChange: (v: string) => void; finalState: string; onFinalStateChange: (s: string) => void }) {
+function FinalUIShell({ children, version = "final", onVersionChange, finalState, onFinalStateChange }: { children: ReactNode; version?: string; onVersionChange: (v: string) => void; finalState: string; onFinalStateChange: (s: string) => void }) {
   useEffect(() => {
-    const base = (import.meta as any).env.BASE_URL as string;
-    let cancelled = false;
-
     [
       "https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600&display=swap",
       "https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@18,400,0,0;24,400,0,0&display=swap",
@@ -7815,42 +8169,36 @@ function FinalUIShell({ children, onVersionChange, finalState, onFinalStateChang
       document.head.appendChild(l);
     });
 
-    const loadScript = (src: string) => new Promise<void>((res, rej) => {
-      const found = document.querySelector(`script[data-hs="${src}"]`) as (HTMLScriptElement & { _loaded?: boolean }) | null;
-      if (found) { if (found._loaded) res(); else found.addEventListener("load", () => res()); return; }
-      const s = document.createElement("script") as HTMLScriptElement & { _loaded?: boolean };
-      s.src = src; s.dataset.hs = src;
-      s.addEventListener("load", () => { s._loaded = true; res(); });
-      s.addEventListener("error", () => rej(new Error("failed to load " + src)));
+    // Inject each vendored shell script inline (classic script — runs synchronously on
+    // append). Bundled via ?raw so nothing is fetched from a separate folder at runtime.
+    const injectScript = (id: string, source: string) => {
+      if (document.querySelector(`script[data-hs="${id}"]`)) return;
+      const s = document.createElement("script");
+      s.dataset.hs = id;
+      s.textContent = source;
       document.body.appendChild(s);
-    });
+    };
 
-    (async () => {
-      await loadScript(base + "hubstaff-template/hubstaff-shell.js");
-      if (cancelled) return;
-      const HS = (window as any).HubstaffShell;
-      if (HS && !document.getElementById("hs-topbar")) HS.init({ activeItem: "payments", logoHref: "#" });
-      await loadScript(base + "hubstaff-template/design-annotations.js");
-      await loadScript(base + "hubstaff-template/design-annotations.data.js");
-      if (cancelled) return;
-      const DA = (window as any).DesignAnnotations;
-      const data = (window as any).DESIGN_ANNOTATIONS_DATA;
-      if (DA && data && !(window as any).__daInited) {
-        DA.init({ pages: data.pages, annotations: data.annotations, mount: "#shell-content", topOffset: 52, trigger: ["contextmenu", "button"], taskCenter: { anchor: ".hs-timer", position: "after" } });
-        (window as any).__daInited = true;
-      }
-      // Dev Mode inspector — sits next to the Design tasks control in the top bar.
-      await loadScript(base + "hubstaff-template/dev-mode.js");
-      if (cancelled) return;
-      const DM = (window as any).DevMode;
-      if (DM && !(window as any).__dmInited) {
-        DM.init({ topOffset: 52, toggleAnchor: ".hs-timer" });
-        (window as any).__dmInited = true;
-      }
-    })();
+    injectScript("hubstaff-shell", hubstaffShellSrc);
+    const HS = (window as any).HubstaffShell;
+    if (HS && !document.getElementById("hs-topbar")) HS.init({ activeItem: "payments", logoHref: "#" });
+    injectScript("design-annotations", designAnnotationsSrc);
+    injectScript("design-annotations-data", designAnnotationsDataSrc);
+    const DA = (window as any).DesignAnnotations;
+    const data = (window as any).DESIGN_ANNOTATIONS_DATA;
+    if (DA && data && !(window as any).__daInited) {
+      DA.init({ pages: data.pages, annotations: data.annotations, mount: "#shell-content", topOffset: 52, trigger: ["contextmenu", "button"], taskCenter: { anchor: ".hs-timer", position: "after" } });
+      (window as any).__daInited = true;
+    }
+    // Dev Mode inspector — sits next to the Design tasks control in the top bar.
+    injectScript("dev-mode", devModeSrc);
+    const DM = (window as any).DevMode;
+    if (DM && !(window as any).__dmInited) {
+      DM.init({ topOffset: 52, toggleAnchor: ".hs-timer" });
+      (window as any).__dmInited = true;
+    }
 
     return () => {
-      cancelled = true;
       try { (window as any).DesignAnnotations?.destroy?.(); } catch { /* noop */ }
       try { (window as any).DevMode?.destroy?.(); } catch { /* noop */ }
       (window as any).__daInited = false;
@@ -7867,7 +8215,7 @@ function FinalUIShell({ children, onVersionChange, finalState, onFinalStateChang
       <div id="shell-content">{children}</div>
       <div className="fixed bottom-4 left-4 z-[9999] flex items-center gap-1.5 bg-white/95 backdrop-blur border border-[#e5e7eb] rounded-lg shadow-lg px-2.5 py-1.5">
         <span className="text-[9px] font-semibold uppercase tracking-widest text-[#6b7280]">Version</span>
-        <select value="final" onChange={e => onVersionChange(e.target.value)} className="text-[11px] font-medium text-[#111827] bg-transparent outline-none cursor-pointer">
+        <select value={version} onChange={e => onVersionChange(e.target.value)} className="text-[11px] font-medium text-[#111827] bg-transparent outline-none cursor-pointer">
           {FINAL_VERSIONS.map(([v, label]) => <option key={v} value={v}>{label}</option>)}
         </select>
         <span className="w-px h-3.5 bg-[#e5e7eb]" />
@@ -7883,15 +8231,15 @@ function FinalUIShell({ children, onVersionChange, finalState, onFinalStateChang
 }
 
 export default function App() {
-  const [version, setVersion] = useState<"v1"|"v1c"|"v1d"|"v1e"|"v1f"|"v1g"|"v1h"|"v1i"|"v1j"|"v1k"|"v1l"|"v1m"|"v1n"|"final"|"v2">("final");
+  const [version, setVersion] = useState<"v1"|"v1c"|"v1d"|"v1e"|"v1f"|"v1g"|"v1h"|"v1i"|"v1j"|"v1k"|"v1l"|"v1m"|"v1n"|"final"|"mvp"|"v2">("final");
   const [showStatusBreakdown, setShowStatusBreakdown] = useState(false);
   const [seasonalityOn, setSeasonalityOn] = useState(true);
   const [finalState, setFinalState] = useState<"filled" | "initial" | "empty">("filled"); // Final UI state variant (filled = the one being built)
 
-  if (version === "final") {
+  if (version === "final" || version === "mvp") {
     return (
-      <FinalUIShell onVersionChange={(v) => setVersion(v as typeof version)} finalState={finalState} onFinalStateChange={(s) => setFinalState(s as typeof finalState)}>
-        <VersionFinalUI showStatusBreakdown={showStatusBreakdown} seasonalityOn={seasonalityOn} state={finalState} />
+      <FinalUIShell version={version} onVersionChange={(v) => setVersion(v as typeof version)} finalState={finalState} onFinalStateChange={(s) => setFinalState(s as typeof finalState)}>
+        <VersionFinalUI showStatusBreakdown={showStatusBreakdown} seasonalityOn={seasonalityOn} state={finalState} variant={version === "mvp" ? "mvp" : "final"} />
       </FinalUIShell>
     );
   }
@@ -7939,6 +8287,7 @@ export default function App() {
               <button onClick={() => setVersion("v1m")} className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${version === "v1m" ? "bg-white text-[#0168dd] shadow-sm" : "text-[#6b7280] hover:text-[#111827]"}`}>1M</button>
               <button onClick={() => setVersion("v1n")} className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${version === "v1n" ? "bg-white text-[#0168dd] shadow-sm" : "text-[#6b7280] hover:text-[#111827]"}`}>1N</button>
               <button onClick={() => setVersion("final")} className={`px-3 py-1 rounded-md text-xs font-semibold transition-all whitespace-nowrap ${(version as string) === "final" ? "bg-white text-[#0168dd] shadow-sm" : "text-[#6b7280] hover:text-[#111827]"}`}>Final UI</button>
+              <button onClick={() => setVersion("mvp")} className={`px-3 py-1 rounded-md text-xs font-semibold transition-all whitespace-nowrap ${(version as string) === "mvp" ? "bg-white text-[#0168dd] shadow-sm" : "text-[#6b7280] hover:text-[#111827]"}`}>MVP Final UI</button>
               <button onClick={() => setVersion("v2")}  className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${version === "v2"  ? "bg-white text-[#0168dd] shadow-sm" : "text-[#6b7280] hover:text-[#111827]"}`}>2</button>
             </div>
             <div className="flex items-center gap-2 text-xs text-[#6b7280]"><Clock size={13} /><span>0:00:00</span></div>
