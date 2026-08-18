@@ -1619,6 +1619,49 @@ function V1cTriageDrawer({ open, onClose }: { open: boolean; onClose: () => void
 // Wise isn't a connected payout method). No rate/%/amount is ever shown — we link out.
 const WISE_INTEREST_URL = "https://wise.com/us/interest/";
 const WiseVerContext = createContext(0);
+// Off-schedule layout version (repurposed the old Wise-interest switcher): 1 = card inside the funding row, 2 = top-level 25% card.
+const OffSchedVerContext = createContext<1 | 2>(1);
+// "Payments over time" chart control version: 1 = 3/6/12M buttons + month stepper; 2 = single Zone date-range picker (pick any span up to 12 months).
+const PmtVerContext = createContext<1 | 2>(1);
+// Spillover (late-approved timesheets) scenario for the funding schedule + alerts. null = off.
+const SpilloverContext = createContext<"yellow" | "red" | "mixed" | null>(null);
+// Late-approved amounts folded into the imminent ("next") card's method rows in the red state.
+const v1SpilloverLate: Record<string, number> = { wise: 1200, paypal: 800 };
+const v1SpilloverTotal = 2000;
+// Members whose timesheets await approval (the "pending" spillover): Wise 700+500, PayPal 800 → $2,000 across 3 members.
+const v1SpilloverMembers: { id: string; name: string; role: string; provider: string; amount: number }[] = [
+  { id: "sm1", name: "Ana Costa", role: "Design", provider: "wise", amount: 700 },
+  { id: "sm2", name: "Bruno Lima", role: "Engineering", provider: "wise", amount: 500 },
+  { id: "sm3", name: "Chloe Park", role: "Support", provider: "paypal", amount: 800 },
+];
+// Mixed "Off-schedule" — "still owed · past periods": people whose timesheets missed the cycle cutoff and need approval.
+// Approving a person moves them to "ready to fund" — the Fund-by-today card (they missed the date, so fund today, pay tomorrow).
+const v1OwedApproval: { id: string; name: string; provider: string; amount: number; hours: string }[] = [
+  { id: "ap1", name: "Ana Costa", provider: "wise", amount: 1500, hours: "46h 20m" },
+  { id: "ap2", name: "Bruno Lima", provider: "paypal", amount: 1200, hours: "38h 05m" },
+  { id: "ap3", name: "Chloe Park", provider: "payoneer", amount: 1300, hours: "41h 40m" },
+  { id: "ap4", name: "Diego Alves", provider: "wise", amount: 1000, hours: "32h 15m" },
+  { id: "ap5", name: "Elena Rossi", provider: "paypal", amount: 900, hours: "29h 50m" },
+  { id: "ap6", name: "Farah Haddad", provider: "payoneer", amount: 1100, hours: "35h 10m" },
+  { id: "ap7", name: "Grace Okoro", provider: "deel", amount: 800, hours: "26h 30m" },
+  { id: "ap8", name: "Hiro Tanaka", provider: "wise", amount: 1200, hours: "39h 00m" },
+];
+const v1OwedTotal = v1OwedApproval.reduce((s, m) => s + m.amount, 0); // $9,000
+// Not-scheduled people — member-level breakdown for the details dialog (Wise 2 = $4,000, Export 2 = $2,400).
+const v1NotSchedPeople: { id: string; name: string; provider: string; accrued: number }[] = [
+  { id: "ns1", name: "Frank Ncube", provider: "wise", accrued: 2200 },
+  { id: "ns2", name: "Grace Okoro", provider: "wise", accrued: 1800 },
+  { id: "ns3", name: "Hana Suzuki", provider: "export", accrued: 1400 },
+  { id: "ns4", name: "Igor Petrov", provider: "export", accrued: 1000 },
+];
+// "Not scheduled" — members with no pay period: cost accrues, no funding date. Grouped by payout method.
+const NotSchedContext = createContext(false);
+const v1NotSchedRows: { id: string; label: string; members: number; accrued: number }[] = [
+  { id: "wise", label: "Wise", members: 2, accrued: 4000 },
+  { id: "export", label: "Export", members: 2, accrued: 2400 },
+];
+const v1NotSchedMembers = v1NotSchedRows.reduce((s, r) => s + r.members, 0);
+const v1NotSchedTotal = v1NotSchedRows.reduce((s, r) => s + r.accrued, 0);
 
 function AddAdjustmentDialog({
   open, onClose, onSave, base, currentProjection, initial, zone = false,
@@ -2968,6 +3011,48 @@ const v1eMonthNav: V1eBar[] = [
   { label: "Nov '26", actual: 0, projected: 125000 },
   { label: "Dec '26", actual: 0, projected: 129300 },
 ];
+
+// ── Continuous month timeline for the Explore chart's start-month navigation (Final UI) ──
+// Past = settled actuals · Jun '26 = current (split actual/projected) · future = projected.
+// `yoy` = same month one year earlier (used by the "vs last year" comparison bars).
+// The 3M/6M/12M control picks the WINDOW LENGTH; `startMonth` picks the left edge, so the
+// user can slide the window into the past or future instead of always starting from "now".
+const v1eTimeline: (V1eBar & { yoy: number })[] = [
+  { label: "Jul '25", actual: 100700, projected: 0, yoy: 92600 },
+  { label: "Aug '25", actual: 106800, projected: 0, yoy: 98100 },
+  { label: "Sep '25", actual: 103800, projected: 0, yoy: 95500 },
+  { label: "Oct '25", actual: 108600, projected: 0, yoy: 99900 },
+  { label: "Nov '25", actual: 106100, projected: 0, yoy: 97600 },
+  { label: "Dec '25", actual: 115900, projected: 0, yoy: 106600 },
+  { label: "Jan '26", actual: 109000, projected: 0, yoy: 100300 },
+  { label: "Feb '26", actual: 113000, projected: 0, yoy: 104000 },
+  { label: "Mar '26", actual: 104000, projected: 0, yoy: 95700 },
+  { label: "Apr '26", actual: 117000, projected: 0, yoy: 107600 },
+  { label: "May '26", actual: 112000, projected: 0, yoy: 103000 },
+  { label: "Jun '26", actual: 66600, projected: v1AvgMonthly - 66600, isCurrent: true, yoy: 97600 },
+  { label: "Jul '26", actual: 0, projected: 121000, yoy: 100300 },
+  { label: "Aug '26", actual: 0, projected: 117800, yoy: 98000 },
+  { label: "Sep '26", actual: 0, projected: 123000, yoy: 102200 },
+  { label: "Oct '26", actual: 0, projected: 120000, yoy: 100500 },
+  { label: "Nov '26", actual: 0, projected: 125000, yoy: 104300 },
+  { label: "Dec '26", actual: 0, projected: 129300, yoy: 107400 },
+  { label: "Jan '27", actual: 0, projected: 122000, yoy: 102600 },
+  { label: "Feb '27", actual: 0, projected: 124100, yoy: 104500 },
+  { label: "Mar '27", actual: 0, projected: 127200, yoy: 106300 },
+  { label: "Apr '27", actual: 0, projected: 126200, yoy: 105300 },
+  { label: "May '27", actual: 0, projected: 130300, yoy: 108400 },
+];
+const v1eCurrentLabel = "Jun '26"; // "today" in the prototype's world
+const v1eWinLen: Record<V1eRange, number> = { "1M": 1, "3M": 3, "6M": 6, "12M": 12 };
+// "Jun – Aug 2026" / "Jun 2026 – May 2027" from the window's first & last bars.
+function v1eRangePeriodLabel(bars: { label: string }[]): string {
+  if (!bars.length) return "";
+  const shortMon = (l: string) => l.replace(/ '\d\d$/, "");
+  const yr = (l: string) => { const m = l.match(/'(\d\d)$/); return m ? `20${m[1]}` : "2026"; };
+  const f = bars[0].label, l = bars[bars.length - 1].label;
+  if (bars.length === 1) return `${v1eMonthNames[shortMon(f)] ?? shortMon(f)} ${yr(f)}`;
+  return yr(f) === yr(l) ? `${shortMon(f)} – ${shortMon(l)} ${yr(l)}` : `${shortMon(f)} ${yr(f)} – ${shortMon(l)} ${yr(l)}`;
+}
 
 // Segment definitions — the same three lenses V1c offers, reused across ranges.
 type V1eSeg = "source" | "channel" | "type";
@@ -4587,10 +4672,10 @@ function InfoTip({ text, width = 200 }: { text: string; width?: number }) {
 const v1InfoText = {
   unknown:   "Hubstaff can't read this account's balance automatically. Check it manually in your provider account to confirm you can cover the amount due.",
   actuals:   "Payroll already paid out this period, from completed runs.",
-  projected: "Our estimate of payouts still ahead, based on your payment history.",
-  confirmed: "Locked in — tracked hours and overtime already recorded. Won't change.",
-  planned:   "Amounts already scheduled: fixed pay, PTO / holiday, and payroll adjustments.",
-  projAgg:   "An estimate of the hours and bonuses still to come — shown in aggregate, not per person.",
+  projected: "Estimated hourly earnings still to be tracked this period — replaced by Tracked as real hours come in.",
+  confirmed: "Confirmed for this period — tracked hours, overtime, and any fixed pay already earned. Won't change.",
+  planned:   "Scheduled but not yet earned: upcoming PTO, holidays, and payroll adjustments. Moves to Tracked once earned.",
+  projAgg:   "The estimated hourly earnings not yet tracked this period. As hours are tracked, this estimate is replaced by Tracked. Shown in aggregate, not per person.",
 };
 const v1SegLegendInfo: Record<string, string> = { Actuals: v1InfoText.actuals, Confirmed: v1InfoText.actuals, Tracked: v1InfoText.actuals, Projected: v1InfoText.projected };
 const v1SourceLegendInfo: Record<string, string> = { Confirmed: v1InfoText.confirmed, Tracked: v1InfoText.confirmed, Planned: v1InfoText.planned, "~Projected": v1InfoText.projAgg };
@@ -4599,7 +4684,57 @@ const v1SourceLegendInfo: Record<string, string> = { Confirmed: v1InfoText.confi
 const v1gManualProviders = new Set(["bitwage", "gusto", "export"]);
 const v1gTriggerTime = "9:00 AM PST"; // scheduled auto-trigger time (adjustable via the pencil)
 
-function V1kFundDateCard({ e, v1l = false, zone = false, condensed = false, mvp = false, onProviderClick }: { e: V1gFundDate; v1l?: boolean; zone?: boolean; condensed?: boolean; mvp?: boolean; onProviderClick?: (providerId: string) => void }) {
+// Pending-approval popover — lists the members whose timesheets await approval (scope = "all" or a provider id).
+// Trigger = the alert's "3 timesheets" link or a yellow pill; each member row links out to that member.
+function PendingMembersTrigger({ scope = "all", align = "left", className = "", children }: { scope?: string; align?: "left" | "right"; className?: string; children: ReactNode }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (ev: MouseEvent) => { if (ref.current && !ref.current.contains(ev.target as Node)) setOpen(false); };
+    const onEsc = (ev: KeyboardEvent) => { if (ev.key === "Escape") setOpen(false); };
+    document.addEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onEsc);
+    return () => { document.removeEventListener("mousedown", onDoc); document.removeEventListener("keydown", onEsc); };
+  }, [open]);
+  const members = v1SpilloverMembers.filter(m => scope === "all" || m.provider === scope);
+  const total = members.reduce((s, m) => s + m.amount, 0);
+  return (
+    <span ref={ref} className="relative inline-flex align-baseline">
+      <button type="button" onClick={ev => { ev.preventDefault(); ev.stopPropagation(); setOpen(o => !o); }} className={className}>{children}</button>
+      {open && (
+        <div className={`absolute z-50 top-full mt-2 ${align === "right" ? "right-0" : "left-0"} w-72 rounded-lg border border-[#e5e7eb] bg-white shadow-xl text-left cursor-default`} onClick={ev => ev.stopPropagation()}>
+          <div className={`absolute -top-[5px] ${align === "right" ? "right-4" : "left-4"} w-2.5 h-2.5 rotate-45 bg-white border-l border-t border-[#e5e7eb]`} />
+          <div className="px-3 pt-2.5 pb-2">
+            <p className="text-[13px] font-semibold text-[#111827]">Pending timesheet approval</p>
+            <p className="text-[11px] leading-snug text-[#6b7280] mt-0.5">Approve these hours to include them in this payment.</p>
+          </div>
+          <div className="flex items-center gap-2 px-3 py-1 border-y border-[#f3f4f6] text-[10px] font-semibold uppercase tracking-wide text-[#9ca3af]">
+            <span className="flex-1">Team member</span>
+            <span className="w-16">Provider</span>
+            <span className="w-14 text-right">Pending</span>
+          </div>
+          <div className="max-h-56 overflow-y-auto">
+            {members.map(m => (
+              <div key={m.id} className="flex items-center gap-2 px-3 py-1.5 hover:bg-[#f3f4f6] transition-colors">
+                <span className="flex-1 min-w-0 text-[13px]"><a href="#" onClick={ev => ev.preventDefault()} className="block text-[#111827] underline underline-offset-2 decoration-[#9ca3af] hover:decoration-[#111827] truncate">{m.name}</a></span>
+                <span className="w-16 flex items-center gap-1 text-[13px] text-[#6b7280] min-w-0"><ProviderLogo id={m.provider} size={12} /><span className="truncate">{v1gProviderMeta[m.provider]?.name ?? m.provider}</span></span>
+                <span className="w-14 text-right text-[13px] tabular-nums text-[#111827] flex-shrink-0">+{fmt0(m.amount)}</span>
+              </div>
+            ))}
+          </div>
+          <div className="flex items-center gap-2 px-3 py-1.5 border-t border-[#e5e7eb] text-[13px] font-semibold">
+            <span className="flex-1 text-[#111827]">Total pending</span>
+            <span className="w-16" />
+            <span className="w-14 text-right tabular-nums text-[#723b13]">+{fmt0(total)}</span>
+          </div>
+        </div>
+      )}
+    </span>
+  );
+}
+
+function V1kFundDateCard({ e, v1l = false, zone = false, condensed = false, mvp = false, noSpillover = false, onProviderClick }: { e: V1gFundDate; v1l?: boolean; zone?: boolean; condensed?: boolean; mvp?: boolean; noSpillover?: boolean; onProviderClick?: (providerId: string) => void }) {
   const wiseVer = useContext(WiseVerContext);
   // Zone typography (from app.hubstaff.com/zone/docs/typography + real staging table):
   // body text = 14px (text-sm), labels = 12px (text-xs), Roboto, gray-900/700/500.
@@ -4616,10 +4751,24 @@ function V1kFundDateCard({ e, v1l = false, zone = false, condensed = false, mvp 
   const rowPad = zone ? "py-2" : "py-2";
   const headPad = zone ? "pb-2" : "pb-1.5";
   const isNext = e.tag === "next";
+  const spilloverLvlCtx = useContext(SpilloverContext);
+  const spilloverLvl = noSpillover ? null : spilloverLvlCtx; // the "Fund by today" card reuses this card but has no pending/late markers
+  const lateFold = spilloverLvl === "red" && isNext; // amounts fold into the imminent card's method rows (red only)
+  const lateMark = spilloverLvl != null && isNext;   // late marker shows on affected methods in yellow AND red
+  const lateOf = (id: string) => (lateFold ? (v1SpilloverLate[id] ?? 0) : 0);
+  const marks = (id: string) => lateMark && v1SpilloverLate[id] != null;
+  const markClr = spilloverLvl === "red" ? "text-[#c81e1e]" : "text-[#8e4b10]"; // red in red, amber in yellow
+  const yellowPending = spilloverLvl === "yellow" && isNext; // yellow: pending approvals shown as amount pills next to Due/Total (base numbers stay confirmed, not folded)
+  const pendingOf = (id: string) => (yellowPending ? (v1SpilloverLate[id] ?? 0) : 0);
+  const yellowPill = (amount: number, scope: string, suffix?: string) => (
+    <PendingMembersTrigger scope={scope} align="right" className="inline-flex items-center gap-0.5 align-middle rounded-full bg-[#fdf6b2] text-[#723b13] text-[10px] font-medium px-1.5 py-0.5 whitespace-nowrap hover:bg-[#fce96a] transition-colors cursor-pointer">
+      <span className="material-symbols-rounded" style={{ fontSize: 11 }}>history</span>+{fmt0(amount)}{suffix ? <span className="font-normal ml-0.5">{suffix}</span> : null}
+    </PendingMembersTrigger>
+  );
   const projected = e.tag === "projected";
   const check = <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>;
-  const fundTotal = e.providers.reduce((s, p) => s + v1jAddFor(p.id, p.amount).amount, 0);
-  const dueTotal = e.providers.reduce((s, p) => s + p.amount, 0);
+  const fundTotal = e.providers.reduce((s, p) => s + v1jAddFor(p.id, p.amount + lateOf(p.id)).amount, 0);
+  const dueTotal = e.providers.reduce((s, p) => s + p.amount + lateOf(p.id), 0);
   const monthDay = (e.fundBy ?? "").split(", ")[1] ?? e.fundBy;
   const shortDay = (e.fundBy ?? "").split(", ")[0];
   const weekday = v1kDowFull[shortDay] ?? "";
@@ -4627,12 +4776,18 @@ function V1kFundDateCard({ e, v1l = false, zone = false, condensed = false, mvp 
   const [showDialog, setShowDialog] = useState(false);
 
   const providerTable = (
-    <table data-zone="table" className="w-full">
+    <table data-zone="table" className="w-full table-fixed">
+      <colgroup>
+        <col />
+        <col className="w-[24%]" />
+        {!mvp && <col className="w-[18%]" />}
+        {!mvp && <col className="w-[18%]" />}
+      </colgroup>
       <thead>
         <tr className={`${zt.head} font-semibold uppercase tracking-wide`}>
           <th className={`text-left font-semibold ${headPad} border-b border-[#e5e7eb]`}>Payout method</th>
-          {!mvp && <th className={`text-right font-semibold ${headPad} pl-4 border-b border-[#e5e7eb]`}>Balance</th>}
           <th className={`text-right font-semibold ${headPad} pl-4 border-b border-[#e5e7eb]`}>Due</th>
+          {!mvp && <th className={`text-right font-semibold ${headPad} pl-4 border-b border-[#e5e7eb]`}>Balance</th>}
           {!mvp && <th className={`text-right font-semibold ${headPad} pl-4 border-b border-[#e5e7eb]`}>{e.funded ? "Status" : "Fund"}</th>}
         </tr>
       </thead>
@@ -4640,7 +4795,10 @@ function V1kFundDateCard({ e, v1l = false, zone = false, condensed = false, mvp 
         {e.providers.map(p => {
           const meta = v1gProviderMeta[p.id];
           const bal = v1jBalances[p.id];
-          const res = v1jAddFor(p.id, p.amount);
+          const late = lateOf(p.id);
+          const mark = spilloverLvl === "red" && marks(p.id); // name marker: red only (yellow shows a pending pill by the Due)
+          const pending = pendingOf(p.id);
+          const res = v1jAddFor(p.id, p.amount + late);
           const cadence = v1mProviderCycles[p.id]?.cycle ?? "Monthly";
           return (
             <tr key={p.id} className={`border-b last:border-0 ${zone ? "border-[#f3f4f6]" : "border-[#f3f4f6]"}`}>
@@ -4650,11 +4808,24 @@ function V1kFundDateCard({ e, v1l = false, zone = false, condensed = false, mvp 
                   {p.id === "export" ? (
                     <span className={`${zt.name} font-medium ${zt.nameColor} truncate`}>{meta.name}</span>
                   ) : (
-                    <a href="#" onClick={ev => { ev.preventDefault(); onProviderClick?.(p.id); }} className={`${zt.name} font-medium ${zt.nameColor} underline decoration-[#9ca3af] decoration-[1.5px] underline-offset-2 hover:decoration-[#111827] truncate min-w-0`}>
+                    <a href="#" onClick={ev => { ev.preventDefault(); onProviderClick?.(p.id); }} className={`${zt.name} font-medium ${zt.nameColor} underline decoration-[#9ca3af] decoration-[1.5px] underline-offset-2 hover:decoration-[#111827] whitespace-nowrap flex-shrink-0`}>
                       {meta.name}
                     </a>
                   )}
-                  {v1l && <span className={`${zt.cadence} whitespace-nowrap flex-shrink-0`}><span className="text-[#d1d5db] mx-1">·</span>{cadence}</span>}
+                  {/* Pay period(s) inline next to the name — one or two shown as words, three+ collapsed to a count. Full list on hover. */}
+                  {v1l && (p.periods && p.periods.length ? (
+                    <span className={`${zt.cadence} whitespace-nowrap flex-shrink-0 relative group inline-flex items-center cursor-help`}>
+                      <span className="text-[#d1d5db] mx-1">·</span>
+                      <span className="underline decoration-dotted decoration-[#9ca3af] underline-offset-2">{p.periods.length > 2 ? `${p.periods.length} periods` : p.periods.map(pd => pd.type).join(" • ")}</span>
+                      <span className="pointer-events-none absolute left-3 top-full mt-1 z-40 hidden group-hover:block bg-[#111827] text-white text-[11px] font-normal rounded-md px-2.5 py-2 shadow-lg whitespace-nowrap text-left normal-case">
+                        <span className="block font-semibold mb-1">This funding includes</span>
+                        {p.periods.map(pd => <span key={pd.type} className="block leading-relaxed">{pd.type}{pd.dates ? <span className="text-[#9ca3af]"> — {pd.dates}</span> : null}</span>)}
+                      </span>
+                    </span>
+                  ) : (
+                    <span className={`${zt.cadence} whitespace-nowrap flex-shrink-0`}><span className="text-[#d1d5db] mx-1">·</span>{cadence}</span>
+                  ))}
+                  {mark && <span title={late > 0 ? `${fmt0(late)} approved after the cycle closed` : "Has timesheets awaiting approval — may be added to this payment"} aria-label="Late-approved timesheets" className={`inline-flex items-center flex-shrink-0 cursor-help ${markClr}`}><span className="material-symbols-rounded" style={{ fontSize: 14 }}>history</span></span>}
                 </div>
                 {/* v1 — subtle inline Wise-interest link under the Wise row */}
                 {wiseVer === 1 && p.id === "wise" && (
@@ -4666,8 +4837,8 @@ function V1kFundDateCard({ e, v1l = false, zone = false, condensed = false, mvp 
                   </a>
                 )}
               </td>
+              <td className={`${rowPad} pl-4 text-right whitespace-nowrap tabular-nums ${v1l ? zt.num : "text-[11px] font-semibold text-[#4b5563]"}`}><span className="flex items-center gap-1.5 justify-end">{pending > 0 && yellowPill(pending, p.id)}<span>{fmt0(p.amount + late)}</span></span></td>
               {!mvp && <td className={`${rowPad} pl-4 text-right whitespace-nowrap tabular-nums ${v1l ? zt.num : "text-[11px] font-semibold text-[#4b5563]"}`}>{/* v3 — balance-anchored Wise-interest tag (icon-only, left of the number so the amount stays column-aligned) */}{wiseVer === 3 && p.id === "wise" && bal !== undefined && (<span title="This balance earns interest" aria-label="This balance earns interest" className="mr-1.5 inline-flex items-center align-middle text-[#0e9f6e]"><Gift size={13} aria-hidden="true" /></span>)}{bal !== undefined ? fmt0(bal) : (v1l ? <span className={`inline-flex items-center gap-1 justify-end ${zone ? "text-[#9ca3af]" : "text-[#9ca3af]"}`}>Unknown <InfoTip text={v1InfoText.unknown} /></span> : "—")}</td>}
-              <td className={`${rowPad} pl-4 text-right whitespace-nowrap tabular-nums ${v1l ? zt.num : "text-[11px] font-semibold text-[#4b5563]"}`}>{fmt0(p.amount)}</td>
               {!mvp && (
               <td className={`${rowPad} pl-4 text-right whitespace-nowrap`}>
                 {e.funded ? (
@@ -4698,19 +4869,16 @@ function V1kFundDateCard({ e, v1l = false, zone = false, condensed = false, mvp 
               <span className="text-base text-[#6b7280] whitespace-nowrap"> · {shortDay}</span>
             </p>
             {e.providers.every(p => v1gManualProviders.has(p.id)) ? (
-              <p className={`${zt.cadence} flex items-center flex-wrap gap-x-2.5`}>
+              <p className={`${zt.cadence} flex items-center gap-x-1.5 whitespace-nowrap`}>
                 <span>Cycle ends {monthDay}</span>
                 <span className="text-[#d1d5db]">·</span>
-                <span>Triggered by you <span className="text-[#9ca3af]">(no set time)</span></span>
+                <span>Triggered by you</span>
               </p>
             ) : (
-              <p className={`${zt.cadence} flex items-center flex-wrap gap-x-2.5`}>
+              <p className={`${zt.cadence} flex items-center gap-x-1.5 whitespace-nowrap`}>
                 <span>Cycle ends {monthDay}</span>
                 <span className="text-[#d1d5db]">·</span>
-                <span className="inline-flex items-center gap-1">
-                  Triggers {e.date} <span className="text-[#9ca3af]">({v1gTriggerTime})</span>
-                  <button onClick={ev => ev.preventDefault()} title="Adjust trigger time" aria-label="Adjust trigger time" className="p-0.5 rounded text-[#6b7280] hover:text-[#0168dd] hover:bg-[#f3f4f6] transition-colors flex-shrink-0"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>
-                </span>
+                <span>Triggers {e.date}</span>
               </p>
             )}
           </div>
@@ -4745,10 +4913,26 @@ function V1kFundDateCard({ e, v1l = false, zone = false, condensed = false, mvp 
 
       {showTable && <div className={zone ? "" : "mt-3"}>{providerTable}</div>}
 
-      <div className={`${showTable ? "mt-auto" : "mt-4"} pt-2 border-t border-[#e5e7eb] flex items-center justify-between gap-2`}>
-        <span className={v1l ? `${zt.numStrong} font-medium` : "text-[#111827] text-[11px] font-semibold"}>{e.funded ? "Total paid" : (mvp ? "Total due" : "Total to fund")}{condensed && <span className="font-normal text-[#6b7280]"> · {e.providers.length} payment method{e.providers.length > 1 ? "s" : ""}</span>}</span>
-        <span className={v1l ? `${zt.numStrong} font-semibold tabular-nums` : `text-xs font-bold ${e.funded ? "text-emerald-600" : "text-[#111827]"}`}>{fmt0(e.funded ? dueTotal : (mvp ? dueTotal : fundTotal))}</span>
-      </div>
+      {!mvp && !e.funded ? (
+        <div className={`${showTable ? "mt-auto" : "mt-4"} pt-2 border-t border-[#e5e7eb]`}>
+          <table className="w-full table-fixed">
+            <colgroup><col /><col className="w-[24%]" /><col className="w-[18%]" /><col className="w-[18%]" /></colgroup>
+            <tbody>
+              <tr>
+                <td className="text-[11px] font-semibold uppercase tracking-wide text-[#9ca3af] align-middle">Totals</td>
+                <td className="text-right align-middle"><span className="flex items-center gap-1.5 justify-end">{yellowPending && yellowPill(v1SpilloverTotal, "all", "pending")}<span className={`${zt.numStrong} font-semibold tabular-nums`}>{fmt0(dueTotal)}</span>{lateFold && <span title={`Includes ${fmt0(v1SpilloverTotal)} approved after the cycle closed`} aria-label="Late-approved timesheets" className={`inline-flex items-center align-middle cursor-help ${markClr}`}><span className="material-symbols-rounded" style={{ fontSize: 14 }}>history</span></span>}</span></td>
+                <td />
+                <td className="text-right align-middle"><span className={`${zt.numStrong} font-semibold tabular-nums`}>{fmt0(fundTotal)}</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div className={`${showTable ? "mt-auto" : "mt-4"} pt-2 border-t border-[#e5e7eb] flex items-center justify-between gap-2`}>
+          <span className={v1l ? `${zt.numStrong} font-medium` : "text-[#111827] text-[11px] font-semibold"}>{e.funded ? "Total paid" : "Total due"}{lateFold && <span title={`Includes ${fmt0(v1SpilloverTotal)} approved after the cycle closed`} aria-label="Late-approved timesheets" className={`ml-1 inline-flex items-center align-middle cursor-help ${markClr}`}><span className="material-symbols-rounded" style={{ fontSize: 14 }}>history</span></span>}{condensed && <span className="font-normal text-[#6b7280]"> · {e.providers.length} payment method{e.providers.length > 1 ? "s" : ""}</span>}</span>
+          <span className="flex items-center gap-1.5 justify-end">{yellowPending && yellowPill(v1SpilloverTotal, "all", "pending")}<span className={v1l ? `${zt.numStrong} font-semibold tabular-nums` : `text-xs font-bold ${e.funded ? "text-emerald-600" : "text-[#111827]"}`}>{fmt0(dueTotal)}</span></span>
+        </div>
+      )}
 
       {showDialog && (
         <>
@@ -4881,16 +5065,321 @@ function V1kLearnMoreDialog({ open, onClose, v1l = false, zone = false }: { open
   );
 }
 
-function V1kNextPaymentsCard({ onViewSchedule, v1l = false, zone = false, condensed = false, mvp = false, onProviderClick }: { onViewSchedule: () => void; v1l?: boolean; zone?: boolean; condensed?: boolean; mvp?: boolean; onProviderClick?: (providerId: string) => void }) {
+// "Not scheduled" — members with no pay period: cost accrues, no funding date. Same card structure as a Fund-by card (title · members / table / total).
+function V1kNotSchedCard() {
+  return (
+    <div data-zone="card" className="rounded-lg border bg-white p-4 flex flex-col h-full border-[#e5e7eb]">
+      <div className="flex justify-between items-start gap-2 mb-4">
+        <div className="min-w-0">
+          <p className="text-base font-bold text-[#111827]">Not scheduled</p>
+          <p className="text-[12px] text-[#6b7280] mt-0.5">{v1NotSchedMembers} members with no pay period set</p>
+        </div>
+        <button title="Set pay periods" aria-label="Set pay periods" className={zbtn("ghostPrimary", "sm", "flex-shrink-0 whitespace-nowrap")}><CalendarDays size={16} /> Set periods</button>
+      </div>
+      <table data-zone="table" className="w-full">
+        <thead>
+          <tr className="text-[11px] text-[#6b7280] font-semibold uppercase tracking-wide">
+            <th className="text-left font-semibold pb-2 border-b border-[#e5e7eb]">Payout method</th>
+            <th className="text-right font-semibold pb-2 pl-4 border-b border-[#e5e7eb]">Accrued</th>
+          </tr>
+        </thead>
+        <tbody>
+          {v1NotSchedRows.map((r, i) => {
+            const div = i < v1NotSchedRows.length - 1 ? " border-b border-[#f3f4f6]" : "";
+            return (
+            <tr key={r.id}>
+              <td className={"py-2 pr-2" + div}>
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <ProviderLogo id={r.id} size={16} />
+                  <span className="text-sm font-medium text-[#111827] truncate">{r.label}</span>
+                  <span className="text-[12px] text-[#6b7280] whitespace-nowrap flex-shrink-0"><span className="text-[#d1d5db] mx-1">·</span>{r.members} members</span>
+                </div>
+              </td>
+              <td className={"py-2 pl-4 text-right whitespace-nowrap tabular-nums text-[12px] text-[#6b7280]" + div}>{fmt0(r.accrued)}</td>
+            </tr>
+          );})}
+        </tbody>
+      </table>
+      <div className="mt-auto pt-2 border-t border-[#e5e7eb] flex items-center justify-between gap-2">
+        <span className="text-[12px] text-[#111827] font-medium">Total accrued</span>
+        <span className="text-[12px] text-[#111827] font-semibold tabular-nums">{fmt0(v1NotSchedTotal)}</span>
+      </div>
+    </div>
+  );
+}
+
+// "Mixed" spillover — a compact "Off schedule" summary card (3rd in the funding row); details + approval open in a dialog.
+function V1kOffScheduleCard({ approvedIds, onApprove, topLevel = false }: { approvedIds: string[]; onApprove: (id: string) => void; topLevel?: boolean }) {
+  const [dialog, setDialog] = useState<null | "owed" | "notsched">(null);
+  const pending = v1OwedApproval.filter(m => !approvedIds.includes(m.id));
+  const pendingTotal = pending.reduce((s, m) => s + m.amount, 0);
+  // Keep the original gray pill size; just move the calendar icon inside it (like the "Next" pill has one).
+  const noFundingPill = <span className="inline-flex items-center gap-1 flex-shrink-0 text-[10px] font-medium px-2 py-0.5 rounded-full bg-[#f3f4f6] text-[#6b7280] whitespace-nowrap"><span className="material-symbols-rounded leading-none" style={{ fontSize: 12 }}>event_busy</span>no funding date</span>;
+  // Item content, shared between the two layouts
+  // Each group mirrors the Fund-by card: [alert + title] left, ghost action top-right,
+  // then a "cycle ends"-style description line that folds the amount in.
+  const noPeriodContent = (
+    <>
+      <div className="flex items-start gap-2">
+        <span className="material-symbols-rounded text-[#d97706] flex-shrink-0 mt-0.5" style={{ fontSize: 18 }}>warning</span>
+        <div className="min-w-0">
+          <p className="text-[13px] font-semibold text-[#111827]">No pay period set</p>
+          <p className="text-[12px] text-[#6b7280] mt-0.5">{v1NotSchedMembers} members can&apos;t predict a date yet</p>
+        </div>
+      </div>
+      <div className="mt-2 pl-[26px] flex items-center justify-between gap-2">
+        <p><span className="text-base font-bold text-[#111827] tabular-nums">{fmt0(v1NotSchedTotal)}</span> <span className="text-[12px] text-[#6b7280]">accrued</span></p>
+        <button onClick={() => setDialog("notsched")} className={zbtn("ghostPrimary", "sm", "flex-shrink-0 !gap-0.5 !px-2")}>Review <ChevronRight size={14} /></button>
+      </div>
+    </>
+  );
+  const stillOwedContent = (
+    <>
+      <div className="flex items-start gap-2">
+        <span className="material-symbols-rounded text-[#d97706] flex-shrink-0 mt-0.5" style={{ fontSize: 18 }}>warning</span>
+        <div className="min-w-0">
+          <p className="text-[13px] font-semibold text-[#111827]">Pending timesheet approval</p>
+          <p className="text-[12px] text-[#6b7280] mt-0.5">{pending.length} member{pending.length > 1 ? "s" : ""} from past periods</p>
+        </div>
+      </div>
+      <div className="mt-2 pl-[26px] flex items-center justify-between gap-2">
+        <p><span className="text-base font-bold text-[#111827] tabular-nums">{fmt0(pendingTotal)}</span> <span className="text-[12px] text-[#6b7280]">owed</span></p>
+        <button onClick={() => setDialog("owed")} className={zbtn("ghostPrimary", "sm", "flex-shrink-0 !gap-0.5 !px-2")}>Review <ChevronRight size={14} /></button>
+      </div>
+    </>
+  );
+  const footerNote = (
+    <div className="flex items-start gap-1.5">
+      <Info size={13} className="text-[#9ca3af] flex-shrink-0 mt-0.5" />
+      <p className="text-[11px] text-[#6b7280] leading-snug">Not in your scheduled funding predictions yet — already counted in your trend and Future tracked so far.</p>
+    </div>
+  );
+  return (
+    <>
+      {topLevel ? (
+        <div data-zone="card" className="bg-white rounded-lg border border-[#e5e7eb] flex flex-col h-full">
+          <div className="px-4 flex items-center justify-between gap-3 border-b bg-white rounded-t-lg h-[60px] border-[#e5e7eb]">
+            <p className="text-lg font-medium text-[#111827] min-w-0 truncate">Off schedule</p>
+            {noFundingPill}
+          </div>
+          {/* v2 — each problem is its own outlined card (fund-by padding / border / spacing) */}
+          <div className="px-4 pt-4 pb-4 flex-1 flex flex-col gap-4">
+            <div className="rounded-lg border border-[#e5e7eb] p-4">{noPeriodContent}</div>
+            {pending.length > 0 && <div className="rounded-lg border border-[#e5e7eb] p-4">{stillOwedContent}</div>}
+            <div className="mt-auto pt-1">{footerNote}</div>
+          </div>
+        </div>
+      ) : (
+        <div data-zone="card" className="rounded-lg border border-[#e5e7eb] bg-white p-4 flex flex-col h-full">
+          <div className="flex items-center justify-between gap-2 mb-1">
+            <p className="text-base font-bold text-[#111827] min-w-0 truncate">Off schedule</p>
+            {noFundingPill}
+          </div>
+          <div className="py-3 border-t border-[#e5e7eb] mt-2">{noPeriodContent}</div>
+          {pending.length > 0 && <div className="py-3 border-t border-[#e5e7eb]">{stillOwedContent}</div>}
+          <div className="mt-auto pt-3 border-t border-[#e5e7eb]">{footerNote}</div>
+        </div>
+      )}
+      {dialog && <V1kOffSchedDialog mode={dialog} approvedIds={approvedIds} onApprove={onApprove} onClose={() => setDialog(null)} />}
+    </>
+  );
+}
+
+// The "Fund by today" card appears once people are approved — they missed the cycle, so they fund today and pay tomorrow.
+function V1kFundTodayCard({ approvedIds }: { approvedIds: string[] }) {
+  const funded = v1OwedApproval.filter(m => approvedIds.includes(m.id));
+  const total = funded.reduce((s, m) => s + m.amount, 0);
+  return (
+    <div data-zone="card" className="rounded-lg border border-[#bcd4f2] bg-[#f5faff] p-4 flex flex-col h-full">
+      <div className="flex justify-between items-start gap-2 mb-4">
+        <div className="min-w-0">
+          <p><span className="text-base text-[#111827]">Fund by </span><span className="text-base font-bold text-[#111827]">today</span><span className="text-base text-[#6b7280]"> · Jun 22</span></p>
+          <p className="text-[12px] text-[#6b7280] mt-0.5">Approved today · pays tomorrow</p>
+        </div>
+        <span className={zpill("primary", "md", "flex-shrink-0")}><span className="material-symbols-rounded leading-none" style={{ fontSize: 16, marginRight: 2 }}>bolt</span> New</span>
+      </div>
+      <table className="w-full">
+        <thead>
+          <tr className="text-[11px] text-[#6b7280] font-semibold uppercase tracking-wide">
+            <th className="text-left font-semibold pb-2 border-b border-[#e5e7eb]">Payout method</th>
+            <th className="text-right font-semibold pb-2 pl-4 border-b border-[#e5e7eb]">Fund</th>
+          </tr>
+        </thead>
+        <tbody>
+          {funded.map(m => (
+            <tr key={m.id} className="border-b border-[#f3f4f6] last:border-0">
+              <td className="py-2"><span className="inline-flex items-center gap-1.5"><ProviderLogo id={m.provider} size={14} /><span className="text-[13px] font-medium text-[#111827]">{m.name}</span><span className="text-[12px] text-[#6b7280]">· {v1gProviderMeta[m.provider]?.name ?? m.provider}</span></span></td>
+              <td className="py-2 pl-4 text-right text-[13px] tabular-nums text-[#111827]">{fmt0(m.amount)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div className="mt-auto pt-2 border-t border-[#e5e7eb] flex items-center justify-between">
+        <span className="text-[12px] font-medium text-[#111827]">Total to fund</span>
+        <span className="text-[12px] font-semibold text-[#111827] tabular-nums">{fmt0(total)}</span>
+      </div>
+    </div>
+  );
+}
+
+// Details dialog behind the Off-schedule card's buttons. "owed" = approval flow; "notsched" = member breakdown.
+function V1kOffSchedDialog({ mode, approvedIds = [], onApprove, onClose }: { mode: "owed" | "notsched"; approvedIds?: string[]; onApprove?: (id: string) => void; onClose: () => void }) {
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(5);
+  useEffect(() => { const h = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); }; document.addEventListener("keydown", h); return () => document.removeEventListener("keydown", h); }, [onClose]);
+  if (mode === "owed") {
+    const pending = v1OwedApproval.filter(m => !approvedIds.includes(m.id));
+    const pendingTotal = pending.reduce((s, m) => s + m.amount, 0);
+    const approvedCount = v1OwedApproval.length - pending.length;
+    const initials = (n: string) => n.split(" ").map(w => w[0]).join("").slice(0, 2);
+    const totalPages = Math.max(1, Math.ceil(pending.length / pageSize));
+    const curPage = Math.min(page, totalPages);
+    const startIdx = pending.length === 0 ? 0 : (curPage - 1) * pageSize + 1;
+    const endIdx = Math.min(curPage * pageSize, pending.length);
+    const pageItems = pending.slice((curPage - 1) * pageSize, curPage * pageSize);
+    return (
+      <>
+        <div className="fixed inset-0 z-40 bg-black/30" onClick={onClose} />
+        <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-[680px] max-w-full pointer-events-auto max-h-[85vh] flex flex-col">
+            {/* Header — bordered title bar (Bulk Payroll adjustments pattern) */}
+            <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-[#e5e7eb] flex-shrink-0">
+              <p className="text-[18px] font-semibold text-[#111827]">Review missed timesheets <span className="font-normal text-[#6b7280]">({pending.length})</span></p>
+              <button onClick={onClose} aria-label="Close" className="p-1 rounded-md text-[#9ca3af] hover:text-[#4b5563] hover:bg-[#f3f4f6] flex-shrink-0"><X size={18} /></button>
+            </div>
+            <p className="px-5 pt-3 text-[13px] text-[#6b7280] leading-snug flex-shrink-0">The pay date passed before these timesheets were approved, so they dropped off the schedule. Review and approve them to get these people paid.</p>
+            {/* Yellow alert — above the table */}
+            <div className="mx-5 mt-3 mb-3 rounded-lg border border-[#9f580a] bg-[#fdfdea] text-[#723b13] px-3 py-2 flex items-start gap-2 flex-shrink-0">
+              <span className="material-symbols-rounded flex-shrink-0" style={{ fontSize: 16 }}>schedule</span>
+              <p className="text-[12px] leading-snug">Once approved, fund <span className="font-semibold">today</span> — this payment triggers <span className="font-semibold">tomorrow</span>.</p>
+            </div>
+            {approvedCount > 0 && (
+              <div className="flex items-center justify-end px-5 pb-2 flex-shrink-0">
+                <span className="inline-flex items-center gap-1.5 text-[12px] font-medium text-[#0e9f6e]"><span className="material-symbols-rounded" style={{ fontSize: 15 }}>check_circle</span>{approvedCount} approved · {fmt0(v1OwedTotal - pendingTotal)} on Fund by today</span>
+              </div>
+            )}
+            {/* Table — Bulk Payroll adjustments styling: bordered container, gray header, avatars, roomy rows; pagination lives inside */}
+            <div className="overflow-y-auto flex-1 px-5 pb-5">
+              <div className="rounded-lg border border-[#e5e7eb] overflow-hidden">
+                <table className="w-full">
+                  <thead>
+                    <tr className="bg-[#f9fafb] text-[12px] font-semibold text-[#1f2937]">
+                      <th className="text-left px-4 py-2.5 border-b border-[#e5e7eb]">Team member</th>
+                      <th className="text-left px-3 py-2.5 border-b border-[#e5e7eb]">Payout method</th>
+                      <th className="text-right px-3 py-2.5 border-b border-[#e5e7eb]">Time logged</th>
+                      <th className="text-right px-3 py-2.5 border-b border-[#e5e7eb]">To approve</th>
+                      <th className="px-4 py-2.5 border-b border-[#e5e7eb]" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pageItems.map(m => (
+                      <tr key={m.id} className="border-b border-[#e5e7eb] last:border-0 hover:bg-[#f9fafb] transition-colors">
+                        <td className="px-4 py-3">
+                          <span className="flex items-center gap-2.5">
+                            <span className="flex items-center justify-center size-6 rounded-full bg-[#eaf6ff] text-[#0168dd] text-[10px] font-semibold flex-shrink-0">{initials(m.name)}</span>
+                            <a href="#" onClick={ev => ev.preventDefault()} className="text-sm font-semibold text-[#111827] hover:underline whitespace-nowrap">{m.name}</a>
+                          </span>
+                        </td>
+                        <td className="px-3 py-3 text-sm text-[#6b7280]"><span className="inline-flex items-center gap-1.5 whitespace-nowrap"><ProviderLogo id={m.provider} size={14} />{v1gProviderMeta[m.provider]?.name ?? m.provider}</span></td>
+                        <td className="px-3 py-3 text-right text-sm tabular-nums text-[#6b7280] whitespace-nowrap">{m.hours}</td>
+                        <td className="px-3 py-3 text-right text-sm tabular-nums font-medium text-[#111827] whitespace-nowrap">{fmt0(m.amount)}</td>
+                        <td className="px-4 py-3 text-right"><button onClick={() => onApprove?.(m.id)} className={zbtn("ghostPrimary", "sm")}>Approve</button></td>
+                      </tr>
+                    ))}
+                    {pending.length === 0 && (
+                      <tr><td colSpan={5} className="px-4 py-10 text-center text-sm text-[#6b7280]">All approved — they&apos;re on <span className="font-medium text-[#111827]">Fund by today</span>.</td></tr>
+                    )}
+                  </tbody>
+                  {pending.length > 0 && (
+                    <tfoot>
+                      <tr className="bg-[#f9fafb]">
+                        <td colSpan={3} className="px-4 py-2.5 text-sm font-semibold text-[#111827] border-t border-[#e5e7eb]">Total to approve</td>
+                        <td className="px-3 py-2.5 text-right text-sm font-semibold tabular-nums text-[#111827] whitespace-nowrap border-t border-[#e5e7eb]">{fmt0(pendingTotal)}</td>
+                        <td className="px-4 py-2.5 border-t border-[#e5e7eb]" />
+                      </tr>
+                    </tfoot>
+                  )}
+                </table>
+                {/* Pagination — injected inside the table container */}
+                {pending.length > 0 && (
+                <div className="flex items-center justify-between gap-3 px-4 py-3 border-t border-[#e5e7eb] bg-white text-[13px] text-[#6b7280]">
+                <div className="flex items-center gap-2">
+                  <span>Showing {startIdx}-{endIdx} items</span>
+                  <span className="relative inline-flex">
+                    <select value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setPage(1); }} className="appearance-none h-7 rounded-md border border-[#d1d5db] bg-white pl-2.5 pr-7 text-[13px] text-[#111827] cursor-pointer focus:outline-none">
+                      <option value={5}>5</option>
+                      <option value={10}>10</option>
+                      <option value={25}>25</option>
+                    </select>
+                    <ChevronDown size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-[#6b7280] pointer-events-none" />
+                  </span>
+                  <span>Per page</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+                    <button key={p} onClick={() => setPage(p)} className={`min-w-7 h-7 px-2 rounded-md text-[13px] font-medium transition-colors ${p === curPage ? "bg-[#eaf6ff] text-[#0168dd]" : "text-[#4b5563] hover:bg-[#f3f4f6]"}`}>{p}</button>
+                  ))}
+                  <button onClick={() => setPage(Math.min(curPage + 1, totalPages))} disabled={curPage >= totalPages} className="inline-flex items-center gap-0.5 h-7 pl-2 pr-1.5 rounded-md text-[13px] font-medium text-[#4b5563] hover:bg-[#f3f4f6] disabled:opacity-40 disabled:cursor-not-allowed transition-colors">Next <ChevronRight size={14} /></button>
+                </div>
+              </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  }
+  return (
+    <>
+      <div className="fixed inset-0 z-40 bg-black/30" onClick={onClose} />
+      <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none p-4">
+        <div className="bg-white rounded-xl shadow-2xl w-[460px] max-w-full pointer-events-auto max-h-[80vh] flex flex-col">
+          <div className="flex items-start justify-between px-5 pt-4 pb-3 border-b border-[#e5e7eb]">
+            <div className="min-w-0">
+              <p className="text-[18px] font-semibold text-[#111827]">No pay period set</p>
+              <p className="text-[13px] text-[#6b7280] mt-0.5">These members aren&apos;t on a pay period, so there&apos;s no funding date yet.</p>
+            </div>
+            <button onClick={onClose} aria-label="Close" className="p-1 rounded-md text-[#9ca3af] hover:text-[#4b5563] hover:bg-[#f3f4f6] flex-shrink-0"><X size={18} /></button>
+          </div>
+          <div className="overflow-y-auto flex-1 py-1">
+            <p className="px-5 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-[#9ca3af]">{v1NotSchedMembers} members · {fmt0(v1NotSchedTotal)} accrued</p>
+            {v1NotSchedPeople.map(m => (
+              <div key={m.id} className="flex items-center justify-between gap-3 px-5 py-2 border-b border-[#f3f4f6] last:border-0">
+                <span className="flex items-center gap-2 min-w-0 text-sm"><ProviderLogo id={m.provider} size={16} /><span className="font-medium text-[#111827] truncate">{m.name}</span><span className="text-[#6b7280]">({v1gProviderMeta[m.provider]?.name ?? m.provider})</span></span>
+                <span className="text-sm tabular-nums text-[#111827] flex-shrink-0">{fmt0(m.accrued)}</span>
+              </div>
+            ))}
+          </div>
+          <div className="flex items-center justify-between gap-2 px-5 py-3 border-t border-[#e5e7eb]">
+            <span className="text-sm"><span className="font-semibold text-[#111827] tabular-nums">{fmt0(v1NotSchedTotal)}</span> <span className="text-[#6b7280]">accrued</span></span>
+            <button className="inline-flex items-center h-9 px-4 rounded-md bg-[#0168dd] text-white text-sm font-medium hover:bg-[#0057bb] transition-colors">Set pay periods</button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function V1kNextPaymentsCard({ onViewSchedule, v1l = false, zone = false, condensed = false, mvp = false, onProviderClick, approvedIds = [], onApprove = () => {}, offSchedVer = 1, colSpan = "col-span-9" }: { onViewSchedule: () => void; v1l?: boolean; zone?: boolean; condensed?: boolean; mvp?: boolean; onProviderClick?: (providerId: string) => void; approvedIds?: string[]; onApprove?: (id: string) => void; offSchedVer?: 1 | 2; colSpan?: string }) {
   const upcoming = v1gFundSchedule.filter(e => !e.funded && e.daysOut > 0).slice(0, 2);
   const wiseVer = useContext(WiseVerContext);
+  const notSched = useContext(NotSchedContext);
+  const spillover = useContext(SpilloverContext);
+  // The "Fund by today" card is a real fund-by card, aggregated by payout method from the approved people.
+  const fundTodayEntry: V1gFundDate = (() => {
+    const funded = v1OwedApproval.filter(m => approvedIds.includes(m.id));
+    const byProv: Record<string, number> = {};
+    funded.forEach(m => { byProv[m.provider] = (byProv[m.provider] || 0) + m.amount; });
+    return { date: "Jun 23", dow: "Mon", daysOut: 1, tag: "next", fundBy: "today, Jun 22", providers: Object.entries(byProv).map(([id, amount]) => ({ id, amount })) };
+  })();
   const [showLearn, setShowLearn] = useState(false);
   const [wiseBannerDismissed, setWiseBannerDismissed] = useState(false); // v2 dismiss (session-only in the prototype)
   const learnMoreBtn = (
     <button onClick={() => setShowLearn(true)} className={zone ? zbtn("ghostGray", "sm") : "inline-flex items-center gap-1 text-[11px] font-medium text-[#4b5563] rounded-md px-2.5 py-1 hover:bg-[#f3f4f6] hover:text-[#111827] transition-colors select-none"}><Info size={zone ? 16 : 12} /> Learn more</button>
   );
   return (
-    <div className="col-span-9 flex flex-col gap-3">
+    <div className={`${colSpan} flex flex-col gap-3`}>
       {/* v2 — prominent, dismissible Wise-interest banner above the schedule */}
       {wiseVer === 2 && !wiseBannerDismissed && (
         <div data-zone="alert" className="rounded-lg border border-[#bcd4f2] bg-[#f0f6ff] px-4 py-3 flex items-start gap-3">
@@ -4927,9 +5416,12 @@ function V1kNextPaymentsCard({ onViewSchedule, v1l = false, zone = false, conden
           </div>
         )}
         <V1kLearnMoreDialog open={showLearn} onClose={() => setShowLearn(false)} v1l={v1l} zone={zone} />
-        <div className="px-4 py-4 flex-1">
-          <div className="grid grid-cols-2 gap-4 items-stretch">
-            {upcoming.map(e => <V1kFundDateCard key={e.date} e={e} v1l={v1l} zone={zone} condensed={condensed} mvp={mvp} onProviderClick={onProviderClick} />)}
+        <div className="px-4 py-4 flex-1 flex flex-col">
+          <div className={`grid ${(notSched || (spillover === "mixed" && offSchedVer === 1)) ? "grid-cols-3" : "grid-cols-2"} gap-4 items-stretch flex-1 auto-rows-fr`}>
+            {/* Mixed + approvals: "Fund by today" leads (reuses the fund-by card), replacing the missed Jun 21 slot */}
+            {spillover === "mixed" && approvedIds.length > 0 && <V1kFundDateCard e={fundTodayEntry} noSpillover v1l={v1l} zone={zone} condensed={condensed} mvp={mvp} onProviderClick={onProviderClick} />}
+            {(spillover === "mixed" && approvedIds.length > 0 ? upcoming.slice(1) : upcoming).map(e => <V1kFundDateCard key={e.date} e={e} v1l={v1l} zone={zone} condensed={condensed} mvp={mvp} onProviderClick={onProviderClick} />)}
+            {spillover === "mixed" && offSchedVer === 1 ? <V1kOffScheduleCard approvedIds={approvedIds} onApprove={onApprove} /> : (notSched && <V1kNotSchedCard />)}
           </div>
           {/* v3 — one-line tip below the table */}
           {wiseVer === 3 && (
@@ -5275,6 +5767,13 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
     seg: (active: boolean) => `h-8 px-3 flex items-center justify-center whitespace-nowrap text-sm overflow-hidden transition-colors border border-l-0 first:border-l border-[#d1d5db] first:rounded-l-[6px] last:rounded-r-[6px] ${active ? "bg-[#f0f5ff] text-[#0168dd] font-medium" : "text-[#374151] font-normal hover:bg-[#f9fafb]"}`,
   };
   const [range, setRange]           = useState<V1eRange>(v1l || v1m ? "3M" : "1M"); // 1L/1M drop the 1M view
+  const [startMonth, setStartMonth] = useState<string>(v1eCurrentLabel); // Final UI v1: left edge of the chart window (past ↔ future)
+  const [startPickerOpen, setStartPickerOpen] = useState(false);
+  const [v2Start, setV2Start]       = useState<string>("Jun '26"); // Final UI v2: date-range picker → window start
+  const [v2Len, setV2Len]           = useState<number>(6);         // Final UI v2: window length in months (1–12)
+  const [rangePickerOpen, setRangePickerOpen] = useState(false);
+  const [rangePendStart, setRangePendStart]   = useState<string | null>(null); // v2 picker: first-clicked month awaiting the second
+  const [rangeHover, setRangeHover]           = useState<string | null>(null); // v2 picker: hovered month for range preview
   const [showYoY, setShowYoY]       = useState(false);
   const [drillMonth, setDrillMonth] = useState<string | null>(null);
   const [segTab, setSegTab]         = useState<V1eSeg>(mvp ? "type" : "source"); // MVP defaults to Payroll breakdown
@@ -5286,6 +5785,13 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
   const [mathOpen, setMathOpen] = useState(false); // inline "+28% adjustments" detail popover
   const [showAutoPop, setShowAutoPop] = useState(false); // 1L auto-adjustments "Details" popover
   const [showMathDialog, setShowMathDialog] = useState(false); // 1I "How we get there" dialog
+  const spillover = useContext(SpilloverContext); // late-approved spillover — full-width alert at the top of the report
+  const offSchedVer = useContext(OffSchedVerContext); // 1 = off-schedule card in the funding row; 2 = top-level 25% card
+  const pmtVer = useContext(PmtVerContext); // 1 = 3/6/12M + month stepper; 2 = date-range picker
+  const [approvedIds, setApprovedIds] = useState<string[]>([]); // Mixed: approved people → Fund-by-today card (lifted so it's shared across the split layout)
+  const onApprove = (id: string) => setApprovedIds(a => a.includes(id) ? a : [...a, id]);
+  const [spillAlertDismissed, setSpillAlertDismissed] = useState(false); // Zone alert is dismissable; reset when the overlay toggles
+  useEffect(() => { setSpillAlertDismissed(false); }, [spillover]);
   const [scenario, setScenario] = useState<1 | 2>(1); // Estimated Payroll: 1 = trending higher (pace wins), 2 = historical only (click "· June 2026" to toggle)
   const [driversOpen, setDriversOpen] = useState(false); // 1J "+X% vs typical" drivers popover
   const [showAddDialog, setShowAddDialog] = useState(false); // 1K single "Add adjustment" dialog (1F-style)
@@ -5331,8 +5837,45 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
   const scen3Tracked   = 52000;  // tracked + planned so far · 12 of 30 days
   const scen3Remaining = 80000;  // remaining 18 days at the current run-rate
   const scen3Total     = scen3Tracked + scen3Remaining + manualNet; // + any manual buffer
+  // ── Final UI: slide-a-window over the continuous timeline ──────────────────
+  // 3M/6M/12M = window length; `startMonth` = the left edge. The user can push the
+  // window into the past or the future; the summary above stays fixed to "today".
+  const useTimeline = zone && !mvp && !is1M && !initial;
+  const v2mode = useTimeline && pmtVer === 2; // v2 = single date-range picker (no 3/6/12M buttons, no chevrons)
+  const winLen = v2mode ? Math.min(12, Math.max(1, v2Len)) : v1eWinLen[range]; // v2: picked span (capped 12); v1: 3/6/12
+  const maxStartIdx = Math.max(0, v1eTimeline.length - winLen); // latest start that still fits a full window
+  const startSource = v2mode ? v2Start : startMonth;
+  const startIdxRaw = v1eTimeline.findIndex(b => b.label === startSource);
+  const startIdx = Math.min(Math.max(0, startIdxRaw < 0 ? v1eTimeline.findIndex(b => b.isCurrent) : startIdxRaw), maxStartIdx);
+  const startLabel = v1eTimeline[startIdx]?.label ?? v1eCurrentLabel; // clamped label actually shown
+  const windowBars = v1eTimeline.slice(startIdx, startIdx + winLen);
+  const atToday = startLabel === v1eCurrentLabel;
+  const loadWin = () => { setLoading(true); setTimeout(() => setLoading(false), 450); };
+  const stepStart = (dir: -1 | 1) => {
+    const n = startIdx + dir;
+    if (n >= 0 && n <= maxStartIdx) { setStartMonth(v1eTimeline[n].label); setStartPickerOpen(false); loadWin(); }
+  };
+  // v2 date-range picker helpers (month granularity — the chart is monthly).
+  const v1eIdx = (label: string) => v1eTimeline.findIndex(b => b.label === label);
+  const commitRange = (aLabel: string, bLabel: string) => {
+    let lo = v1eIdx(aLabel), hi = v1eIdx(bLabel);
+    if (lo > hi) [lo, hi] = [hi, lo];
+    hi = Math.min(hi, lo + 11); // cap the span at 12 months
+    setV2Start(v1eTimeline[lo].label); setV2Len(hi - lo + 1);
+    setRangePickerOpen(false); setRangePendStart(null); setRangeHover(null); loadWin();
+  };
+  const onRangeCellClick = (label: string) => {
+    if (rangePendStart == null) { setRangePendStart(label); setRangeHover(label); }
+    else commitRange(rangePendStart, label);
+  };
+  // Chart data source: windowed timeline for the Final UI, else the legacy forward-anchored config.
+  const chartBars: V1eBar[] = useTimeline ? windowBars : cfg.bars;
+  const chartYoY = useTimeline ? windowBars.map(b => ({ label: b.label, yoy: b.yoy })) : cfg.yoy;
+  const chartPeriodLabel = useTimeline ? v1eRangePeriodLabel(windowBars) : cfg.periodLabel;
+  const chartTodayBar = useTimeline ? (windowBars.some(b => b.isCurrent) ? v1eCurrentLabel : null) : cfg.todayBar;
+
   // Initial state has < 3 months of data → the chart shows only the months we have (Jun + Jul).
-  const barsView = initial ? cfg.bars.slice(0, 2) : cfg.bars;
+  const barsView = initial ? cfg.bars.slice(0, 2) : chartBars;
   const adjPctC = Math.round(v1cConfirmed / adjProj * 100);
   const adjPctP = Math.round(v1cPlanned   / adjProj * 100);
 
@@ -5360,7 +5903,7 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
     const planned = Math.round(projected * 0.6);
     const projRemain = projected - planned;
     return {
-      ...b, actual, projected, total, yoy: cfg.yoy[i]?.yoy ?? 0,
+      ...b, actual, projected, total, yoy: chartYoY[i]?.yoy ?? 0,
       paid, pending, failed, planned, projRemain,
       isFut, isCur, projOpacity, barOpacity: isFut ? projOpacity : 1,
       ...v1eSplit(total, v1eChannelSeg),
@@ -5372,7 +5915,7 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
   const activeWeekLabel = drillMonth ?? (is1M ? oneMonth : null);
   const weekMonthKey = activeWeekLabel ? activeWeekLabel.replace(/ '2[0-9]+$/, "") : "Jun";
   const weekBar = activeWeekLabel
-    ? (cfg.bars.find(b => b.label === activeWeekLabel) ?? v1eMonthNav.find(b => b.label === activeWeekLabel))
+    ? (chartBars.find(b => b.label === activeWeekLabel) ?? v1eTimeline.find(b => b.label === activeWeekLabel))
     : undefined;
   const weekRows: V1eWeekRow[] = activeWeekLabel
     ? v1eBuildWeeks(weekMonthKey, weekBar?.actual ?? 0, weekBar?.projected ?? 0)
@@ -5478,6 +6021,37 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
 
   return (
     <>
+      {/* Spillover — late-approved timesheets: Zone Alert (Figma 1988-363). Header = icon + bold title; body below; outline CTA + dismiss on the right. Icon/title/body = -800 text; border/button/close = -600 accent. */}
+      {spillover === "yellow" && !spillAlertDismissed && (
+        <div data-zone="alert" className="relative flex items-center gap-3 rounded-lg border border-[#9f580a] bg-[#fdfdea] text-[#723b13] p-3">
+          <div className="flex flex-1 flex-col gap-2 items-start min-w-0">
+            <div className="flex items-center gap-2 w-full">
+              <span className="material-symbols-rounded flex-shrink-0" style={{ fontSize: 18 }}>history</span>
+              <p className="flex-1 min-w-0 font-semibold text-base leading-6"><PendingMembersTrigger scope="all" align="left" className="underline decoration-[#9f580a]/50 decoration-[1.5px] underline-offset-2 hover:decoration-[#9f580a] cursor-pointer">3 timesheets</PendingMembersTrigger> still need approval</p>
+            </div>
+            <p className="text-sm leading-5"><span className="font-semibold">+{fmt0(v1SpilloverTotal)}</span> to this payment if approved by <span className="font-semibold">Jun 21</span> — otherwise they&apos;ll be paid later.</p>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <button className="inline-flex items-center rounded-md border border-[#9f580a] text-[#9f580a] px-5 py-2.5 text-sm leading-5 hover:bg-[#fdf6b2] transition-colors whitespace-nowrap">Review approvals</button>
+            <button onClick={() => setSpillAlertDismissed(true)} aria-label="Dismiss" className="flex items-center justify-center size-5 rounded-full text-[#9f580a] hover:bg-[#fdf6b2] transition-colors flex-shrink-0"><span className="material-symbols-rounded" style={{ fontSize: 18 }}>close</span></button>
+          </div>
+        </div>
+      )}
+      {spillover === "red" && !spillAlertDismissed && (
+        <div data-zone="alert" className="relative flex items-center gap-3 rounded-lg border border-[#e02424] bg-[#fdf2f2] text-[#9b1c1c] p-3">
+          <div className="flex flex-1 flex-col gap-2 items-start min-w-0">
+            <div className="flex items-center gap-2 w-full">
+              <span className="material-symbols-rounded flex-shrink-0" style={{ fontSize: 18 }}>history</span>
+              <p className="flex-1 min-w-0 font-semibold text-base leading-6">Late-approved timesheets need funding</p>
+            </div>
+            <p className="text-sm leading-5">{fmt0(v1SpilloverTotal)} was approved after the cycle closed — fund by <span className="font-semibold">Jun 21</span> (triggers Jun 22).</p>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <button className="inline-flex items-center rounded-md border border-[#e02424] text-[#e02424] px-5 py-2.5 text-sm leading-5 hover:bg-[#fde8e8] transition-colors whitespace-nowrap">Fund now</button>
+            <button onClick={() => setSpillAlertDismissed(true)} aria-label="Dismiss" className="flex items-center justify-center size-5 rounded-full text-[#e02424] hover:bg-[#fde8e8] transition-colors flex-shrink-0"><span className="material-symbols-rounded" style={{ fontSize: 18 }}>close</span></button>
+          </div>
+        </div>
+      )}
       {v1j ? (
       /* ══ 1J TOP ROW — Estimated-to-fund as its own narrow card + brief card ══ */
       <div className="grid grid-cols-12 gap-6 items-stretch">
@@ -5655,8 +6229,12 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
         </div>
         {/* Right — Add to cover: date-card timeline + expandable provider detail */}
         {v1k
-          ? <V1kNextPaymentsCard onViewSchedule={() => setShowScheduleDialog(true)} v1l={v1l} zone={zone} condensed={condensed} mvp={mvp} onProviderClick={onProviderClick} />
+          ? <V1kNextPaymentsCard onViewSchedule={() => setShowScheduleDialog(true)} v1l={v1l} zone={zone} condensed={condensed} mvp={mvp} onProviderClick={onProviderClick} approvedIds={approvedIds} onApprove={onApprove} offSchedVer={offSchedVer} colSpan={offSchedVer === 2 && spillover === "mixed" ? "col-span-6" : "col-span-9"} />
           : <V1jAddToCoverCard onViewSchedule={() => setShowScheduleDialog(true)} />}
+        {/* V2 — Off-schedule promoted to a top-level 25% card beside Estimated Payroll + Funding schedule */}
+        {offSchedVer === 2 && spillover === "mixed" && (
+          <div className="col-span-3"><V1kOffScheduleCard approvedIds={approvedIds} onApprove={onApprove} topLevel /></div>
+        )}
       </div>
       ) : (
       <>
@@ -5819,7 +6397,7 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
                 ))}
               </div>
             )}
-            {!mvp && (
+            {!mvp && !v2mode && (
             <div className={zone ? zc.segWrap : `flex items-center ${zc.segTrack} rounded-md p-0.5`}>
               {((v1l || v1m ? ["3M","6M","12M"] : ["1M","3M","6M","12M"]) as V1eRange[]).map(r => (
                 <button key={r} onClick={() => applyRange(r)}
@@ -5828,6 +6406,135 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
                 </button>
               ))}
             </div>
+            )}
+            {/* v2 — a single Zone date-range picker replaces the 3/6/12M buttons and the chevrons.
+                Pick any span up to 12 months; move through time by picking a different range. */}
+            {v2mode && !drillMonth && (() => {
+              const loIdx = startIdx, hiIdx = startIdx + winLen - 1;
+              // preview span while choosing the second endpoint (capped at 12 months)
+              let pLo = loIdx, pHi = hiIdx;
+              if (rangePendStart != null) {
+                let a = v1eIdx(rangePendStart), b = v1eIdx(rangeHover ?? rangePendStart);
+                if (a > b) [a, b] = [b, a];
+                b = Math.min(b, a + 11);
+                pLo = a; pHi = b;
+              }
+              const cellCls = (i: number) => {
+                const inRange = i >= pLo && i <= pHi;
+                const isLo = i === pLo, isHi = i === pHi;
+                if (isLo || isHi) return "bg-[#2f8af4] text-white hover:cursor-pointer";
+                if (inRange) return "bg-gray-200 hover:cursor-pointer";
+                return "hover:bg-gray-100 hover:cursor-pointer text-[#111827]";
+              };
+              const cellRound = (i: number) => `${i === pLo ? "rounded-l-full" : ""} ${i === pHi ? "rounded-r-full" : ""}`;
+              const CAL_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+              const presets: [string, number, number][] = [ // [label, startIdxInTimeline, len]
+                ["Last 3 months", v1eIdx("Apr '26"), 3],
+                ["Last 6 months", v1eIdx("Jan '26"), 6],
+                ["Last 12 months", v1eIdx("Jul '25"), 12],
+                ["Next 3 months", v1eIdx("Jun '26"), 3],
+                ["Next 6 months", v1eIdx("Jun '26"), 6],
+                ["This year", v1eIdx("Jan '26"), 12],
+              ];
+              return (
+                <div className="relative flex-shrink-0">
+                  <button onClick={() => setRangePickerOpen(o => !o)}
+                    className={`h-8 px-2.5 flex items-center gap-1.5 rounded-[6px] border border-[#d1d5db] text-sm font-medium text-[#374151] ${zc.hoverBg} transition-colors whitespace-nowrap`}>
+                    <span className="material-symbols-rounded text-[#6b7280]" style={{ fontSize: 16 }}>calendar_month</span>
+                    {chartPeriodLabel}
+                    <ChevronDown size={13} className={`${zc.muted} transition-transform ${rangePickerOpen ? "rotate-180" : ""}`} />
+                  </button>
+                  {rangePickerOpen && (
+                    <>
+                      <div className="fixed inset-0 z-20" onClick={() => { setRangePickerOpen(false); setRangePendStart(null); }} />
+                      <div className="absolute top-9 right-0 z-30 flex gap-0 bg-white rounded-lg shadow-lg ring-1 ring-black/5 overflow-hidden">
+                        {/* presets */}
+                        <div className="flex flex-col gap-2 px-4 py-4 bg-gradient-to-r from-white to-[#f9fafb] border-r border-[#f3f4f6]">
+                          {presets.map(([label, sIdx, len]) => {
+                            const active = sIdx === loIdx && len === winLen;
+                            return (
+                              <button key={label} onClick={() => commitRange(v1eTimeline[sIdx].label, v1eTimeline[Math.min(sIdx + len - 1, v1eTimeline.length - 1)].label)}
+                                className={`px-2.5 py-1 text-xs rounded-md border transition-colors whitespace-nowrap text-left ${active ? "bg-[#2f8af4] text-white border-transparent" : "bg-white text-[#374151] border-[#d1d5db] hover:bg-[#f9fafb]"}`}>
+                                {label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        {/* month calendar — years stacked, padded Jan–Dec, months without data disabled */}
+                        <div className="p-4 w-[248px]">
+                          <p className="text-sm font-medium text-[#111827] mb-0.5">Select up to 12 months</p>
+                          <p className="text-[11px] text-[#6b7280] mb-3 h-4">{rangePendStart != null ? "Pick the end month…" : "Click a start, then an end month"}</p>
+                          <div className="flex flex-col gap-3">
+                            {["2025", "2026", "2027"].map(yr => {
+                              const yy = yr.slice(2);
+                              return (
+                                <div key={yr}>
+                                  <p className="text-xs font-semibold text-[#0168dd] mb-1.5">{yr}</p>
+                                  <div className="grid grid-cols-4 gap-y-1">
+                                    {CAL_MONTHS.map(mon => {
+                                      const label = `${mon} '${yy}`;
+                                      const i = v1eIdx(label);
+                                      const avail = i >= 0;
+                                      return (
+                                        <button key={mon} disabled={!avail}
+                                          onClick={() => avail && onRangeCellClick(label)}
+                                          onMouseEnter={() => { if (avail && rangePendStart != null) setRangeHover(label); }}
+                                          className={`h-8 flex items-center justify-center text-[13px] border-none transition-colors ${avail ? `${cellRound(i)} ${cellCls(i)}` : "text-gray-300 cursor-not-allowed"}`}>
+                                          {mon}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              );
+            })()}
+            {/* Start-month navigator — the label opens a jump picker; Today snaps back to the current month. */}
+            {useTimeline && !v2mode && !drillMonth && (
+              <div className="relative flex items-center gap-2 flex-shrink-0">
+                <button onClick={() => setStartPickerOpen(o => !o)}
+                  className={`h-10 px-2.5 flex items-center gap-1.5 rounded-[6px] border border-[#d1d5db] ${zc.hoverBg} transition-colors whitespace-nowrap`}>
+                  <span className="material-symbols-rounded text-[#6b7280]" style={{ fontSize: 16 }}>calendar_month</span>
+                  <span className="flex flex-col items-start leading-none gap-0.5">
+                    <span className={`text-[9px] ${zc.muted} font-normal`}>Starting on</span>
+                    <span className="text-sm font-medium text-[#374151]">{v1eFullMonthLabel(startLabel)}</span>
+                  </span>
+                  <ChevronDown size={13} className={`${zc.muted} transition-transform ${startPickerOpen ? "rotate-180" : ""}`} />
+                </button>
+                {!atToday && (
+                  <button onClick={() => { setStartMonth(v1eCurrentLabel); setStartPickerOpen(false); loadWin(); }}
+                    className="ml-1 h-8 px-2.5 flex items-center gap-1 rounded-[6px] text-sm font-medium text-[#0168dd] hover:bg-[#f0f5ff] transition-colors whitespace-nowrap">
+                    <span className="material-symbols-rounded" style={{ fontSize: 15 }}>today</span>
+                    Today
+                  </button>
+                )}
+                {startPickerOpen && (
+                  <>
+                    <div className="fixed inset-0 z-20" onClick={() => setStartPickerOpen(false)} />
+                    <div className="absolute top-9 left-0 z-30 bg-white rounded-lg border border-[#e5e7eb] shadow-xl py-1 w-44 max-h-64 overflow-y-auto">
+                      <p className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-[#9ca3af]">Start month</p>
+                      {v1eTimeline.slice(0, maxStartIdx + 1).map(b => {
+                        const sel = b.label === startLabel;
+                        const isCur = b.label === v1eCurrentLabel;
+                        return (
+                          <button key={b.label} onClick={() => { setStartMonth(b.label); setStartPickerOpen(false); loadWin(); }}
+                            className={`w-full text-left px-3 py-1.5 text-[13px] flex items-center justify-between transition-colors ${sel ? "bg-[#f0f5ff] text-[#0168dd] font-medium" : "text-[#111827] hover:bg-[#f9fafb]"}`}>
+                            <span>{v1eFullMonthLabel(b.label)}</span>
+                            {isCur && <span className={`text-[10px] ${sel ? "text-[#0168dd]" : "text-[#9ca3af]"}`}>Today</span>}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+              </div>
             )}
             {zone && !mvp && !is1M && !drillMonth && (
               /* Zone Toggle — size sm. Track w-8 h-4 rounded-[24px]; 12px white thumb,
@@ -5885,7 +6592,7 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
         {!mvp && (
         <div className="flex items-start justify-between mb-3 gap-4">
           <div>
-            <p className={`text-[11px] ${zc.muted}`}>{zone ? chartCaption.replace(" · click a bar for its weekly breakdown", "") : chartCaption}</p>
+            <p className={`text-[11px] ${zc.muted}`}>{zone ? `${chartCaption.replace(" · click a bar for its weekly breakdown", "")}${useTimeline && !drillMonth ? ` · ${chartPeriodLabel}` : ""}` : chartCaption}</p>
           </div>
           {!zone && (<div className="flex items-center gap-3 flex-shrink-0">
             <div className={`flex items-center ${zc.segTrack} rounded-md p-0.5`}>
@@ -5937,7 +6644,7 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
       {/* ── Chart ────────────────────────────────────────────────────────── */}
       <div className="px-5 pt-3 pb-4">
         {loading ? (
-          <ChartSkeleton bars={isWeekly ? 4 : (cfg.bars.length || 12)} />
+          <ChartSkeleton bars={isWeekly ? 4 : (chartBars.length || 12)} />
         ) : isWeekly ? (
           <ResponsiveContainer width="100%" height={zone ? 220 : 150}>
             <BarChart data={weekRows} barCategoryGap="30%" maxBarSize={zone ? 80 : undefined} margin={{ top: 20, right: 4, left: 0, bottom: 4 }}>
@@ -5964,6 +6671,11 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
           <ResponsiveContainer width="100%" height={zone ? 220 : 150}>
             <ComposedChart data={monthlyRows} barCategoryGap="28%" maxBarSize={zone ? 80 : undefined} margin={{ top: 20, right: 4, left: 0, bottom: 4 }}>
               <CartesianGrid vertical={false} stroke={zone ? "#e5e7eb" : "#f3f4f6"} strokeDasharray={zone ? "5 5" : undefined} />
+              {/* "Now" anchor — keeps users oriented once the window slides off the current month. */}
+              {useTimeline && chartTodayBar && (
+                <ReferenceLine x={chartTodayBar} stroke="#0168dd" strokeDasharray="4 4"
+                  label={{ value: "Today", position: "top", fontSize: 11, fill: "#0168dd", fontWeight: 600 }} />
+              )}
               <XAxis dataKey="label" tick={{ fontSize: zone ? 14 : (range === "12M" ? 9 : 10), fill: zone ? "#6b7280" : "#6b7280" }} tickLine={false} axisLine={false} interval={0} />
               <YAxis tick={{ fontSize: zone ? 14 : 10, fill: zone ? "#6b7280" : "#6b7280" }} tickFormatter={(v: number) => `$${Math.round(v/1000)}k`} axisLine={false} tickLine={false} width={zone ? 40 : 36} />
               <Tooltip cursor={{ fill: "#f9fafb" }} content={({ active, payload }: any) => {
@@ -6105,14 +6817,18 @@ const v1gProviderMeta: Record<string, { name: string; balanceReadable: boolean }
   deel:    { name: "Deel",    balanceReadable: true },
   export:  { name: "Export",  balanceReadable: false },
   gusto:   { name: "Gusto",   balanceReadable: true },
+  payoneer:{ name: "Payoneer", balanceReadable: false },
 };
 // daysOut = days from today until the FUND-BY date (payout date minus transfer lag),
 // so windows are built on when you must fund, not when the payment lands.
-type V1gFundDate = { date: string; dow: string; daysOut: number; tag?: "next" | "projected"; funded?: boolean; fundBy?: string; paidOn?: string; providers: { id: string; amount: number }[] };
+// A payout method on a funding date can aggregate MORE than one pay period (e.g. Wise weekly + monthly
+// both landing on the same fund date). `periods` lists the contributing pay periods for context.
+type V1gPayPeriod = { type: string; dates?: string };
+type V1gFundDate = { date: string; dow: string; daysOut: number; tag?: "next" | "projected"; funded?: boolean; fundBy?: string; paidOn?: string; providers: { id: string; amount: number; periods?: V1gPayPeriod[] }[] };
 const v1gFundSchedule: V1gFundDate[] = [
   { date: "Jun 8",  dow: "Mon", daysOut: -12, funded: true,    fundBy: "Sun, Jun 7",  paidOn: "Jun 10", providers: [{ id: "wise", amount: 12000 }, { id: "paypal", amount: 9000 }] },
   { date: "Jun 15", dow: "Mon", daysOut: -5, funded: true,     fundBy: "Sun, Jun 14", paidOn: "Jun 17", providers: [{ id: "wise", amount: 13000 }, { id: "paypal", amount: 11000 }] },
-  { date: "Jun 22", dow: "Mon", daysOut: 2,  tag: "next",       fundBy: "Sun, Jun 21", paidOn: "Jun 24", providers: [{ id: "wise", amount: 15000 }, { id: "paypal", amount: 13000 }, { id: "deel", amount: 20000 }, { id: "export", amount: 12000 }] },
+  { date: "Jun 22", dow: "Mon", daysOut: 2,  tag: "next",       fundBy: "Sun, Jun 21", paidOn: "Jun 24", providers: [{ id: "wise", amount: 15000, periods: [{ type: "Weekly", dates: "Jun 16 – Jun 22" }, { type: "Bi-weekly", dates: "Jun 9 – Jun 22" }, { type: "Monthly", dates: "Jun 1 – Jun 30" }] }, { id: "paypal", amount: 13000, periods: [{ type: "Weekly", dates: "Jun 16 – Jun 22" }, { type: "Monthly", dates: "Jun 1 – Jun 30" }] }, { id: "deel", amount: 20000 }, { id: "export", amount: 12000 }] },
   { date: "Jun 24", dow: "Wed", daysOut: 4,                      fundBy: "Tue, Jun 23", paidOn: "Jun 26", providers: [{ id: "bitwage", amount: 10000 }, { id: "gusto", amount: 8000 }] },
   { date: "Jun 30", dow: "Tue", daysOut: 10,                     fundBy: "Mon, Jun 29", paidOn: "Jul 2",  providers: [{ id: "wise", amount: 16000 }, { id: "paypal", amount: 11000 }] },
   { date: "Jul 6",  dow: "Mon", daysOut: 16, tag: "projected",   fundBy: "Sun, Jul 5",  paidOn: "Jul 8",  providers: [{ id: "wise", amount: 14500 }, { id: "paypal", amount: 9500 }] },
@@ -6892,7 +7608,7 @@ function FinalUIEmptyBody({ ver }: { ver: 1 | 2 | 3 | 4 | 5 }) {
   );
 }
 
-function VersionFinalUI({ showStatusBreakdown, seasonalityOn, state = "filled", variant = "final" }: { showStatusBreakdown: boolean; seasonalityOn: boolean; state?: "filled" | "initial" | "empty"; variant?: "final" | "mvp" }) {
+function VersionFinalUI({ showStatusBreakdown, seasonalityOn, state = "filled", variant = "final", spillover = null, notSched = false }: { showStatusBreakdown: boolean; seasonalityOn: boolean; state?: "filled" | "initial" | "empty"; variant?: "final" | "mvp"; spillover?: "yellow" | "red" | "mixed" | null; notSched?: boolean }) {
   // `state` selects which Final UI variant to render. All three are the same content today
   // (copies) — branch on `state` here as the initial/empty states get built out.
   const dense = false;
@@ -6901,10 +7617,13 @@ function VersionFinalUI({ showStatusBreakdown, seasonalityOn, state = "filled", 
   const [futurePeriod, setFuturePeriod] = useState<string>("June 2026");
   const [ftVer, setFtVer] = useState<"v1" | "v2" | "v3">("v3"); // Future Tracked layout version — V3 is the live direction; V1/V2 kept for reference
   const SHOW_FT_VERSION_TOGGLE = false; // toggle hidden; flip to true to compare V1/V2/V3 again
-  const [wiseVer, setWiseVer] = useState<0 | 1 | 2 | 3 | 4 | 5>(1); // Wise Interest disclosure — 0 = off, 1–5 = the five treatments
+  const [wiseVer, setWiseVer] = useState<0 | 1 | 2 | 3 | 4 | 5>(1); // Wise Interest disclosure — retired (switcher repurposed for off-schedule version)
+  const [offSchedVer, setOffSchedVer] = useState<1 | 2>(1); // Off-schedule layout: 1 = card in the funding row, 2 = top-level 25% card
+  const [pmtVer, setPmtVer] = useState<1 | 2>(1); // Payments-over-time chart control: 1 = 3/6/12M + stepper, 2 = date-range picker
   const [emptyVer, setEmptyVer] = useState<1 | 2 | 3 | 4 | 5>(5); // Empty-state layout variant — V5 (welcome, bare hero) is the shipped one; V1–V4 kept in code but hidden from the switcher
   const wiseConnected = v1gFundSchedule.some(e => e.providers.some(p => p.id === "wise")); // only surface when Wise is a connected payout method
   const mvp = variant === "mvp";
+  const bState = state; // spillover + not-scheduled are independent overlays (props), not states
   const effWiseVer = mvp ? 1 : wiseVer; // MVP locks the Wise disclosure to treatment 1 (the inline "earn interest" link); the switcher is hidden
   const activityRef = useRef<HTMLDivElement>(null);
 
@@ -6916,26 +7635,40 @@ function VersionFinalUI({ showStatusBreakdown, seasonalityOn, state = "filled", 
   };
 
   return (
-    <WiseVerContext.Provider value={wiseConnected ? effWiseVer : 0}>
-    <div data-final-state={state} data-wise-ver={wiseVer} className="px-6 pb-5 space-y-6 bg-[#f9fafb] min-h-full" style={{ fontFamily: '"Roboto", "Helvetica Neue", Helvetica, Arial, sans-serif' }}>
+    <SpilloverContext.Provider value={spillover}>
+    <NotSchedContext.Provider value={notSched}>
+    <WiseVerContext.Provider value={0}>
+    <OffSchedVerContext.Provider value={offSchedVer}>
+    <PmtVerContext.Provider value={pmtVer}>
+    <div data-final-state={state} data-offsched-ver={offSchedVer} data-pmt-ver={pmtVer} className="px-6 pb-5 space-y-6 bg-[#f9fafb] min-h-full" style={{ fontFamily: '"Roboto", "Helvetica Neue", Helvetica, Arial, sans-serif' }}>
       {/* Zone page header — real structure from hubstaff-server (shadow-md, sticky, h2 text-2xl font-light) */}
       <header className="bg-white shadow-md sticky top-12 z-20 -mx-6 px-6">
         <div className="flex justify-between items-center h-8 pt-3 pb-4 box-content">
           <h2 className="text-2xl font-light text-[#111827]">Payments report</h2>
-          {state === "empty" ? null : mvp ? null : (
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-semibold uppercase tracking-widest text-[#9ca3af]">Wise interest</span>
-              <div className="flex items-center bg-[#f3f4f6] rounded-lg p-0.5">
-                {([[0, "Off"], [1, "1"], [2, "2"], [3, "3"], [4, "4"], [5, "5"]] as const).map(([v, label]) => (
-                  <button key={v} onClick={() => setWiseVer(v)} className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${wiseVer === v ? "bg-white text-[#0168dd] shadow-sm" : "text-[#6b7280] hover:text-[#111827]"}`}>{label}</button>
-                ))}
+          {bState === "empty" ? null : mvp ? null : (
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-semibold uppercase tracking-widest text-[#9ca3af]">Off-schedule</span>
+                <div className="flex items-center bg-[#f3f4f6] rounded-lg p-0.5">
+                  {([[1, "V1"], [2, "V2"]] as const).map(([v, label]) => (
+                    <button key={v} onClick={() => setOffSchedVer(v)} className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${offSchedVer === v ? "bg-white text-[#0168dd] shadow-sm" : "text-[#6b7280] hover:text-[#111827]"}`}>{label}</button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-semibold uppercase tracking-widest text-[#9ca3af]">Payments over Time</span>
+                <div className="flex items-center bg-[#f3f4f6] rounded-lg p-0.5">
+                  {([[1, "V1"], [2, "V2"]] as const).map(([v, label]) => (
+                    <button key={v} onClick={() => setPmtVer(v)} className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${pmtVer === v ? "bg-white text-[#0168dd] shadow-sm" : "text-[#6b7280] hover:text-[#111827]"}`}>{label}</button>
+                  ))}
+                </div>
               </div>
             </div>
           )}
         </div>
       </header>
-      {state === "empty" ? <FinalUIEmptyBody ver={emptyVer} /> : (<>
-      <V1gPredictivePanel key={variant} showStatusBreakdown={showStatusBreakdown} seasonalityOn={seasonalityOn} v1i v1j v1k v1l v1m zone condensed={dense} state={state} variant={variant} onProviderClick={openFuture} />
+      {bState === "empty" ? <FinalUIEmptyBody ver={emptyVer} /> : (<>
+      <V1gPredictivePanel key={variant} showStatusBreakdown={showStatusBreakdown} seasonalityOn={seasonalityOn} v1i v1j v1k v1l v1m zone condensed={dense} state={bState} variant={variant} onProviderClick={openFuture} />
       <div ref={activityRef} className="pt-2">
         <p className="text-lg font-medium text-[#111827] mb-3">Payment Activity</p>
         <div className="flex items-center justify-between gap-0 mb-6 border-b border-[#e5e7eb]">
@@ -6956,7 +7689,11 @@ function VersionFinalUI({ showStatusBreakdown, seasonalityOn, state = "filled", 
       </div>
       </>)}
     </div>
+    </PmtVerContext.Provider>
+    </OffSchedVerContext.Provider>
     </WiseVerContext.Provider>
+    </NotSchedContext.Provider>
+    </SpilloverContext.Provider>
   );
 }
 
@@ -7413,7 +8150,7 @@ function V1mFutureTracked({ provider, period, onProviderChange, onPeriodChange, 
           <div className={`flex-1 min-w-0 ${ftVer !== "v1" ? "" : "border-l border-[#f3f4f6] pl-6"}`}>
             {zone ? (
             /* Breakdown header — label + description stacked (left column), segmented control (right), top-aligned */
-            <div className="flex items-start justify-between gap-6 mb-4">
+            <div className="flex items-start justify-between gap-6 mb-2">
               <div className="flex flex-col gap-1 min-w-0">
                 {ftVer === "v3" ? (<>
                   <p className="text-[11px] font-semibold uppercase tracking-wide text-[#6b7280]">Total projected</p>
@@ -7424,7 +8161,7 @@ function V1mFutureTracked({ provider, period, onProviderChange, onPeriodChange, 
                 </>) : (<>
                   <p className="text-[11px] font-semibold uppercase tracking-wide text-[#6b7280]">Breakdown</p>
                   <p className="text-sm text-[#6b7280] leading-snug">
-                    {segLens === "source" ? "Tracked is final; planned is committed; projected is still an estimate." : "What the payout is made of — e.g. fixed and hourly pay, PTO, and more."}{" "}
+                    {segLens === "source" ? "Tracked is confirmed, Planned is scheduled, and Projected is the estimated hours still to be tracked." : "What the payout is made of — e.g. fixed and hourly pay, PTO, and more."}{" "}
                     <a href="#" onClick={(e) => { e.preventDefault(); setShowBreakdownInfo(true); }} className="font-medium underline underline-offset-2 hover:text-[#111827] transition-colors select-none">Learn more</a>
                   </p>
                 </>)}
@@ -7439,7 +8176,7 @@ function V1mFutureTracked({ provider, period, onProviderChange, onPeriodChange, 
                 )}
                 {ftVer === "v3" && !mvp && (
                   <p className="text-[11px] text-[#6b7280] leading-snug text-right whitespace-nowrap">
-                    {segLens === "source" ? "Tracked is locked in, planned is scheduled, projected is still an estimate." : "The pay types that make up each payout — hourly, fixed pay, PTO, and more."}{" "}
+                    {segLens === "source" ? "Tracked is confirmed, Planned is scheduled, and Projected is the estimated hours still to be tracked." : "The pay types that make up each payout — hourly, fixed pay, PTO, and more."}{" "}
                     <a href="#" onClick={(e) => { e.preventDefault(); setShowBreakdownInfo(true); }} className="font-medium underline underline-offset-2 hover:text-[#111827] transition-colors select-none">Learn more</a>
                   </p>
                 )}
@@ -7455,13 +8192,21 @@ function V1mFutureTracked({ provider, period, onProviderChange, onPeriodChange, 
               </div>
             </div>
             <p className="text-[11px] text-[#6b7280] leading-snug mb-3">
-              {segLens === "source" ? "Tracked is final; planned is committed; projected is still an estimate." : "What the payout is made of — e.g. fixed and hourly pay, PTO, and more."}{" "}
+              {segLens === "source" ? "Tracked is confirmed, Planned is scheduled, and Projected is the estimated hours still to be tracked." : "What the payout is made of — e.g. fixed and hourly pay, PTO, and more."}{" "}
               <a href="#" onClick={(e) => { e.preventDefault(); setShowBreakdownInfo(true); }} className="font-medium underline underline-offset-2 hover:text-[#111827] transition-colors select-none">Learn more</a>
             </p>
             </>)}
             {segLens === "source" ? (<>
-            <div className="relative h-3 rounded-full overflow-hidden flex bg-[#f3f4f6]">
-              {sourceSegs.map((s, i) => <div key={s.label} className="h-full" title={`${s.label} ${fmt0(s.value)}`} style={{ width: `${Math.round(s.value / total * 100)}%`, background: s.striped ? "repeating-linear-gradient(90deg,#85baf5 0px,#85baf5 5px,#bfdbfe 5px,#bfdbfe 9px)" : s.color, marginRight: i < sourceSegs.length - 1 ? 1 : 0 }} />)}
+            {/* Certainty bar — ordered most→least certain, with a "confirmed so far" frontier
+                that grows rightward as the period fills (Tracked replaces Projected over time). */}
+            <div className="relative pt-4">
+              <div className="relative h-3 rounded-full overflow-hidden flex bg-[#f3f4f6]">
+                {sourceSegs.map((s, i) => <div key={s.label} className="h-full" title={`${s.label} ${fmt0(s.value)}`} style={{ width: `${Math.round(s.value / total * 100)}%`, background: s.striped ? "repeating-linear-gradient(90deg,#85baf5 0px,#85baf5 5px,#bfdbfe 5px,#bfdbfe 9px)" : s.color, marginRight: i < sourceSegs.length - 1 ? 1 : 0 }} />)}
+              </div>
+              <div className="absolute top-0 -translate-x-1/2 flex flex-col items-center pointer-events-none" style={{ left: `${Math.min(confirmedPct, 96)}%` }}>
+                <span className="text-[9px] font-semibold text-[#0e9f6e] leading-none whitespace-nowrap">{confirmedPct}% confirmed</span>
+                <span className="material-symbols-rounded text-[#0e9f6e] leading-none" style={{ fontSize: 12, marginTop: -1 }}>arrow_drop_down</span>
+              </div>
             </div>
             <div className="flex items-start justify-between gap-6 mt-3">
               <div className="flex flex-wrap gap-x-6 gap-y-2 flex-1 min-w-0">
@@ -7476,7 +8221,7 @@ function V1mFutureTracked({ provider, period, onProviderChange, onPeriodChange, 
               </div>
               {mvp && (
                 <p className="text-[11px] text-[#6b7280] leading-snug text-right whitespace-nowrap flex-shrink-0">
-                  Tracked is locked in, planned is scheduled, projected is still an estimate.{" "}
+                  Tracked is confirmed, Planned is scheduled, and Projected is the estimated hours still to be tracked.{" "}
                   <a href="#" onClick={(e) => { e.preventDefault(); setShowBreakdownInfo(true); }} className="font-medium underline underline-offset-2 hover:text-[#111827] transition-colors select-none">Learn more</a>
                 </p>
               )}
@@ -7728,11 +8473,11 @@ function V1mFutureTracked({ provider, period, onProviderChange, onPeriodChange, 
             <div className="px-5 py-2.5 overflow-y-auto">
               {segLens === "source" ? (
                 <>
-                <p className="text-sm text-[#4b5563] leading-relaxed mb-4">Every amount in this period sits at one of three levels of certainty — some is already locked in, some is scheduled and expected, and the rest is still our best estimate. Together they show how much of the total you can rely on today versus what could still move before payout. Here's what each level means:</p>
+                <p className="text-sm text-[#4b5563] leading-relaxed mb-4">Every amount in this period sits at one of three levels of certainty — some is already locked in, some is scheduled and expected, and the rest is still our best estimate. Together they show how much of the total you can rely on today versus what could still move before payout. As the period goes on, estimates turn into confirmed amounts — Tracked grows while Projected shrinks toward zero, so the total stays steady while certainty rises. Here's what each level means:</p>
                 <ul className="space-y-4 text-sm leading-relaxed">
-                  <li className="flex gap-2.5"><span className="w-2.5 h-2.5 rounded-sm bg-[#0e9f6e] mt-1 flex-shrink-0" /><span className="text-[#6b7280]"><span className="font-semibold text-[#111827] block mb-0.5">Tracked</span>Hours already logged and recorded, including overtime. It's final and won't change before payout — the part you can count on. <span className="text-[#9ca3af]">Example: 120 hours logged this cycle at $50/hr.</span></span></li>
-                  <li className="flex gap-2.5"><span className="w-2.5 h-2.5 rounded-sm bg-[#0168dd] mt-1 flex-shrink-0" /><span className="text-[#6b7280]"><span className="font-semibold text-[#111827] block mb-0.5">Planned</span>Amounts scheduled and known ahead of time: fixed salaries, approved PTO and holidays, and manual payroll adjustments. Committed unless someone cancels them. <span className="text-[#9ca3af]">Example: a $5,000 monthly salary, approved PTO, or a −$200 correction.</span></span></li>
-                  <li className="flex gap-2.5"><span className="w-2.5 h-2.5 rounded-sm mt-1 flex-shrink-0" style={{ background: "repeating-linear-gradient(90deg,#85baf5 0,#85baf5 3px,#bfdbfe 3px,#bfdbfe 5px)" }} /><span className="text-[#6b7280]"><span className="font-semibold text-[#111827] block mb-0.5">~Projected</span>Our estimate of what's still to come this period — hours not yet logged, plus likely bonuses. Shown only as a team-wide aggregate, never assigned to a person, because it hasn't happened yet. <span className="text-[#9ca3af]">Example: the hours left in the month.</span></span></li>
+                  <li className="flex gap-2.5"><span className="w-2.5 h-2.5 rounded-sm bg-[#0e9f6e] mt-1 flex-shrink-0" /><span className="text-[#6b7280]"><span className="font-semibold text-[#111827] block mb-0.5">Tracked</span>Money already confirmed for this period — tracked hours, overtime, and any fixed pay Team Payments has marked as earned. It's locked in and keeps growing as more is confirmed. <span className="text-[#9ca3af]">Example: 120 hours logged this cycle, plus a salary that's now earned.</span></span></li>
+                  <li className="flex gap-2.5"><span className="w-2.5 h-2.5 rounded-sm bg-[#0168dd] mt-1 flex-shrink-0" /><span className="text-[#6b7280]"><span className="font-semibold text-[#111827] block mb-0.5">Planned</span>Amounts already scheduled but not yet earned — upcoming PTO, holidays, and payroll adjustments. Known ahead of time; each moves into Tracked once Team Payments marks it earned. <span className="text-[#9ca3af]">Example: approved PTO next week, or a −$200 correction.</span></span></li>
+                  <li className="flex gap-2.5"><span className="w-2.5 h-2.5 rounded-sm mt-1 flex-shrink-0" style={{ background: "repeating-linear-gradient(90deg,#85baf5 0,#85baf5 3px,#bfdbfe 3px,#bfdbfe 5px)" }} /><span className="text-[#6b7280]"><span className="font-semibold text-[#111827] block mb-0.5">~Projected</span>The estimated remainder of hourly earnings for this period — hours people are likely to track but haven't yet. It exists only because working days are left; as real hours get tracked it shrinks, approaching zero by period end. Shown only as a team-wide aggregate, never per person. <span className="text-[#9ca3af]">Example: the hours still to be logged this month.</span></span></li>
                 </ul>
                 </>
               ) : (
@@ -8158,7 +8903,7 @@ const FINAL_VERSIONS: [string, string][] = [["v1","1"],["v1c","1C"],["v1d","1D"]
 // and served from /public/hubstaff-template. The shell injects fixed chrome into
 // <body> and offsets #shell-content; there is no teardown API, so we clean it up
 // manually when leaving this version.
-function FinalUIShell({ children, version = "final", onVersionChange, finalState, onFinalStateChange }: { children: ReactNode; version?: string; onVersionChange: (v: string) => void; finalState: string; onFinalStateChange: (s: string) => void }) {
+function FinalUIShell({ children, version = "final", onVersionChange, finalState, onFinalStateChange, spilloverLvl, onSpilloverChange, notSchedOn, onNotSchedChange }: { children: ReactNode; version?: string; onVersionChange: (v: string) => void; finalState: string; onFinalStateChange: (s: string) => void; spilloverLvl: "off" | "yellow" | "red" | "mixed"; onSpilloverChange: (v: "off" | "yellow" | "red" | "mixed") => void; notSchedOn: boolean; onNotSchedChange: (v: boolean) => void }) {
   useEffect(() => {
     [
       "https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600&display=swap",
@@ -8225,6 +8970,21 @@ function FinalUIShell({ children, version = "final", onVersionChange, finalState
           <option value="initial">Initial state</option>
           <option value="empty">Empty state</option>
         </select>
+        <span className="w-px h-3.5 bg-[#e5e7eb]" />
+        <span className="text-[9px] font-semibold uppercase tracking-widest text-[#6b7280]">Spillover</span>
+        <select value={spilloverLvl} onChange={e => onSpilloverChange(e.target.value as "off" | "yellow" | "red" | "mixed")} className="text-[11px] font-medium text-[#111827] bg-transparent outline-none cursor-pointer">
+          <option value="off">Off</option>
+          <option value="yellow">Yellow</option>
+          <option value="red">Red</option>
+          <option value="mixed">Mixed</option>
+        </select>
+        <span className="w-px h-3.5 bg-[#e5e7eb]" />
+        {(() => { const nsOn = notSchedOn && spilloverLvl !== "mixed"; const nsLocked = spilloverLvl === "mixed"; return (
+        <button onClick={() => { if (!nsLocked) onNotSchedChange(!notSchedOn); }} disabled={nsLocked} title={nsLocked ? "Merged into the Mixed spillover card" : "Toggle the Not-scheduled group"} className={`flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest select-none ${nsLocked ? "text-[#d1d5db] cursor-not-allowed" : "text-[#6b7280]"}`}>
+          <span className={`relative w-7 h-4 rounded-full transition-colors flex-shrink-0 inline-flex ${nsOn ? "bg-[#0168dd]" : "bg-[#d1d5db]"}`}><span className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow-sm transition-transform ${nsOn ? "translate-x-3.5" : "translate-x-0.5"}`} /></span>
+          Not scheduled
+        </button>
+        ); })()}
       </div>
     </>
   );
@@ -8235,11 +8995,13 @@ export default function App() {
   const [showStatusBreakdown, setShowStatusBreakdown] = useState(false);
   const [seasonalityOn, setSeasonalityOn] = useState(true);
   const [finalState, setFinalState] = useState<"filled" | "initial" | "empty">("filled"); // Final UI state variant (filled = the one being built)
+  const [spilloverLvl, setSpilloverLvl] = useState<"off" | "yellow" | "red" | "mixed">("off"); // late-approved spillover overlay — "mixed" merges the Not-scheduled group into one off-schedule card
+  const [notSchedOn, setNotSchedOn] = useState(false); // "Not scheduled" group — independent toggle
 
   if (version === "final" || version === "mvp") {
     return (
-      <FinalUIShell version={version} onVersionChange={(v) => setVersion(v as typeof version)} finalState={finalState} onFinalStateChange={(s) => setFinalState(s as typeof finalState)}>
-        <VersionFinalUI showStatusBreakdown={showStatusBreakdown} seasonalityOn={seasonalityOn} state={finalState} variant={version === "mvp" ? "mvp" : "final"} />
+      <FinalUIShell version={version} onVersionChange={(v) => setVersion(v as typeof version)} finalState={finalState} onFinalStateChange={(s) => setFinalState(s as typeof finalState)} spilloverLvl={spilloverLvl} onSpilloverChange={(v) => { setSpilloverLvl(v); if (v === "mixed") setNotSchedOn(false); }} notSchedOn={notSchedOn} onNotSchedChange={setNotSchedOn}>
+        <VersionFinalUI showStatusBreakdown={showStatusBreakdown} seasonalityOn={seasonalityOn} state={finalState} variant={version === "mvp" ? "mvp" : "final"} spillover={spilloverLvl === "off" ? null : spilloverLvl} notSched={spilloverLvl === "mixed" ? false : notSchedOn} />
       </FinalUIShell>
     );
   }
