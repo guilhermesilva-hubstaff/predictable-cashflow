@@ -1623,11 +1623,17 @@ const WiseVerContext = createContext(0);
 const OffSchedVerContext = createContext<1 | 2>(1);
 // "Payments over time" chart control version: 1 = 3/6/12M buttons + month stepper; 2 = single Zone date-range picker (pick any span up to 12 months).
 const PmtVerContext = createContext<1 | 2>(1);
+// Payments-report off-schedule strategy: 1 = dedicated Off-schedule card (pending + no-period-set live there);
+// 2 = no card — pending timesheet approval moves into the fund-by "Not approved" columns, and a yellow banner covers "No pay period set".
+const PmtReportVerContext = createContext<1 | 2>(1);
 // Spillover (late-approved timesheets) scenario for the funding schedule + alerts. null = off.
 const SpilloverContext = createContext<"yellow" | "red" | "mixed" | null>(null);
 // Late-approved amounts folded into the imminent ("next") card's method rows in the red state.
 const v1SpilloverLate: Record<string, number> = { wise: 1200, paypal: 800 };
 const v1SpilloverTotal = 2000;
+// Pending timesheet approval per payout method — the SAME $9,000 pool the off-schedule card shows
+// (wise 3,700 + paypal 2,100 + deel 800 + export 2,400 = 9,000), so the fund-by "Not approved" column reconciles.
+const v1PendingApproval: Record<string, number> = { wise: 3700, paypal: 2100, deel: 800, export: 2400 };
 // Members whose timesheets await approval (the "pending" spillover): Wise 700+500, PayPal 800 → $2,000 across 3 members.
 const v1SpilloverMembers: { id: string; name: string; role: string; provider: string; amount: number }[] = [
   { id: "sm1", name: "Ana Costa", role: "Design", provider: "wise", amount: 700 },
@@ -4734,7 +4740,7 @@ function PendingMembersTrigger({ scope = "all", align = "left", className = "", 
   );
 }
 
-function V1kFundDateCard({ e, v1l = false, zone = false, condensed = false, mvp = false, noSpillover = false, onProviderClick }: { e: V1gFundDate; v1l?: boolean; zone?: boolean; condensed?: boolean; mvp?: boolean; noSpillover?: boolean; onProviderClick?: (providerId: string) => void }) {
+function V1kFundDateCard({ e, v1l = false, zone = false, condensed = false, mvp = false, sync = false, mergeCls = "", noSpillover = false, onProviderClick }: { e: V1gFundDate; v1l?: boolean; zone?: boolean; condensed?: boolean; mvp?: boolean; sync?: boolean; mergeCls?: string; noSpillover?: boolean; onProviderClick?: (providerId: string) => void }) {
   const wiseVer = useContext(WiseVerContext);
   // Zone typography (from app.hubstaff.com/zone/docs/typography + real staging table):
   // body text = 14px (text-sm), labels = 12px (text-xs), Roboto, gray-900/700/500.
@@ -4753,6 +4759,8 @@ function V1kFundDateCard({ e, v1l = false, zone = false, condensed = false, mvp 
   const isNext = e.tag === "next";
   const spilloverLvlCtx = useContext(SpilloverContext);
   const spilloverLvl = noSpillover ? null : spilloverLvlCtx; // the "Fund by today" card reuses this card but has no pending/late markers
+  const reportVer = useContext(PmtReportVerContext);
+  const certainty = mvp && !noSpillover; // MVP fund-by shows Not-approved/Approved/Due columns in both off-schedule versions
   const lateFold = spilloverLvl === "red" && isNext; // amounts fold into the imminent card's method rows (red only)
   const lateMark = spilloverLvl != null && isNext;   // late marker shows on affected methods in yellow AND red
   const lateOf = (id: string) => (lateFold ? (v1SpilloverLate[id] ?? 0) : 0);
@@ -4769,6 +4777,36 @@ function V1kFundDateCard({ e, v1l = false, zone = false, condensed = false, mvp 
   const check = <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>;
   const fundTotal = e.providers.reduce((s, p) => s + v1jAddFor(p.id, p.amount + lateOf(p.id)).amount, 0);
   const dueTotal = e.providers.reduce((s, p) => s + p.amount + lateOf(p.id), 0);
+  // MVP certainty totals: Due = sum of amounts, Not approved yet = pending portion, Approved = the rest.
+  const mvpDueTotal = e.providers.reduce((s, p) => s + p.amount, 0);
+  const mvpNotApprovedTotal = e.providers.reduce((s, p) => s + Math.min(v1PendingApproval[p.id] ?? 0, p.amount), 0);
+  const mvpApprovedTotal = mvpDueTotal - mvpNotApprovedTotal;
+  // Sync version keeps the column ALWAYS (dashes when zero) so the table structure never shifts between cards.
+  const hasNotApproved = sync ? true : mvpNotApprovedTotal > 0; // otherwise only show the column when this card has pending
+  const pendingColLabel = sync ? "Pending timesheets" : "Not approved";
+  // Card-level pay periods (the card is grouped by period end date, so periods describe the whole card).
+  const cardPeriods: { type: string; dates?: string }[] = (() => {
+    const seen = new Map<string, string | undefined>();
+    e.providers.forEach(p => (p.periods ?? []).forEach(pd => { if (!seen.has(pd.type)) seen.set(pd.type, pd.dates); }));
+    if (seen.size === 0) [...new Set(e.providers.map(p => v1mProviderCycles[p.id]?.cycle ?? "Monthly"))].forEach(c => seen.set(c, undefined));
+    return [...seen.entries()].map(([type, dates]) => ({ type, dates }));
+  })();
+  // Periods sit on the title row's RIGHT side (next to the "Next" pill): "3 periods" when several
+  // (hover lists them with dates), or the single type name ("Monthly") when there's just one.
+  const periodsBadge = sync && cardPeriods.length > 0 ? (
+    cardPeriods.length === 1 ? (
+      <span className="text-[12px] text-[#6b7280] whitespace-nowrap font-normal">{cardPeriods[0].type}</span>
+    ) : (
+      <span className="relative group inline-flex items-center cursor-help text-[12px] text-[#6b7280] whitespace-nowrap font-normal">
+        <span className="underline decoration-dotted decoration-[#9ca3af] underline-offset-2">{cardPeriods.length} periods</span>
+        <span className="pointer-events-none absolute right-0 top-full mt-1 z-40 hidden group-hover:block bg-[#111827] text-white text-[11px] font-normal rounded-md px-2.5 py-2 shadow-lg whitespace-nowrap text-left">
+          <span className="block font-semibold mb-1">This funding includes</span>
+          {cardPeriods.map(pd => <span key={pd.type} className="block leading-relaxed">{pd.type}{pd.dates ? <span className="text-[#9ca3af]"> — {pd.dates}</span> : null}</span>)}
+        </span>
+      </span>
+    )
+  ) : null;
+  const periodsSegment = null;
   const monthDay = (e.fundBy ?? "").split(", ")[1] ?? e.fundBy;
   const shortDay = (e.fundBy ?? "").split(", ")[0];
   const weekday = v1kDowFull[shortDay] ?? "";
@@ -4779,16 +4817,22 @@ function V1kFundDateCard({ e, v1l = false, zone = false, condensed = false, mvp 
     <table data-zone="table" className="w-full table-fixed">
       <colgroup>
         <col />
-        <col className="w-[24%]" />
-        {!mvp && <col className="w-[18%]" />}
-        {!mvp && <col className="w-[18%]" />}
+        {certainty ? (hasNotApproved ? (<><col className="w-[26%]" /><col className="w-[24%]" /><col className="w-[21%]" /></>) : (<><col className="w-[26%]" /><col className="w-[24%]" /></>)) : mvp ? (<col className="w-[24%]" />) : (<><col className="w-[24%]" /><col className="w-[18%]" /><col className="w-[18%]" /></>)}
       </colgroup>
       <thead>
         <tr className={`${zt.head} font-semibold uppercase tracking-wide`}>
-          <th className={`text-left font-semibold ${headPad} border-b border-[#e5e7eb]`}>Payout method</th>
-          <th className={`text-right font-semibold ${headPad} pl-4 border-b border-[#e5e7eb]`}>Due</th>
-          {!mvp && <th className={`text-right font-semibold ${headPad} pl-4 border-b border-[#e5e7eb]`}>Balance</th>}
-          {!mvp && <th className={`text-right font-semibold ${headPad} pl-4 border-b border-[#e5e7eb]`}>{e.funded ? "Status" : "Fund"}</th>}
+          <th className={`text-left font-semibold ${headPad} border-b border-[#e5e7eb]`}>{certainty ? (<>Payout<br />method</>) : "Payout method"}</th>
+          {certainty ? (<>
+            {hasNotApproved && <th className={`text-right font-semibold ${headPad} pl-3 border-b border-[#e5e7eb]`}>{pendingColLabel}</th>}
+            <th className={`text-right font-semibold ${headPad} pl-3 border-b border-[#e5e7eb]`}>Approved</th>
+            <th className={`text-right font-semibold ${headPad} pl-3 border-b border-[#e5e7eb]`}>Due</th>
+          </>) : mvp ? (
+            <th className={`text-right font-semibold ${headPad} pl-4 border-b border-[#e5e7eb]`}>Due</th>
+          ) : (<>
+            <th className={`text-right font-semibold ${headPad} pl-4 border-b border-[#e5e7eb]`}>Due</th>
+            <th className={`text-right font-semibold ${headPad} pl-4 border-b border-[#e5e7eb]`}>Balance</th>
+            <th className={`text-right font-semibold ${headPad} pl-4 border-b border-[#e5e7eb]`}>{e.funded ? "Status" : "Fund"}</th>
+          </>)}
         </tr>
       </thead>
       <tbody>
@@ -4800,6 +4844,9 @@ function V1kFundDateCard({ e, v1l = false, zone = false, condensed = false, mvp 
           const pending = pendingOf(p.id);
           const res = v1jAddFor(p.id, p.amount + late);
           const cadence = v1mProviderCycles[p.id]?.cycle ?? "Monthly";
+          // MVP certainty split: Due = amount, Not approved yet = pending-approval portion, Approved = the rest.
+          const notApproved = Math.min(v1PendingApproval[p.id] ?? 0, p.amount);
+          const approvedAmt = p.amount - notApproved;
           return (
             <tr key={p.id} className={`border-b last:border-0 ${zone ? "border-[#f3f4f6]" : "border-[#f3f4f6]"}`}>
               <td className={`${rowPad} pr-2`}>
@@ -4812,8 +4859,8 @@ function V1kFundDateCard({ e, v1l = false, zone = false, condensed = false, mvp 
                       {meta.name}
                     </a>
                   )}
-                  {/* Pay period(s) inline next to the name — one or two shown as words, three+ collapsed to a count. Full list on hover. */}
-                  {v1l && (p.periods && p.periods.length ? (
+                  {/* Pay period(s) inline next to the name — hidden when the certainty columns show (report V1/V2 MVP). */}
+                  {v1l && !certainty && (p.periods && p.periods.length ? (
                     <span className={`${zt.cadence} whitespace-nowrap flex-shrink-0 relative group inline-flex items-center cursor-help`}>
                       <span className="text-[#d1d5db] mx-1">·</span>
                       <span className="underline decoration-dotted decoration-[#9ca3af] underline-offset-2">{p.periods.length > 2 ? `${p.periods.length} periods` : p.periods.map(pd => pd.type).join(" • ")}</span>
@@ -4827,19 +4874,31 @@ function V1kFundDateCard({ e, v1l = false, zone = false, condensed = false, mvp 
                   ))}
                   {mark && <span title={late > 0 ? `${fmt0(late)} approved after the cycle closed` : "Has timesheets awaiting approval — may be added to this payment"} aria-label="Late-approved timesheets" className={`inline-flex items-center flex-shrink-0 cursor-help ${markClr}`}><span className="material-symbols-rounded" style={{ fontSize: 14 }}>history</span></span>}
                 </div>
-                {/* v1 — subtle inline Wise-interest link under the Wise row */}
-                {wiseVer === 1 && p.id === "wise" && (
+                {/* v1 — subtle inline Wise-interest link under the Wise row (mvp2: shorter, the whole text is the link) */}
+                {sync && p.id === "wise" ? (
+                  <a href={WISE_INTEREST_URL} target="_blank" rel="noopener noreferrer" className="mt-0.5 flex items-center gap-1 text-[11px] text-[#0168dd] hover:text-[#0057bb] transition-colors whitespace-nowrap w-fit">
+                    <TrendingUp size={12} aria-hidden="true" className="flex-shrink-0" />
+                    <span className="font-medium underline underline-offset-2">Earn interest on your balance</span>
+                  </a>
+                ) : wiseVer === 1 && p.id === "wise" ? (
                   <a href={WISE_INTEREST_URL} target="_blank" rel="noopener noreferrer" className="mt-0.5 flex items-center gap-1 text-[11px] text-[#0168dd] hover:text-[#0057bb] transition-colors whitespace-nowrap w-fit">
                     <TrendingUp size={12} aria-hidden="true" className="flex-shrink-0" />
                     <span>Earn interest on your Wise balance</span>
                     <span className="text-[#93c5fd]" aria-hidden="true">·</span>
                     <span className="font-medium underline underline-offset-2">Learn how</span>
                   </a>
-                )}
+                ) : null}
               </td>
+              {certainty ? (<>
+                {/* Report V2 — certainty columns: Not approved (only if any) · Approved · Due */}
+                {hasNotApproved && <td className={`${rowPad} pl-3 text-right whitespace-nowrap tabular-nums text-[11px] font-semibold ${notApproved > 0 ? "text-[#9f580a]" : "text-[#d1d5db]"}`}>{notApproved > 0 ? fmt0(notApproved) : "—"}</td>}
+                <td className={`${rowPad} pl-3 text-right whitespace-nowrap tabular-nums text-[11px] font-semibold text-[#111827]`}>{fmt0(approvedAmt)}</td>
+                <td className={`${rowPad} pl-3 text-right whitespace-nowrap tabular-nums text-[11px] font-semibold text-[#4b5563]`}>{fmt0(p.amount)}</td>
+              </>) : mvp ? (
+                <td className={`${rowPad} pl-4 text-right whitespace-nowrap tabular-nums ${v1l ? zt.num : "text-[11px] font-semibold text-[#4b5563]"}`}><span className="flex items-center gap-1.5 justify-end">{pending > 0 && yellowPill(pending, p.id)}<span>{fmt0(p.amount + late)}</span></span></td>
+              ) : (<>
               <td className={`${rowPad} pl-4 text-right whitespace-nowrap tabular-nums ${v1l ? zt.num : "text-[11px] font-semibold text-[#4b5563]"}`}><span className="flex items-center gap-1.5 justify-end">{pending > 0 && yellowPill(pending, p.id)}<span>{fmt0(p.amount + late)}</span></span></td>
-              {!mvp && <td className={`${rowPad} pl-4 text-right whitespace-nowrap tabular-nums ${v1l ? zt.num : "text-[11px] font-semibold text-[#4b5563]"}`}>{/* v3 — balance-anchored Wise-interest tag (icon-only, left of the number so the amount stays column-aligned) */}{wiseVer === 3 && p.id === "wise" && bal !== undefined && (<span title="This balance earns interest" aria-label="This balance earns interest" className="mr-1.5 inline-flex items-center align-middle text-[#0e9f6e]"><Gift size={13} aria-hidden="true" /></span>)}{bal !== undefined ? fmt0(bal) : (v1l ? <span className={`inline-flex items-center gap-1 justify-end ${zone ? "text-[#9ca3af]" : "text-[#9ca3af]"}`}>Unknown <InfoTip text={v1InfoText.unknown} /></span> : "—")}</td>}
-              {!mvp && (
+              <td className={`${rowPad} pl-4 text-right whitespace-nowrap tabular-nums ${v1l ? zt.num : "text-[11px] font-semibold text-[#4b5563]"}`}>{/* v3 — balance-anchored Wise-interest tag (icon-only, left of the number so the amount stays column-aligned) */}{wiseVer === 3 && p.id === "wise" && bal !== undefined && (<span title="This balance earns interest" aria-label="This balance earns interest" className="mr-1.5 inline-flex items-center align-middle text-[#0e9f6e]"><Gift size={13} aria-hidden="true" /></span>)}{bal !== undefined ? fmt0(bal) : (v1l ? <span className={`inline-flex items-center gap-1 justify-end ${zone ? "text-[#9ca3af]" : "text-[#9ca3af]"}`}>Unknown <InfoTip text={v1InfoText.unknown} /></span> : "—")}</td>
               <td className={`${rowPad} pl-4 text-right whitespace-nowrap`}>
                 {e.funded ? (
                   <span className="text-[11px] font-semibold text-emerald-600 inline-flex items-center gap-1 justify-end">{check} paid</span>
@@ -4849,7 +4908,7 @@ function V1kFundDateCard({ e, v1l = false, zone = false, condensed = false, mvp 
                   <span className={v1l ? `${zt.numStrong} tabular-nums` : "text-xs font-bold text-amber-600"}>{fmt0(res.amount)}</span>
                 )}
               </td>
-              )}
+              </>)}
             </tr>
           );
         })}
@@ -4858,7 +4917,7 @@ function V1kFundDateCard({ e, v1l = false, zone = false, condensed = false, mvp 
   );
 
   return (
-    <div data-zone="card" data-component={zone ? "Fund-by card" : undefined} className={`rounded-lg border bg-white ${zone ? "p-4" : "px-4 py-3"} flex flex-col h-full ${zone ? "border-[#e5e7eb]" : (isNext ? "border-[#d1d5db]" : "border-[#e5e7eb]")}`}>
+    <div data-zone="card" data-component={zone ? "Fund-by card" : undefined} className={`rounded-lg border bg-white ${zone ? (sync ? "px-5 py-4" : "p-4") : "px-4 py-3"} flex flex-col h-full ${zone ? "border-[#e5e7eb]" : (isNext ? "border-[#d1d5db]" : "border-[#e5e7eb]")}${mergeCls ? " " + mergeCls : ""}`}>
       {zone ? (
         /* Final UI — title + cycle caption stacked on the left, pill on the right */
         <div className="flex justify-between items-start gap-2 mb-4">
@@ -4869,24 +4928,29 @@ function V1kFundDateCard({ e, v1l = false, zone = false, condensed = false, mvp 
               <span className="text-base text-[#6b7280] whitespace-nowrap"> · {shortDay}</span>
             </p>
             {e.providers.every(p => v1gManualProviders.has(p.id)) ? (
-              <p className={`${zt.cadence} flex items-center gap-x-1.5 whitespace-nowrap`}>
+              <p className={`${zt.cadence} flex items-center gap-x-1.5 flex-wrap`}>
                 <span>Cycle ends {monthDay}</span>
                 <span className="text-[#d1d5db]">·</span>
                 <span>Triggered by you</span>
+                {periodsSegment}
               </p>
             ) : (
-              <p className={`${zt.cadence} flex items-center gap-x-1.5 whitespace-nowrap`}>
+              <p className={`${zt.cadence} flex items-center gap-x-1.5 flex-wrap`}>
                 <span>Cycle ends {monthDay}</span>
                 <span className="text-[#d1d5db]">·</span>
                 <span>Triggers {e.date}</span>
+                {periodsSegment}
               </p>
             )}
           </div>
-          {isNext ? (
-            <span className={zpill("primary", "md", "flex-shrink-0")}><span className="material-symbols-rounded leading-none" style={{ fontSize: 16, marginRight: 2 }}>event_upcoming</span> Next</span>
-          ) : projected ? (
-            <span className="text-[10px] text-[#d1d5db] flex-shrink-0">projected</span>
-          ) : null}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {periodsBadge}
+            {isNext ? (
+              <span className={zpill("primary", "md", "flex-shrink-0")}><span className="material-symbols-rounded leading-none" style={{ fontSize: 16, marginRight: 2 }}>event_upcoming</span> Next</span>
+            ) : projected ? (
+              <span className="text-[10px] text-[#d1d5db] flex-shrink-0">projected</span>
+            ) : null}
+          </div>
         </div>
       ) : (
         <>
@@ -4913,7 +4977,22 @@ function V1kFundDateCard({ e, v1l = false, zone = false, condensed = false, mvp 
 
       {showTable && <div className={zone ? "" : "mt-3"}>{providerTable}</div>}
 
-      {!mvp && !e.funded ? (
+      {certainty && !e.funded ? (
+        /* Report V2 — Total row aligned under Not approved (if any) · Approved · Due */
+        <div className={`${showTable ? "mt-auto" : "mt-4"} pt-2 border-t border-[#e5e7eb]`}>
+          <table className="w-full table-fixed">
+            <colgroup>{hasNotApproved ? (<><col /><col className="w-[26%]" /><col className="w-[22%]" /><col className="w-[20%]" /></>) : (<><col /><col className="w-[26%]" /><col className="w-[24%]" /></>)}</colgroup>
+            <tbody>
+              <tr>
+                <td className="text-[11px] font-semibold uppercase tracking-wide text-[#111827] align-middle">Total</td>
+                {hasNotApproved && <td className={`pl-3 text-right align-middle text-[11px] font-semibold tabular-nums ${mvpNotApprovedTotal > 0 ? "text-[#9f580a]" : "text-[#d1d5db]"}`}>{mvpNotApprovedTotal > 0 ? fmt0(mvpNotApprovedTotal) : "—"}</td>}
+                <td className="pl-3 text-right align-middle text-[11px] font-semibold text-[#111827] tabular-nums">{fmt0(mvpApprovedTotal)}</td>
+                <td className="pl-3 text-right align-middle text-[11px] font-semibold text-[#111827] tabular-nums">{fmt0(mvpDueTotal)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      ) : !mvp && !e.funded ? (
         <div className={`${showTable ? "mt-auto" : "mt-4"} pt-2 border-t border-[#e5e7eb]`}>
           <table className="w-full table-fixed">
             <colgroup><col /><col className="w-[24%]" /><col className="w-[18%]" /><col className="w-[18%]" /></colgroup>
@@ -5109,12 +5188,12 @@ function V1kNotSchedCard() {
 }
 
 // "Mixed" spillover — a compact "Off schedule" summary card (3rd in the funding row); details + approval open in a dialog.
-function V1kOffScheduleCard({ approvedIds, onApprove, topLevel = false }: { approvedIds: string[]; onApprove: (id: string) => void; topLevel?: boolean }) {
+function V1kOffScheduleCard({ approvedIds, onApprove, topLevel = false, mvp = false }: { approvedIds: string[]; onApprove: (id: string) => void; topLevel?: boolean; mvp?: boolean }) {
   const [dialog, setDialog] = useState<null | "owed" | "notsched">(null);
   const pending = v1OwedApproval.filter(m => !approvedIds.includes(m.id));
   const pendingTotal = pending.reduce((s, m) => s + m.amount, 0);
-  // Keep the original gray pill size; just move the calendar icon inside it (like the "Next" pill has one).
-  const noFundingPill = <span className="inline-flex items-center gap-1 flex-shrink-0 text-[10px] font-medium px-2 py-0.5 rounded-full bg-[#f3f4f6] text-[#6b7280] whitespace-nowrap"><span className="material-symbols-rounded leading-none" style={{ fontSize: 12 }}>event_busy</span>no funding date</span>;
+  // Same size/shape as the fund-by "Next" pill (zpill md), gray, with the calendar icon inside.
+  const noFundingPill = <span className={zpill("gray", "md", "flex-shrink-0")}><span className="material-symbols-rounded leading-none" style={{ fontSize: 16, marginRight: 2 }}>event_busy</span> No funding date</span>;
   // Item content, shared between the two layouts
   // Each group mirrors the Fund-by card: [alert + title] left, ghost action top-right,
   // then a "cycle ends"-style description line that folds the amount in.
@@ -5138,8 +5217,8 @@ function V1kOffScheduleCard({ approvedIds, onApprove, topLevel = false }: { appr
       <div className="flex items-start gap-2">
         <span className="material-symbols-rounded text-[#d97706] flex-shrink-0 mt-0.5" style={{ fontSize: 18 }}>warning</span>
         <div className="min-w-0">
-          <p className="text-[13px] font-semibold text-[#111827]">Pending timesheet approval</p>
-          <p className="text-[12px] text-[#6b7280] mt-0.5">{pending.length} member{pending.length > 1 ? "s" : ""} from past periods</p>
+          <p className="text-[13px] font-semibold text-[#111827]">Still owed</p>
+          <p className="text-[12px] text-[#6b7280] mt-0.5">{pending.length} member{pending.length > 1 ? "s" : ""} from past periods (pending timesheet approval)</p>
         </div>
       </div>
       <div className="mt-2 pl-[26px] flex items-center justify-between gap-2">
@@ -5162,11 +5241,11 @@ function V1kOffScheduleCard({ approvedIds, onApprove, topLevel = false }: { appr
             <p className="text-lg font-medium text-[#111827] min-w-0 truncate">Off schedule</p>
             {noFundingPill}
           </div>
-          {/* v2 — each problem is its own outlined card (fund-by padding / border / spacing) */}
-          <div className="px-4 pt-4 pb-4 flex-1 flex flex-col gap-4">
-            <div className="rounded-lg border border-[#e5e7eb] p-4">{noPeriodContent}</div>
-            {pending.length > 0 && <div className="rounded-lg border border-[#e5e7eb] p-4">{stillOwedContent}</div>}
-            <div className="mt-auto pt-1">{footerNote}</div>
+          {/* v2 — one container: the two problems are divider-separated rows (no inner cards → narrower content inset) */}
+          <div className="px-4 pb-4 flex-1 flex flex-col">
+            <div className="py-4">{noPeriodContent}</div>
+            {pending.length > 0 && <div className="py-4 border-t border-[#e5e7eb]">{stillOwedContent}</div>}
+            <div className="mt-auto pt-3 border-t border-[#e5e7eb]">{footerNote}</div>
           </div>
         </div>
       ) : (
@@ -5361,7 +5440,7 @@ function V1kOffSchedDialog({ mode, approvedIds = [], onApprove, onClose }: { mod
   );
 }
 
-function V1kNextPaymentsCard({ onViewSchedule, v1l = false, zone = false, condensed = false, mvp = false, onProviderClick, approvedIds = [], onApprove = () => {}, offSchedVer = 1, colSpan = "col-span-9" }: { onViewSchedule: () => void; v1l?: boolean; zone?: boolean; condensed?: boolean; mvp?: boolean; onProviderClick?: (providerId: string) => void; approvedIds?: string[]; onApprove?: (id: string) => void; offSchedVer?: 1 | 2; colSpan?: string }) {
+function V1kNextPaymentsCard({ onViewSchedule, v1l = false, zone = false, condensed = false, mvp = false, sync = false, estPanel, onProviderClick, approvedIds = [], onApprove = () => {}, offSchedVer = 1, colSpan = "col-span-9" }: { onViewSchedule: () => void; v1l?: boolean; zone?: boolean; condensed?: boolean; mvp?: boolean; sync?: boolean; estPanel?: ReactNode; onProviderClick?: (providerId: string) => void; approvedIds?: string[]; onApprove?: (id: string) => void; offSchedVer?: 1 | 2; colSpan?: string }) {
   const upcoming = v1gFundSchedule.filter(e => !e.funded && e.daysOut > 0).slice(0, 2);
   const wiseVer = useContext(WiseVerContext);
   const notSched = useContext(NotSchedContext);
@@ -5417,11 +5496,13 @@ function V1kNextPaymentsCard({ onViewSchedule, v1l = false, zone = false, conden
         )}
         <V1kLearnMoreDialog open={showLearn} onClose={() => setShowLearn(false)} v1l={v1l} zone={zone} />
         <div className="px-4 py-4 flex-1 flex flex-col">
-          <div className={`grid ${(notSched || (spillover === "mixed" && offSchedVer === 1)) ? "grid-cols-3" : "grid-cols-2"} gap-4 items-stretch flex-1 auto-rows-fr`}>
+          <div className={`grid ${(() => { const base = (notSched || (spillover === "mixed" && offSchedVer === 1)) ? 3 : 2; const n = base + (estPanel ? 1 : 0); return n === 4 ? "grid-cols-4" : n === 3 ? (estPanel ? "grid-cols-[minmax(0,0.88fr)_minmax(0,1fr)_minmax(0,1fr)]" : "grid-cols-3") : "grid-cols-2"; })()} ${estPanel ? "gap-0" : "gap-4"} items-stretch flex-1 auto-rows-fr`}>
+            {/* mvp2 — Estimated Payroll lives inside the Funding schedule (first slot) */}
+            {estPanel}
             {/* Mixed + approvals: "Fund by today" leads (reuses the fund-by card), replacing the missed Jun 21 slot */}
-            {spillover === "mixed" && approvedIds.length > 0 && <V1kFundDateCard e={fundTodayEntry} noSpillover v1l={v1l} zone={zone} condensed={condensed} mvp={mvp} onProviderClick={onProviderClick} />}
-            {(spillover === "mixed" && approvedIds.length > 0 ? upcoming.slice(1) : upcoming).map(e => <V1kFundDateCard key={e.date} e={e} v1l={v1l} zone={zone} condensed={condensed} mvp={mvp} onProviderClick={onProviderClick} />)}
-            {spillover === "mixed" && offSchedVer === 1 ? <V1kOffScheduleCard approvedIds={approvedIds} onApprove={onApprove} /> : (notSched && <V1kNotSchedCard />)}
+            {spillover === "mixed" && approvedIds.length > 0 && <V1kFundDateCard e={fundTodayEntry} noSpillover v1l={v1l} zone={zone} condensed={condensed} mvp={mvp} sync={sync} onProviderClick={onProviderClick} />}
+            {(spillover === "mixed" && approvedIds.length > 0 ? upcoming.slice(1) : upcoming).map((e, i) => <V1kFundDateCard key={e.date} e={e} v1l={v1l} zone={zone} condensed={condensed} mvp={mvp} sync={sync} mergeCls={estPanel ? (i === 0 ? "rounded-r-none" : "rounded-l-none border-l-0") : ""} onProviderClick={onProviderClick} />)}
+            {spillover === "mixed" && offSchedVer === 1 ? <V1kOffScheduleCard approvedIds={approvedIds} onApprove={onApprove} mvp={mvp} /> : (notSched && <V1kNotSchedCard />)}
           </div>
           {/* v3 — one-line tip below the table */}
           {wiseVer === 3 && (
@@ -5744,8 +5825,9 @@ function V1iHowWeGetThereDialog({
   );
 }
 
-function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = false, v1i = false, v1j = false, v1k = false, v1l = false, v1m = false, zone = false, condensed = false, state = "filled", variant = "final", onProviderClick }: { showStatusBreakdown: boolean; seasonalityOn: boolean; sideFund?: boolean; v1i?: boolean; v1j?: boolean; v1k?: boolean; v1l?: boolean; v1m?: boolean; zone?: boolean; condensed?: boolean; state?: "filled" | "initial" | "empty"; variant?: "final" | "mvp"; onProviderClick?: (providerId: string) => void }) {
-  const mvp = variant === "mvp"; // MVP strip: chart → Payroll breakdown + 3M only; funding → Due only
+function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = false, v1i = false, v1j = false, v1k = false, v1l = false, v1m = false, zone = false, condensed = false, state = "filled", variant = "final", onProviderClick }: { showStatusBreakdown: boolean; seasonalityOn: boolean; sideFund?: boolean; v1i?: boolean; v1j?: boolean; v1k?: boolean; v1l?: boolean; v1m?: boolean; zone?: boolean; condensed?: boolean; state?: "filled" | "initial" | "empty"; variant?: "final" | "mvp" | "mvp2"; onProviderClick?: (providerId: string) => void }) {
+  const mvpSync = variant === "mvp2"; // "after sync" MVP: est-payroll inside the funding schedule, "Pending timesheets" column, card-level pay periods
+  const mvp = variant === "mvp" || mvpSync; // MVP strip: chart → Payroll breakdown + 3M only; funding → Due only
   // Zone theme tokens (real Zone hexes) — applied only when `zone` is set (Final UI).
   // These map the prototype's hand-picked greys to Zone's gray/primary scale.
   const zc = {
@@ -5770,7 +5852,7 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
   const [startMonth, setStartMonth] = useState<string>(v1eCurrentLabel); // Final UI v1: left edge of the chart window (past ↔ future)
   const [startPickerOpen, setStartPickerOpen] = useState(false);
   const [v2Start, setV2Start]       = useState<string>("Jun '26"); // Final UI v2: date-range picker → window start
-  const [v2Len, setV2Len]           = useState<number>(6);         // Final UI v2: window length in months (1–12)
+  const [v2Len, setV2Len]           = useState<number>(3);         // Final UI v2: window length in months (1–12), default 3
   const [rangePickerOpen, setRangePickerOpen] = useState(false);
   const [rangePendStart, setRangePendStart]   = useState<string | null>(null); // v2 picker: first-clicked month awaiting the second
   const [rangeHover, setRangeHover]           = useState<string | null>(null); // v2 picker: hovered month for range preview
@@ -5788,6 +5870,9 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
   const spillover = useContext(SpilloverContext); // late-approved spillover — full-width alert at the top of the report
   const offSchedVer = useContext(OffSchedVerContext); // 1 = off-schedule card in the funding row; 2 = top-level 25% card
   const pmtVer = useContext(PmtVerContext); // 1 = 3/6/12M + month stepper; 2 = date-range picker
+  const reportVer = useContext(PmtReportVerContext); // 1 = off-schedule card; 2 = pending in fund-by columns + yellow banner
+  const offSchedAsCard = spillover === "mixed" && offSchedVer === 2 && reportVer === 1; // dedicated off-schedule card shown
+  const offSchedAsBanner = spillover === "mixed" && reportVer === 2; // no card — yellow banner + fund-by "Not approved" columns
   const [approvedIds, setApprovedIds] = useState<string[]>([]); // Mixed: approved people → Fund-by-today card (lifted so it's shared across the split layout)
   const onApprove = (id: string) => setApprovedIds(a => a.includes(id) ? a : [...a, id]);
   const [spillAlertDismissed, setSpillAlertDismissed] = useState(false); // Zone alert is dismissable; reset when the overlay toggles
@@ -5828,6 +5913,65 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
   const scenTrendPct = 16;
   const scenTrendTotal = Math.round(v1lEstimate * (1 + scenTrendPct / 100)); // 150k → 174k
   const scen1Total = scenTrendTotal + (adjProj - v1lEstimate); // trend + any manual buffer
+  // mvp2 ("after sync") — Estimated Payroll lives INSIDE the Funding schedule as an inner card,
+  // so the total visually belongs to the scheduled side and clearly excludes off-schedule amounts.
+  const estPanelInner = (
+    /* Split card: white top (title + total + Adjust) · full-width divider · full-bleed gray bottom
+       ("How this adds up" + disclosure). Wider 32px gap to the fund-by cards (grid gap 12 + mr-5). */
+    <div data-zone="card" data-component="Estimated payroll inner card" className="rounded-lg border border-[#e5e7eb] bg-white flex flex-col h-full mr-4">
+      <div className="px-4 pt-4 pb-4">
+        <div className="flex justify-between items-start gap-2 mb-4">
+          <p className="min-w-0"><span className="text-base font-bold text-[#111827]">Estimated Payroll</span> <span className="text-base text-[#6b7280] whitespace-nowrap">· June 2026</span></p>
+        </div>
+        <div className="flex items-center min-w-0 gap-3 flex-wrap">
+          <p className="text-2xl font-bold text-[#111827] tracking-tight leading-none">{fmt0(scenario === 1 ? scen1Total : adjProj)}</p>
+          <button onClick={() => { setEditingAdj(null); setShowAddDialog(true); }} className={zbtn("outlinePrimary", "sm", "flex-shrink-0")}><SlidersHorizontal size={16} /> Adjust</button>
+        </div>
+      </div>
+      <div className="border-t border-[#e5e7eb] bg-[#f9fafb] px-4 py-3 flex-1 flex flex-col rounded-b-lg">
+        <div className="space-y-2">
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-[#6b7280]">How this adds up</p>
+            <button data-zone="button" onClick={() => setShowMathDialog(true)} className="inline-flex items-center gap-1 text-[12px] font-medium text-[#6b7280] hover:text-[#111827] transition-colors select-none"><Info size={14} /> Learn more</button>
+          </div>
+          <div className="flex items-baseline gap-3 text-[12px]">
+            <span className="w-28 flex-shrink-0 font-semibold text-[#111827] tabular-nums whitespace-nowrap"><span className="inline-block w-3 text-[#9ca3af] font-normal"> </span>{fmt0(v1AvgMonthly)}</span>
+            <span className="text-[#6b7280] min-w-0">Monthly average</span>
+          </div>
+          {/* Auto adjustments — same drivers popover as the standalone MVP card */}
+          <div className="flex items-baseline gap-3 text-[12px]">
+            <span className="w-28 flex-shrink-0 font-semibold text-[#111827] tabular-nums whitespace-nowrap"><span className="inline-block w-3 text-[#9ca3af] font-normal">+</span>{fmt0(v1lAutoAmt)} <span className="text-[#0168dd] font-medium">({v1lAutoPct}%)</span></span>
+            <span className="relative inline-flex self-center">
+              <button onClick={() => setShowAutoPop(o => !o)} className="text-[12px] font-normal text-[#6b7280] underline underline-offset-2 hover:text-[#111827] transition-colors select-none">Auto adjustments</button>
+              {showAutoPop && (<>
+                <div className="fixed inset-0 z-20" onClick={() => setShowAutoPop(false)} />
+                <div data-zone="popover" className="absolute top-6 left-0 z-30 bg-white rounded-lg border border-[#e5e7eb] shadow-xl w-96 p-3.5">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-[#6b7280]">+{v1lAutoPct}% vs a typical month</p>
+                  <div className="mt-1 divide-y divide-[#f3f4f6]">
+                    <div className="flex items-center gap-1.5 text-xs py-1.5"><span className="font-semibold flex-shrink-0 text-[#0168dd]">+{memberPct}%</span><span className="text-[#111827] font-medium flex-shrink-0">Headcount change</span><span className="text-[#d1d5db] flex-shrink-0">—</span><span className="text-[#6b7280] whitespace-nowrap">{v1CurrMembers} this cycle vs avg {v1AvgMembers}</span></div>
+                    {seasonPct > 0 && <div className="flex items-center gap-1.5 text-xs py-1.5"><span className="font-semibold flex-shrink-0 text-[#0168dd]">+{seasonPct}%</span><span className="text-[#111827] font-medium flex-shrink-0">Seasonality</span><span className="text-[#d1d5db] flex-shrink-0">—</span><span className="text-[#6b7280] whitespace-nowrap">June is typically above average</span></div>}
+                  </div>
+                </div>
+              </>)}
+            </span>
+          </div>
+          <div className="flex items-baseline gap-3 text-[12px] pt-1.5 border-t border-[#e5e7eb]">
+            <span className="w-28 flex-shrink-0 font-semibold text-[#111827] tabular-nums whitespace-nowrap"><span className="inline-block w-3 text-[#9ca3af] font-normal">=</span>{fmt0(v1lEstimate)}</span>
+            <span className="text-[#6b7280] min-w-0">Projection based on historical numbers</span>
+          </div>
+          <div className="flex items-baseline gap-3 text-[12px]">
+            <span className="w-28 flex-shrink-0 font-semibold text-[#111827] tabular-nums whitespace-nowrap"><span className="inline-block w-3 text-[#9ca3af] font-normal">+</span>{fmt0(scenTrendTotal - v1lEstimate)} <span className="text-[#0168dd] font-medium">({scenTrendPct}%)</span></span>
+            <span className="text-[#6b7280] min-w-0">Current trend</span>
+          </div>
+          <div className="flex items-baseline gap-3 text-[12px] pt-1.5 border-t border-[#e5e7eb]">
+            <span className="w-28 flex-shrink-0 font-bold text-[#111827] tabular-nums"><span className="inline-block w-3 text-[#9ca3af] font-normal">=</span>{fmt0(scenario === 1 ? scen1Total : adjProj)}</span>
+            <span className="font-bold text-[#111827]">Total to fund</span>
+          </div>
+        </div>
+        <p className="mt-auto pt-3 text-[11px] text-[#6b7280] leading-snug">Estimated from your history and current pace. Gets more accurate as the month fills. Off-schedule amounts are not included.</p>
+      </div>
+    </div>
+  );
   // Scenario 2 — current pace runs LOWER than the historical projection. We show the
   // trend for transparency but do NOT apply it: total = max(projection, trend) = projection.
   const scen2TrendPct = 9; // shown as −9%, struck through, "not applied"
@@ -6052,10 +6196,24 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
           </div>
         </div>
       )}
+      {/* Report V2 — off-schedule "No pay period set" surfaced as a yellow banner (the card is gone; pending lives in the fund-by columns) */}
+      {offSchedAsBanner && (
+        <div data-zone="alert" className="flex items-center justify-between gap-3 bg-[#fdfdea] border border-[#fde68a] rounded-lg px-4 py-3">
+          <div className="flex items-start gap-2 min-w-0">
+            <span className="material-symbols-rounded text-[#d97706] flex-shrink-0 mt-0.5" style={{ fontSize: 18 }}>warning</span>
+            <p className="text-[13px] text-[#723b13] leading-snug">
+              <span className="font-semibold">No pay period set · {v1NotSchedMembers} members</span> — <span className="font-semibold tabular-nums">{fmt0(v1NotSchedTotal)}</span> accrued that we can&apos;t predict a funding date for yet.
+            </p>
+          </div>
+          <button onClick={ev => ev.preventDefault()} className={zbtn("ghostPrimary", "sm", "flex-shrink-0 !gap-0.5 !px-2")}>Set periods <ChevronRight size={14} /></button>
+        </div>
+      )}
       {v1j ? (
-      /* ══ 1J TOP ROW — Estimated-to-fund as its own narrow card + brief card ══ */
-      <div className="grid grid-cols-12 gap-6 items-stretch">
-        {/* Left — Estimated to fund, sized like the old Fund-your-accounts card */}
+      /* ══ 1J TOP ROW — Estimated-to-fund as its own narrow card + brief card ══
+         mvp2 uses flex so Off-schedule can be a fixed 300px and Funding schedule takes the rest. */
+      <div className={mvpSync ? "flex gap-6 items-stretch" : "grid grid-cols-12 gap-6 items-stretch"}>
+        {/* Left — Estimated to fund, sized like the old Fund-your-accounts card (mvp2 moves it INSIDE the Funding schedule) */}
+        {!mvpSync && (
         <div data-zone="card" data-component={zone ? "Estimated payroll card" : undefined} className={`col-span-3 bg-white rounded-lg border ${zc.border} flex flex-col`}>
           <div className={`px-4 flex items-center border-b bg-white rounded-t-lg ${zone ? "h-[60px] border-[#e5e7eb]" : "h-[55px] border-[#e5e7eb]"}`}>
             <p className={zone ? "text-lg font-medium text-[#111827]" : "text-sm font-semibold text-[#111827]"}>{zone ? "Estimated Payroll" : "Estimated payout"} <button onClick={() => setScenario(s => (s === 1 ? 2 : 1))} title="Toggle scenario (trend vs. historical)" className="text-[#6b7280] font-normal whitespace-nowrap hover:text-[#0168dd] transition-colors cursor-pointer">· June 2026</button></p>
@@ -6227,13 +6385,14 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
             )}
           </div>
         </div>
+        )}
         {/* Right — Add to cover: date-card timeline + expandable provider detail */}
         {v1k
-          ? <V1kNextPaymentsCard onViewSchedule={() => setShowScheduleDialog(true)} v1l={v1l} zone={zone} condensed={condensed} mvp={mvp} onProviderClick={onProviderClick} approvedIds={approvedIds} onApprove={onApprove} offSchedVer={offSchedVer} colSpan={offSchedVer === 2 && spillover === "mixed" ? "col-span-6" : "col-span-9"} />
+          ? <V1kNextPaymentsCard onViewSchedule={() => setShowScheduleDialog(true)} v1l={v1l} zone={zone} condensed={condensed} mvp={mvp} sync={mvpSync} estPanel={mvpSync ? estPanelInner : undefined} onProviderClick={onProviderClick} approvedIds={approvedIds} onApprove={onApprove} offSchedVer={offSchedVer} colSpan={mvpSync ? "flex-1 min-w-0" : offSchedAsCard ? "col-span-6" : "col-span-9"} />
           : <V1jAddToCoverCard onViewSchedule={() => setShowScheduleDialog(true)} />}
         {/* V2 — Off-schedule promoted to a top-level 25% card beside Estimated Payroll + Funding schedule */}
-        {offSchedVer === 2 && spillover === "mixed" && (
-          <div className="col-span-3"><V1kOffScheduleCard approvedIds={approvedIds} onApprove={onApprove} topLevel /></div>
+        {offSchedAsCard && (
+          <div className={mvpSync ? "w-[280px] flex-shrink-0" : "col-span-3"}><V1kOffScheduleCard approvedIds={approvedIds} onApprove={onApprove} topLevel mvp={mvp} /></div>
         )}
       </div>
       ) : (
@@ -6500,12 +6659,10 @@ function V1gPredictivePanel({ showStatusBreakdown, seasonalityOn, sideFund = fal
             {useTimeline && !v2mode && !drillMonth && (
               <div className="relative flex items-center gap-2 flex-shrink-0">
                 <button onClick={() => setStartPickerOpen(o => !o)}
-                  className={`h-10 px-2.5 flex items-center gap-1.5 rounded-[6px] border border-[#d1d5db] ${zc.hoverBg} transition-colors whitespace-nowrap`}>
+                  className={`h-8 px-2.5 flex items-center gap-1.5 rounded-[6px] border border-[#d1d5db] ${zc.hoverBg} transition-colors whitespace-nowrap`}>
                   <span className="material-symbols-rounded text-[#6b7280]" style={{ fontSize: 16 }}>calendar_month</span>
-                  <span className="flex flex-col items-start leading-none gap-0.5">
-                    <span className={`text-[9px] ${zc.muted} font-normal`}>Starting on</span>
-                    <span className="text-sm font-medium text-[#374151]">{v1eFullMonthLabel(startLabel)}</span>
-                  </span>
+                  <span className={`text-sm ${zc.muted} font-normal`}>Starting on</span>
+                  <span className="text-sm font-medium text-[#374151]">{v1eFullMonthLabel(startLabel)}</span>
                   <ChevronDown size={13} className={`${zc.muted} transition-transform ${startPickerOpen ? "rotate-180" : ""}`} />
                 </button>
                 {!atToday && (
@@ -7608,7 +7765,7 @@ function FinalUIEmptyBody({ ver }: { ver: 1 | 2 | 3 | 4 | 5 }) {
   );
 }
 
-function VersionFinalUI({ showStatusBreakdown, seasonalityOn, state = "filled", variant = "final", spillover = null, notSched = false }: { showStatusBreakdown: boolean; seasonalityOn: boolean; state?: "filled" | "initial" | "empty"; variant?: "final" | "mvp"; spillover?: "yellow" | "red" | "mixed" | null; notSched?: boolean }) {
+function VersionFinalUI({ showStatusBreakdown, seasonalityOn, state = "filled", variant = "final", spillover = null, notSched = false }: { showStatusBreakdown: boolean; seasonalityOn: boolean; state?: "filled" | "initial" | "empty"; variant?: "final" | "mvp" | "mvp2"; spillover?: "yellow" | "red" | "mixed" | null; notSched?: boolean }) {
   // `state` selects which Final UI variant to render. All three are the same content today
   // (copies) — branch on `state` here as the initial/empty states get built out.
   const dense = false;
@@ -7618,11 +7775,12 @@ function VersionFinalUI({ showStatusBreakdown, seasonalityOn, state = "filled", 
   const [ftVer, setFtVer] = useState<"v1" | "v2" | "v3">("v3"); // Future Tracked layout version — V3 is the live direction; V1/V2 kept for reference
   const SHOW_FT_VERSION_TOGGLE = false; // toggle hidden; flip to true to compare V1/V2/V3 again
   const [wiseVer, setWiseVer] = useState<0 | 1 | 2 | 3 | 4 | 5>(1); // Wise Interest disclosure — retired (switcher repurposed for off-schedule version)
-  const [offSchedVer, setOffSchedVer] = useState<1 | 2>(1); // Off-schedule layout: 1 = card in the funding row, 2 = top-level 25% card
-  const [pmtVer, setPmtVer] = useState<1 | 2>(1); // Payments-over-time chart control: 1 = 3/6/12M + stepper, 2 = date-range picker
+  const [offSchedVer, setOffSchedVer] = useState<1 | 2>(2); // Off-schedule layout: 1 = card in the funding row, 2 = top-level 25% card (default)
+  const [pmtVer, setPmtVer] = useState<1 | 2>(2); // Payments-over-time chart control: 1 = 3/6/12M + stepper, 2 = date-range picker (default)
+  const [reportVer, setReportVer] = useState<1 | 2>(1); // Off-schedule strategy: 1 = off-schedule card, 2 = pending in fund-by columns + yellow banner
   const [emptyVer, setEmptyVer] = useState<1 | 2 | 3 | 4 | 5>(5); // Empty-state layout variant — V5 (welcome, bare hero) is the shipped one; V1–V4 kept in code but hidden from the switcher
   const wiseConnected = v1gFundSchedule.some(e => e.providers.some(p => p.id === "wise")); // only surface when Wise is a connected payout method
-  const mvp = variant === "mvp";
+  const mvp = variant === "mvp" || variant === "mvp2";
   const bState = state; // spillover + not-scheduled are independent overlays (props), not states
   const effWiseVer = mvp ? 1 : wiseVer; // MVP locks the Wise disclosure to treatment 1 (the inline "earn interest" link); the switcher is hidden
   const activityRef = useRef<HTMLDivElement>(null);
@@ -7640,12 +7798,13 @@ function VersionFinalUI({ showStatusBreakdown, seasonalityOn, state = "filled", 
     <WiseVerContext.Provider value={0}>
     <OffSchedVerContext.Provider value={offSchedVer}>
     <PmtVerContext.Provider value={pmtVer}>
+    <PmtReportVerContext.Provider value={reportVer}>
     <div data-final-state={state} data-offsched-ver={offSchedVer} data-pmt-ver={pmtVer} className="px-6 pb-5 space-y-6 bg-[#f9fafb] min-h-full" style={{ fontFamily: '"Roboto", "Helvetica Neue", Helvetica, Arial, sans-serif' }}>
       {/* Zone page header — real structure from hubstaff-server (shadow-md, sticky, h2 text-2xl font-light) */}
       <header className="bg-white shadow-md sticky top-12 z-20 -mx-6 px-6">
         <div className="flex justify-between items-center h-8 pt-3 pb-4 box-content">
           <h2 className="text-2xl font-light text-[#111827]">Payments report</h2>
-          {bState === "empty" ? null : mvp ? null : (
+          {bState === "empty" || variant === "mvp2" ? null : (
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-semibold uppercase tracking-widest text-[#9ca3af]">Off-schedule</span>
@@ -7660,6 +7819,14 @@ function VersionFinalUI({ showStatusBreakdown, seasonalityOn, state = "filled", 
                 <div className="flex items-center bg-[#f3f4f6] rounded-lg p-0.5">
                   {([[1, "V1"], [2, "V2"]] as const).map(([v, label]) => (
                     <button key={v} onClick={() => setPmtVer(v)} className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${pmtVer === v ? "bg-white text-[#0168dd] shadow-sm" : "text-[#6b7280] hover:text-[#111827]"}`}>{label}</button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-semibold uppercase tracking-widest text-[#9ca3af]">Off-schedule display</span>
+                <div className="flex items-center bg-[#f3f4f6] rounded-lg p-0.5">
+                  {([[1, "V1"], [2, "V2"]] as const).map(([v, label]) => (
+                    <button key={v} onClick={() => setReportVer(v)} className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${reportVer === v ? "bg-white text-[#0168dd] shadow-sm" : "text-[#6b7280] hover:text-[#111827]"}`}>{label}</button>
                   ))}
                 </div>
               </div>
@@ -7689,6 +7856,7 @@ function VersionFinalUI({ showStatusBreakdown, seasonalityOn, state = "filled", 
       </div>
       </>)}
     </div>
+    </PmtReportVerContext.Provider>
     </PmtVerContext.Provider>
     </OffSchedVerContext.Provider>
     </WiseVerContext.Provider>
@@ -8896,7 +9064,7 @@ const v2CycleForProvider: Record<string, string> = {
 // ─── Root ──────────────────────────────────────────────────────────────────────
 
 // Version list for the Final UI floating switcher (the template shell has no switcher).
-const FINAL_VERSIONS: [string, string][] = [["v1","1"],["v1c","1C"],["v1d","1D"],["v1e","1E"],["v1f","1F"],["v1g","1G"],["v1h","1H"],["v1i","1I"],["v1j","1J"],["v1k","1K"],["v1l","1L"],["v1m","1M"],["v1n","1N"],["final","Final UI"],["mvp","MVP Final UI"],["v2","2"]];
+const FINAL_VERSIONS: [string, string][] = [["v1","1"],["v1c","1C"],["v1d","1D"],["v1e","1E"],["v1f","1F"],["v1g","1G"],["v1h","1H"],["v1i","1I"],["v1j","1J"],["v1k","1K"],["v1l","1L"],["v1m","1M"],["v1n","1N"],["final","Final UI"],["mvp","MVP Final UI"],["mvp2","MVP Final UI (after sync)"],["v2","2"]];
 
 // Final UI — wraps the payments report in the real Hubstaff shell template
 // (left panel + top header + design annotations), vendored from the design repo
@@ -8978,6 +9146,7 @@ function FinalUIShell({ children, version = "final", onVersionChange, finalState
           <option value="red">Red</option>
           <option value="mixed">Mixed</option>
         </select>
+        {version !== "mvp2" && (<>
         <span className="w-px h-3.5 bg-[#e5e7eb]" />
         {(() => { const nsOn = notSchedOn && spilloverLvl !== "mixed"; const nsLocked = spilloverLvl === "mixed"; return (
         <button onClick={() => { if (!nsLocked) onNotSchedChange(!notSchedOn); }} disabled={nsLocked} title={nsLocked ? "Merged into the Mixed spillover card" : "Toggle the Not-scheduled group"} className={`flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest select-none ${nsLocked ? "text-[#d1d5db] cursor-not-allowed" : "text-[#6b7280]"}`}>
@@ -8985,23 +9154,24 @@ function FinalUIShell({ children, version = "final", onVersionChange, finalState
           Not scheduled
         </button>
         ); })()}
+        </>)}
       </div>
     </>
   );
 }
 
 export default function App() {
-  const [version, setVersion] = useState<"v1"|"v1c"|"v1d"|"v1e"|"v1f"|"v1g"|"v1h"|"v1i"|"v1j"|"v1k"|"v1l"|"v1m"|"v1n"|"final"|"mvp"|"v2">("final");
+  const [version, setVersion] = useState<"v1"|"v1c"|"v1d"|"v1e"|"v1f"|"v1g"|"v1h"|"v1i"|"v1j"|"v1k"|"v1l"|"v1m"|"v1n"|"final"|"mvp"|"mvp2"|"v2">("mvp2");
   const [showStatusBreakdown, setShowStatusBreakdown] = useState(false);
   const [seasonalityOn, setSeasonalityOn] = useState(true);
   const [finalState, setFinalState] = useState<"filled" | "initial" | "empty">("filled"); // Final UI state variant (filled = the one being built)
-  const [spilloverLvl, setSpilloverLvl] = useState<"off" | "yellow" | "red" | "mixed">("off"); // late-approved spillover overlay — "mixed" merges the Not-scheduled group into one off-schedule card
+  const [spilloverLvl, setSpilloverLvl] = useState<"off" | "yellow" | "red" | "mixed">("mixed"); // default "mixed" so the off-schedule card is part of the design; "mixed" merges the Not-scheduled group into one off-schedule card
   const [notSchedOn, setNotSchedOn] = useState(false); // "Not scheduled" group — independent toggle
 
-  if (version === "final" || version === "mvp") {
+  if (version === "final" || version === "mvp" || version === "mvp2") {
     return (
       <FinalUIShell version={version} onVersionChange={(v) => setVersion(v as typeof version)} finalState={finalState} onFinalStateChange={(s) => setFinalState(s as typeof finalState)} spilloverLvl={spilloverLvl} onSpilloverChange={(v) => { setSpilloverLvl(v); if (v === "mixed") setNotSchedOn(false); }} notSchedOn={notSchedOn} onNotSchedChange={setNotSchedOn}>
-        <VersionFinalUI showStatusBreakdown={showStatusBreakdown} seasonalityOn={seasonalityOn} state={finalState} variant={version === "mvp" ? "mvp" : "final"} spillover={spilloverLvl === "off" ? null : spilloverLvl} notSched={spilloverLvl === "mixed" ? false : notSchedOn} />
+        <VersionFinalUI showStatusBreakdown={showStatusBreakdown} seasonalityOn={seasonalityOn} state={finalState} variant={version === "final" ? "final" : (version as "mvp" | "mvp2")} spillover={spilloverLvl === "off" ? null : spilloverLvl} notSched={spilloverLvl === "mixed" ? false : notSchedOn} />
       </FinalUIShell>
     );
   }
