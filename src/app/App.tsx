@@ -4793,12 +4793,13 @@ function V1kFundDateCard({ e, v1l = false, zone = false, condensed = false, mvp 
   })();
   // Periods sit on the title row's RIGHT side (next to the "Next" pill): "3 periods" when several
   // (hover lists them with dates), or the single type name ("Monthly") when there's just one.
+  // Gray pill, same shape as the off-schedule "No funding date" pill; multi-period pills list dates on hover.
   const periodsBadge = sync && cardPeriods.length > 0 ? (
     cardPeriods.length === 1 ? (
-      <span className="text-[12px] text-[#6b7280] whitespace-nowrap font-normal">{cardPeriods[0].type}</span>
+      <span className={zpill("gray", "md", "flex-shrink-0")}>{cardPeriods[0].type}</span>
     ) : (
-      <span className="relative group inline-flex items-center cursor-help text-[12px] text-[#6b7280] whitespace-nowrap font-normal">
-        <span className="underline decoration-dotted decoration-[#9ca3af] underline-offset-2">{cardPeriods.length} periods</span>
+      <span className="relative group inline-flex cursor-help flex-shrink-0">
+        <span className={zpill("gray", "md")}>{cardPeriods.length} periods</span>
         <span className="pointer-events-none absolute right-0 top-full mt-1 z-40 hidden group-hover:block bg-[#111827] text-white text-[11px] font-normal rounded-md px-2.5 py-2 shadow-lg whitespace-nowrap text-left">
           <span className="block font-semibold mb-1">This funding includes</span>
           {cardPeriods.map(pd => <span key={pd.type} className="block leading-relaxed">{pd.type}{pd.dates ? <span className="text-[#9ca3af]"> — {pd.dates}</span> : null}</span>)}
@@ -9138,6 +9139,7 @@ function FinalUIShell({ children, version = "final", onVersionChange, finalState
           <option value="initial">Initial state</option>
           <option value="empty">Empty state</option>
         </select>
+        {version !== "mvp2" && (<>
         <span className="w-px h-3.5 bg-[#e5e7eb]" />
         <span className="text-[9px] font-semibold uppercase tracking-widest text-[#6b7280]">Spillover</span>
         <select value={spilloverLvl} onChange={e => onSpilloverChange(e.target.value as "off" | "yellow" | "red" | "mixed")} className="text-[11px] font-medium text-[#111827] bg-transparent outline-none cursor-pointer">
@@ -9146,6 +9148,7 @@ function FinalUIShell({ children, version = "final", onVersionChange, finalState
           <option value="red">Red</option>
           <option value="mixed">Mixed</option>
         </select>
+        </>)}
         {version !== "mvp2" && (<>
         <span className="w-px h-3.5 bg-[#e5e7eb]" />
         {(() => { const nsOn = notSchedOn && spilloverLvl !== "mixed"; const nsLocked = spilloverLvl === "mixed"; return (
